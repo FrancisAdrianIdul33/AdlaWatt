@@ -2,7 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { router } from "expo-router";
 
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   Pressable,
@@ -10,7 +14,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 import { Routes } from "@/constants/routes";
 
@@ -121,6 +128,13 @@ export default function NavBar({
   const isOnline =
     deviceStatus === "Online";
 
+  const colors = useAppColors();
+
+  const navBarStyles = useMemo(
+    () => getNavBarStyles(colors),
+    [colors],
+  );
+
   // ==========================================================
   // RENDER
   // ==========================================================
@@ -192,7 +206,7 @@ export default function NavBar({
               size={
                 navBarDimensions.notificationIconSize
               }
-              color={Colors.light.onPrimary}
+              color={colors.onPrimary}
             />
 
             {hasUnreadNotifications && (
@@ -235,7 +249,8 @@ const navBarDimensions = {
   statusDotSize: 9,
   statusDotMargin: 8,
 };
-const navBarStyles = StyleSheet.create({
+const getNavBarStyles = (colors: AppColors) =>
+  StyleSheet.create({
   wrapper: {
     width: "100%",
     zIndex: 100,
@@ -251,7 +266,7 @@ const navBarStyles = StyleSheet.create({
     justifyContent: "space-between", // ← changed
     paddingHorizontal:
       navBarDimensions.horizontalPadding,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
   },
 
   actions: {
@@ -276,13 +291,13 @@ const navBarStyles = StyleSheet.create({
     height: navBarDimensions.notificationDotSize,
     borderRadius:
       navBarDimensions.notificationDotSize / 2,
-    backgroundColor: Colors.light.error,
+    backgroundColor: colors.error,
   },
 
   accentLine: {
     width: "100%",
     height: navBarDimensions.accentHeight,
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: colors.secondary,
   },
 
   // Device status capsule
@@ -290,7 +305,7 @@ const navBarStyles = StyleSheet.create({
     width: navBarDimensions.deviceStatusWidth,
     height: navBarDimensions.deviceStatusHeight,
     borderRadius: navBarDimensions.deviceStatusRadius,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -304,15 +319,15 @@ const navBarStyles = StyleSheet.create({
   },
 
   onlineDot: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
   },
 
   offlineDot: {
-    backgroundColor: Colors.light.error,
+    backgroundColor: colors.error,
   },
 
   statusText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,

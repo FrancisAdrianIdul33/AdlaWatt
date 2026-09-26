@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -23,7 +24,10 @@ import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 
 import weatherJson from "@/data/weather.json";
@@ -60,13 +64,18 @@ const WEATHER_REFRESH_INTERVAL_MS =
 
 const QUICK_NAV_SCROLL_MS = 1500;
 const QUICK_NAV_SCROLL_INSET = 12;
-const QUICK_NAV_PRESSED_BG = Colors.light.primaryPressed;
 
 // ============================================================
 // DASHBOARD SCREEN
 // ============================================================
 
 export default function DashboardScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   // ==========================================================
   // QUICK-NAV SCROLL TARGETS
   // ==========================================================
@@ -428,7 +437,7 @@ export default function DashboardScreen() {
             <Ionicons
               name="arrow-forward"
               size={16}
-              color={Colors.light.onPrimary}
+              color={colors.onPrimary}
             />
           </Pressable>
         </View>
@@ -609,12 +618,13 @@ const dashboardDimensions = {
   monitorGap: 10,
 };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor:
-      Colors.light.background,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    scrollView: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
   scrollContent: {
     paddingHorizontal:
@@ -625,10 +635,10 @@ const styles = StyleSheet.create({
 
   headerCard: {
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
     borderWidth: 3,
     borderColor:
-      Colors.light.secondary,
+      colors.secondary,
     borderRadius:
       dashboardDimensions.cardRadius,
     padding: 18,
@@ -636,13 +646,13 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   headerSubtitle: {
     color:
-      Colors.light.textSecondary,
+      colors.textSecondary,
     marginTop: 6,
   },
 
@@ -661,18 +671,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
   },
 
   quickNavButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "700",
   },
 
   quickNavButtonPressed: {
-    backgroundColor: QUICK_NAV_PRESSED_BG,
+    backgroundColor: colors.primaryPressed,
   },
 
   section: {
@@ -682,7 +692,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
     marginBottom: 10,
   },

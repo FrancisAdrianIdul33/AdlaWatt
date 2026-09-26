@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import {
   StyleProp,
   StyleSheet,
@@ -7,7 +7,10 @@ import {
 } from "react-native";
 
 import NavBarBottom from "@/components/layout/NavBarBottom";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 interface ScreenContainer2Props {
   children: ReactNode;
@@ -23,6 +26,13 @@ export default function ScreenContainer2({
   children,
   style,
 }: ScreenContainer2Props) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View style={styles.container}>
       <View style={[styles.content, style]}>
@@ -36,14 +46,15 @@ export default function ScreenContainer2({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  content: {
-    flex: 1,
-    width: "100%",
-  },
-});
+    content: {
+      flex: 1,
+      width: "100%",
+    },
+  });
