@@ -1,7 +1,10 @@
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { useTypography } from "@/hooks/useTypography";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import {
     StyleSheet,
     TextInput,
@@ -18,12 +21,19 @@ export default function AppSearchBox({
   const { scaledSize, family, weight } =
     useTypography();
 
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View style={styles.container}>
       <TextInput
         {...props}
         allowFontScaling={false}
-        placeholderTextColor={Colors.light.textSecondary}
+        placeholderTextColor={colors.textSecondary}
         style={[
           styles.input,
           {
@@ -38,24 +48,25 @@ export default function AppSearchBox({
       <Ionicons
         name="search"
         size={20}
-        color={Colors.light.primary}
+        color={colors.primary}
         style={styles.icon}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   container: {
     position: "relative",
     marginBottom: 18,
   },
 
   input: {
-    backgroundColor: Colors.light.surface,
-    color: Colors.light.textSecondary,
+    backgroundColor: colors.surface,
+    color: colors.textSecondary,
     borderWidth: 2,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 12,
     paddingLeft: 16,
     paddingRight: 48, // Space reserved for the icon

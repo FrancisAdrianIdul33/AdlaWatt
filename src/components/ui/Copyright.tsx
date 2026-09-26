@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   StyleProp,
   StyleSheet,
@@ -7,7 +7,10 @@ import {
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Spacing } from "@/constants/theme";
 
 interface CopyrightProps {
@@ -15,6 +18,11 @@ interface CopyrightProps {
 }
 
 export default function Copyright({ style }: CopyrightProps) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   return (
     <View style={[styles.container, style]}>
       <AppText
@@ -27,16 +35,17 @@ export default function Copyright({ style }: CopyrightProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    marginTop: "auto",
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.sm,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    container: {
+      alignItems: "center",
+      marginTop: "auto",
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing.sm,
+    },
 
-  text: {
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-  },
-});
+    text: {
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+  });

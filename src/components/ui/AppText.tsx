@@ -1,7 +1,10 @@
 import React, { ReactNode, useMemo } from "react";
 import { StyleSheet, Text, TextProps } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { useSettings } from "@/context/SettingsContext";
 import {
   getFontFamilyName,
@@ -32,6 +35,13 @@ export default function AppText({
   ...props
 }: AppTextProps) {
   const { prefs } = useSettings();
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   const override = useMemo(() => {
     const scale = getFontScale(prefs.fontSize);
@@ -86,6 +96,7 @@ export default function AppText({
     variant,
     style,
     allowCustomFamily,
+    styles,
   ]);
 
   return (
@@ -104,9 +115,10 @@ export default function AppText({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   base: {
-    color: Colors.light.text,
+    color: colors.text,
   },
 
   title: {
@@ -127,12 +139,12 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: 14,
     fontWeight: "400",
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
   },
 
   button: {
     fontSize: 16,
     fontWeight: "600",
-   color: Colors.light.onPrimary,
+   color: colors.onPrimary,
   },
 });

@@ -16,7 +16,10 @@ import {
   DropdownModal,
 } from "@/components/ui/DropdownModal";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 // ============================================================
 // CUSTOM CALENDAR VIEWER
@@ -196,6 +199,13 @@ export function CalendarModal({
       startOfMonth(value),
     );
 
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const cells =
     useMemo(
       () =>
@@ -265,7 +275,7 @@ export function CalendarModal({
             name="chevron-back"
             size={20}
             color={
-              Colors.light.primary
+              colors.primary
             }
           />
         </Pressable>
@@ -306,8 +316,8 @@ export function CalendarModal({
             size={20}
             color={
               canGoNext
-                ? Colors.light.primary
-                : Colors.light.border
+                ? colors.primary
+                : colors.border
             }
           />
         </Pressable>
@@ -406,7 +416,7 @@ export function CalendarModal({
 // STYLES
 // ============================================================
 
-const styles =
+const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     monthNav: {
       width: "100%",
@@ -431,7 +441,7 @@ const styles =
     },
 
     monthLabel: {
-      color: Colors.light.text,
+      color: colors.text,
       fontSize: 15,
       fontWeight: "700",
       flexShrink: 1,
@@ -447,7 +457,7 @@ const styles =
 
     weekdayLabel: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
       fontSize: 12,
       fontWeight: "600",
       textAlign: "center",
@@ -477,12 +487,12 @@ const styles =
     todayCell: {
       borderWidth: 2,
       borderColor:
-        Colors.light.primary,
+        colors.primary,
     },
 
     selectedCell: {
       backgroundColor:
-        Colors.light.primary,
+        colors.primary,
     },
 
     futureCell: {
@@ -490,20 +500,20 @@ const styles =
     },
 
     dayText: {
-      color: Colors.light.text,
+      color: colors.text,
       fontSize: 14,
       fontWeight: "600",
       textAlign: "center",
     },
 
     selectedDayText: {
-      color: Colors.light.onPrimary,
+      color: colors.onPrimary,
       fontWeight: "700",
     },
 
     futureDayText: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
     },
 
     buttonPressed: {

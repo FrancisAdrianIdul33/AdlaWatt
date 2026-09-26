@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -8,7 +8,10 @@ import {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 
 type AppButton1Props = {
@@ -24,6 +27,11 @@ export default function AppButton1({
   icon = "arrow-forward",
   style,
 }: AppButton1Props) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   return (
     <Pressable
       onPress={onPress}
@@ -44,34 +52,35 @@ export default function AppButton1({
       <Ionicons
         name={icon}
         size={16}
-        color={Colors.light.onPrimary}
+        color={colors.onPrimary}
       />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    width: "100%",
-    maxWidth: 360,
-    height: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.light.primary,
-    borderRadius: Radius.md,
-    marginTop: 12,
-    marginBottom: 15,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    button: {
+      width: "100%",
+      maxWidth: 360,
+      height: 46,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.primary,
+      borderRadius: Radius.md,
+      marginTop: 12,
+      marginBottom: 15,
+    },
 
-  text: {
-    color: Colors.light.onPrimary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
+    text: {
+      color: colors.onPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
 
-  pressed: {
-    opacity: 0.7,
-  },
-});
+    pressed: {
+      opacity: 0.7,
+    },
+  });

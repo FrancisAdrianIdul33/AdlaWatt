@@ -1,4 +1,6 @@
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+} from "@/hooks/useAppColors";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -20,6 +22,8 @@ export default function PasswordInput({
   error,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
+
+  const colors = useAppColors();
 
   return (
     <View style={styles.container}>
@@ -46,7 +50,7 @@ export default function PasswordInput({
         <Ionicons
           name={showPassword ? "eye-off-outline" : "eye-outline"}
           size={22}
-          color={Colors.light.textSecondary}
+          color={colors.textSecondary}
         />
       </Pressable>
     </View>
