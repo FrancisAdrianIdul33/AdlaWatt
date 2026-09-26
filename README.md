@@ -810,6 +810,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Analytics data pipeline (monitoring + appliance history)
 - [x] CSV and PDF report export
 - [x] Light/dark/glass color tokens and theme hooks
+- [x] Full dark-mode adoption across dashboard screens and shared components (auth screens intentionally remain light)
 - [x] EAS build configuration (development, preview, production)
 - [x] ESLint flat config (eslint-config-expo)
 
@@ -820,7 +821,6 @@ The final build configuration may change as the project approaches deployment.
 - [ ] Forgot password screen
 - [ ] Authentication-aware splash flow
 - [ ] Menu preferences persistence
-- [ ] Full dark-mode adoption across all screens
 - [ ] End-to-end ESP32 → Supabase hardware feed
 - [ ] Admin dashboard
 - [ ] Historical energy charts
@@ -869,7 +869,7 @@ Menu preferences (dark mode, font settings, toggles) are maintained in applicati
 
 ### Dark Mode Coverage
 
-Dark/light design tokens and the dark-mode toggle exist, but screen-level dark styling is applied inconsistently across some screens.
+Dashboard screens and shared components follow the active theme via `useAppColors`. Auth screens intentionally remain light (no theme provider there by design).
 
 ### Development Leftovers
 
@@ -974,7 +974,6 @@ Future development may include:
 - Automatic notification generation refinement and safety threshold configuration
 - Forgot password and password reset flow
 - Menu preferences persistence
-- Full dark-mode support across all screens
 - Offline data handling using the local database (`expo-sqlite`)
 - Admin dashboard for researchers
 - Remote monitoring
