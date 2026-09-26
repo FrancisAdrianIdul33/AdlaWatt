@@ -7,7 +7,7 @@ import {
 } from "react-native";
 
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
@@ -47,6 +47,9 @@ export default function ApplianceStatusBox({
       : tone === "not"
         ? Colors.light.error
         : Colors.light.primary;
+
+  const applianceCardStyles =
+    useApplianceCardStyles();
 
   const iconName =
     tone === "ok"

@@ -1,9 +1,14 @@
+import { useMemo } from "react";
+
 import {
   StyleSheet,
   type ViewStyle,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 
 /*
@@ -14,7 +19,8 @@ import { Radius } from "@/constants/theme";
  * - ComponentStatusBox (components screen)
  *
  * Keeping the sizing in one module stops the four boxes from drifting
- * apart over time.
+ * apart over time. Colors resolve per theme via useApplianceCardStyles
+ * so dark mode follows without duplicating the layout.
  */
 /*
  * Shared card shell. `box` reserves room for the status badge used by
@@ -26,7 +32,8 @@ import { Radius } from "@/constants/theme";
 const applianceCardBox: ViewStyle = {
   width: "46%",
   maxWidth: 150,
-  backgroundColor: Colors.light.surface,
+  // Filled per theme by each variant below.
+  backgroundColor: "transparent",
   borderWidth: 2,
   borderRadius: Radius.md,
   padding: 12,
@@ -35,80 +42,95 @@ const applianceCardBox: ViewStyle = {
   overflow: "hidden",
 };
 
-export const applianceCardStyles = StyleSheet.create({
-  box: {
-    ...applianceCardBox,
-    height: 240,
-  },
+export function useApplianceCardStyles() {
+  const colors = useAppColors();
 
-  boxCompact: {
-    ...applianceCardBox,
-    height: 202,
-  },
+  return useMemo(
+    () => getApplianceCardStyles(colors),
+    [colors],
+  );
+}
 
-  boxSlim: {
-    ...applianceCardBox,
-    height: 182,
-  },
+export const getApplianceCardStyles = (
+  colors: AppColors,
+) =>
+  StyleSheet.create({
+    box: {
+      ...applianceCardBox,
+      height: 240,
+      backgroundColor: colors.surface,
+    },
 
-  imageContainer: {
-    width: 110,
-    height: 110,
-    flexShrink: 0,
-    backgroundColor: Colors.light.placeholder,
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    overflow: "hidden",
-  },
+    boxCompact: {
+      ...applianceCardBox,
+      height: 202,
+      backgroundColor: colors.surface,
+    },
 
-  image: {
-    width: "100%",
-    height: "100%",
-  },
+    boxSlim: {
+      ...applianceCardBox,
+      height: 182,
+      backgroundColor: colors.surface,
+    },
 
-  name: {
-    width: "100%",
-    height: 40,
-    flexShrink: 0,
-    color: Colors.light.text,
-    fontSize: 16,
-    fontWeight: "600",
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 8,
-  },
+    imageContainer: {
+      width: 110,
+      height: 110,
+      flexShrink: 0,
+      backgroundColor: colors.placeholder,
+      borderWidth: 2,
+      borderRadius: Radius.md,
+      overflow: "hidden",
+    },
 
-  watts: {
-    width: "100%",
-    height: 18,
-    flexShrink: 0,
-    color: Colors.light.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 2,
-  },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
 
-  status: {
-    maxWidth: "100%",
-    minHeight: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    borderRadius: Radius.md,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    marginTop: 10,
-    flexShrink: 0,
-  },
+    name: {
+      width: "100%",
+      height: 40,
+      flexShrink: 0,
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600",
+      lineHeight: 20,
+      textAlign: "center",
+      marginTop: 8,
+    },
 
-  statusText: {
-    color: Colors.light.onPrimary,
-    fontSize: 11,
-    fontWeight: "700",
-    flexShrink: 1,
-  },
-});
+    watts: {
+      width: "100%",
+      height: 18,
+      flexShrink: 0,
+      color: colors.textSecondary,
+      fontSize: 13,
+      textAlign: "center",
+      marginTop: 2,
+    },
+
+    status: {
+      maxWidth: "100%",
+      minHeight: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      borderRadius: Radius.md,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      marginTop: 10,
+      flexShrink: 0,
+    },
+
+    statusText: {
+      color: colors.onPrimary,
+      fontSize: 11,
+      fontWeight: "700",
+      flexShrink: 1,
+    },
+  });
 
 /*
  * Centered wrap grid used by the appliances screen and the modal so the

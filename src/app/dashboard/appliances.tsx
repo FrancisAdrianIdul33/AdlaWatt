@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   Pressable,
@@ -21,6 +25,10 @@ import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   Radius,
 } from "@/constants/theme";
@@ -153,6 +161,13 @@ const areaMap: Record<
 export default function AppliancesScreen() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Advisable");
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   const {
     monitoring,
@@ -389,7 +404,7 @@ export default function AppliancesScreen() {
             <Ionicons
               name="add-outline"
               size={18}
-              color={Colors.light.onPrimary}
+              color={colors.onPrimary}
             />
 
             <AppText
@@ -415,7 +430,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="flash-outline"
                 size={18}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -428,7 +443,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -448,7 +463,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="location-outline"
                 size={18}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -461,7 +476,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -664,11 +679,12 @@ const dimensions = {
   gap: 10,
 };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    scrollView: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
   content: {
     padding: dimensions.padding,
@@ -680,21 +696,21 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: dimensions.radius,
     padding: 18,
     marginBottom: 16,
   },
 
   title: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   subtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 6,
   },
 
@@ -713,13 +729,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingHorizontal: 12,
   },
 
   addButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 
@@ -733,9 +749,9 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 14,
     paddingHorizontal: 11,
     gap: 6,
@@ -743,7 +759,7 @@ const styles = StyleSheet.create({
 
   filterText: {
     flex: 1,
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
   },
 
@@ -757,7 +773,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
     marginBottom: 10,
   },
@@ -768,9 +784,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     height: 51,
     flexDirection: "row",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     padding: 3,
     marginTop: 10,
@@ -785,15 +801,16 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 13,
     fontWeight: "700",
   },
 
   activeStatusText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
+  // Frozen: dark ink on the amber caution fill in both themes.
   activeStatusTextCaution: {
     color: Colors.light.text,
   },

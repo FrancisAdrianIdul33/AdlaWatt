@@ -18,7 +18,7 @@ import {
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
@@ -148,6 +148,9 @@ export default function AppRecCard({
 }) {
   const [mode, setMode] =
     useState<Status>("advisable");
+
+  const applianceCardStyles =
+    useApplianceCardStyles();
 
   const [index, setIndex] = useState(0);
 

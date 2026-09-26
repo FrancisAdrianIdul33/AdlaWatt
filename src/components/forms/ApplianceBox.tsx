@@ -11,7 +11,7 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
@@ -52,6 +52,9 @@ export default function ApplianceBox({
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
+
+  const applianceCardStyles =
+    useApplianceCardStyles();
 
   const handleDeleteConfirm = () => {
     setDeleteMode(false);

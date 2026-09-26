@@ -6,7 +6,7 @@ import {
 } from "react-native";
 
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
@@ -36,6 +36,9 @@ export default function ComponentStatusBox({
   const statusColor = isActive
     ? Colors.light.primary
     : Colors.light.error;
+
+  const applianceCardStyles =
+    useApplianceCardStyles();
 
   return (
     <View
