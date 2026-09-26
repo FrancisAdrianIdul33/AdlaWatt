@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -22,7 +23,10 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
@@ -98,6 +102,13 @@ type DeviceStatus =
 // ============================================
 
 export default function ComponentsScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const [statusFilter, setStatusFilter] =
     useState<
       "Active" | "Inactive"
@@ -393,8 +404,8 @@ export default function ComponentsScreen() {
                 statusFilter === option && {
                   backgroundColor:
                     option === "Inactive"
-                      ? Colors.light.error
-                      : Colors.light.primary,
+                      ? colors.error
+                      : colors.primary,
                 },
 
                 pressed && styles.pressed,
@@ -541,14 +552,14 @@ export default function ComponentsScreen() {
 // ============================================
 
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) => StyleSheet.create({
 
   scrollView: {
 
     flex: 1,
 
     backgroundColor:
-      Colors.light.background,
+      colors.background,
 
   },
 
@@ -561,12 +572,12 @@ const styles = StyleSheet.create({
   card: {
 
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
 
     borderWidth: 3,
 
     borderColor:
-      Colors.light.secondary,
+      colors.secondary,
 
     borderRadius: 16,
 
@@ -576,7 +587,7 @@ const styles = StyleSheet.create({
 
   title: {
 
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "700",
 
@@ -585,7 +596,7 @@ const styles = StyleSheet.create({
   subtitle: {
 
     color:
-      Colors.light.textSecondary,
+      colors.textSecondary,
 
     marginTop: 6,
 
@@ -604,12 +615,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
 
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
 
     borderWidth: 2,
 
     borderColor:
-      Colors.light.border,
+      colors.border,
 
     borderRadius: Radius.md,
 
@@ -635,7 +646,7 @@ const styles = StyleSheet.create({
 
   statusText: {
 
-    color: Colors.light.text,
+    color: colors.text,
 
     fontSize: 13,
 
@@ -645,7 +656,7 @@ const styles = StyleSheet.create({
 
   activeStatusText: {
 
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
 
   },
 

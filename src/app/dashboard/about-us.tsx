@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Image,
   Pressable,
@@ -12,9 +12,18 @@ import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 export default function AboutUsScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   return (
     <ScreenContainer2>
@@ -102,7 +111,7 @@ export default function AboutUsScreen() {
           image={require("@/assets/images/developers/d1.jpg")}
           name="Francis Adrian Idul"
           role="Programmer"
-          roleColor= {Colors.light.primary}
+          roleColor= {colors.primary}
           description="Develops and maintains software and system firmware, integrating real-time sensor data, including battery levels, solar input, and temperature, into the mobile app and programming recommendation algorithms."
         />
 
@@ -111,7 +120,7 @@ export default function AboutUsScreen() {
           image={require("@/assets/images/developers/d2.jpg")}
           name="Rhics T. Geonzon"
           role="Documenter"
-          roleColor="#4A90E2"
+          roleColor={colors.areas.study}
           description="Authors user manuals, system setup guides, technical documentation, and safety instructions for operating the AdlaWatt hardware and mobile application."
         />
 
@@ -120,7 +129,7 @@ export default function AboutUsScreen() {
           image={require("@/assets/images/developers/d3.jpg")}
           name="Troy M. Rojo"
           role="Data Analyst"
-          roleColor="#F4C430"
+          roleColor={colors.secondary}
           description="Analyzes incoming sensor telemetry, including solar generation patterns, appliance power consumption, and battery performance, to optimize system efficiency and refine smart appliance recommendations."
         />
 
@@ -144,7 +153,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="call-outline"
               size={24}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -163,7 +172,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="mail-outline"
               size={24}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -201,6 +210,13 @@ function DeveloperProfile({
   roleColor,
   description,
 }: DeveloperProfileProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View style={styles.developerRow}>
       {/* Left Side */}
@@ -227,9 +243,9 @@ function DeveloperProfile({
               styles.roleText,
               {
                 color:
-                  roleColor === Colors.light.primary
-                    ? Colors.light.onPrimary
-                    : Colors.light.text,
+                  roleColor === colors.primary
+                    ? colors.onPrimary
+                    : colors.text,
               },
             ]}
           >
@@ -289,10 +305,11 @@ const aboutDimensions = {
    Styles
    ========================================================= */
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
 
   content: {
@@ -310,12 +327,12 @@ const styles = StyleSheet.create({
      ------------------------------------------------------- */
 
   headerCard: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
 
     borderWidth:
       aboutDimensions.headerBorderWidth,
 
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
 
     borderRadius:
       aboutDimensions.headerRadius,
@@ -326,13 +343,13 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "700",
   },
 
   headerSubtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
 
     marginTop: 6,
 
@@ -350,7 +367,7 @@ const styles = StyleSheet.create({
   },
 
   adlawattTitle: {
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "700",
 
@@ -358,7 +375,7 @@ const styles = StyleSheet.create({
   },
 
   adlawattSubtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
 
     marginTop: 5,
 
@@ -368,7 +385,7 @@ const styles = StyleSheet.create({
   },
 
   overview: {
-    color: Colors.light.text,
+    color: colors.text,
 
     marginTop: 14,
 
@@ -384,7 +401,7 @@ const styles = StyleSheet.create({
      ------------------------------------------------------- */
 
   sectionTitle: {
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "700",
 
@@ -457,12 +474,12 @@ const styles = StyleSheet.create({
   developerInfo: {
     flex: 1,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
 
     borderWidth:
       aboutDimensions.glassBorderWidth,
 
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
 
     borderRadius:
       aboutDimensions.glassRadius,
@@ -473,7 +490,7 @@ const styles = StyleSheet.create({
   },
 
   developerName: {
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "600",
 
@@ -483,7 +500,7 @@ const styles = StyleSheet.create({
   },
 
   developerDescription: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
 
     marginTop: 6,
 
@@ -519,12 +536,12 @@ const styles = StyleSheet.create({
 
     gap: 12,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
 
     borderWidth:
       aboutDimensions.glassBorderWidth,
 
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
 
     borderRadius:
       aboutDimensions.contactRadius,
@@ -537,7 +554,7 @@ const styles = StyleSheet.create({
   },
 
   contactText: {
-    color: Colors.light.text,
+    color: colors.text,
 
     fontWeight: "500",
 

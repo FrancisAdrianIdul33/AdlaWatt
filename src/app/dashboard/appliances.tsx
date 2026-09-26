@@ -83,34 +83,44 @@ const STATUS_FOR_FILTER: Record<
   notAdvisable: "notAdvisable",
 };
 
-const TOGGLE_META: {
+const TOGGLE_META_BASE: {
   filter: StatusFilter;
   label: string;
-  color: string;
+  tone: "primary" | "warning" | "error";
   accessibilityLabel: string;
 }[] = [
   {
     filter: "Advisable",
     label: "Advisable",
-    color: Colors.light.primary,
+    tone: "primary",
     accessibilityLabel:
       "Show advisable appliances",
   },
   {
     filter: "Caution",
     label: "Caution",
-    color: Colors.light.warning,
+    tone: "warning",
     accessibilityLabel:
       "Show appliances to use with care",
   },
   {
     filter: "notAdvisable",
     label: "Not Advisable",
-    color: Colors.light.error,
+    tone: "error",
     accessibilityLabel:
       "Show not advisable appliances",
   },
 ];
+
+const getToggleColor = (
+  colors: AppColors,
+  tone: "primary" | "warning" | "error",
+) =>
+  tone === "warning"
+    ? colors.warning
+    : tone === "error"
+      ? colors.error
+      : colors.primary;
 
 const statusMeta = (
   status: ApplianceStatus,
@@ -484,15 +494,20 @@ export default function AppliancesScreen() {
 
         {/* Status Filter */}
         <View style={styles.statusToggle}>
-          {TOGGLE_META.map(
+          {TOGGLE_META_BASE.map(
             ({
               filter,
               label,
-              color,
+              tone,
               accessibilityLabel,
             }) => {
               const active =
                 statusFilter === filter;
+              const color =
+                getToggleColor(
+                  colors,
+                  tone,
+                );
 
               return (
                 <Pressable

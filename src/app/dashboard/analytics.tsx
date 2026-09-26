@@ -11,7 +11,10 @@ import {
   DropdownModal,
   RadioOptionRow,
 } from "@/components/ui/DropdownModal";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   AnalyticsRange,
   ApplianceUsageHistoryRow,
@@ -51,6 +54,13 @@ import {
    ============================================================ */
 
 export default function AnalyticsScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const [
     monitoringHistory,
     setMonitoringHistory,
@@ -497,7 +507,7 @@ const analyticsDimensions = {
    STYLES
    ============================================================ */
 
-const styles =
+const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     /* ========================================================
        MAIN SCREEN
@@ -506,7 +516,7 @@ const styles =
     scrollView: {
       flex: 1,
       backgroundColor:
-        Colors.light.background,
+        colors.background,
     },
 
     content: {
@@ -524,11 +534,11 @@ const styles =
 
     headerCard: {
       backgroundColor:
-        Colors.glass.white,
+        colors.glass.white,
       borderWidth:
         analyticsDimensions.headerBorderWidth,
       borderColor:
-        Colors.light.secondary,
+        colors.secondary,
       borderRadius:
         analyticsDimensions.headerRadius,
       padding: 18,
@@ -536,13 +546,13 @@ const styles =
     },
 
     headerTitle: {
-      color: Colors.light.text,
+      color: colors.text,
       fontWeight: "700",
     },
 
     headerSubtitle: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
       marginTop: 6,
       lineHeight: 20,
     },

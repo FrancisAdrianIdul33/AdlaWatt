@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import {
   Alert,
@@ -25,7 +25,10 @@ import {
   RadioOptionRow,
 } from "@/components/ui/DropdownModal";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 import { Routes } from "@/constants/routes";
 
@@ -172,6 +175,12 @@ export default function SettingsScreen() {
     family: inputFontFamily,
     weight: inputFontWeight,
   } = useTypography();
+
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   const inputFontStyle = {
     fontSize: scaledInputSize(15),
@@ -605,12 +614,12 @@ export default function SettingsScreen() {
         decorative ? "none" : "auto"
       }
       trackColor={{
-        false: Colors.light.border,
-        true: Colors.light.primary,
+        false: colors.border,
+        true: colors.primary,
       }}
-      thumbColor={Colors.light.surface}
+      thumbColor={colors.surface}
       ios_backgroundColor={
-        Colors.light.border
+        colors.border
       }
     />
   );
@@ -765,7 +774,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="person"
               size={60}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -792,7 +801,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="settings"
               size={60}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -819,7 +828,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="hardware-chip"
               size={60}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -846,7 +855,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="list"
               size={60}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -873,7 +882,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="information-circle"
               size={60}
-              color={Colors.light.primary}
+              color={colors.primary}
             />
 
             <AppText
@@ -988,7 +997,7 @@ export default function SettingsScreen() {
                       ]}
                       placeholder="Enter username"
                       placeholderTextColor={
-                        Colors.light.textSecondary
+                        colors.textSecondary
                       }
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -1017,7 +1026,7 @@ export default function SettingsScreen() {
                       ]}
                       placeholder="Enter email"
                       placeholderTextColor={
-                        Colors.light.textSecondary
+                        colors.textSecondary
                       }
                       keyboardType="email-address"
                       autoCapitalize="none"
@@ -1052,7 +1061,7 @@ export default function SettingsScreen() {
                         ]}
                         placeholder="Leave blank to keep current"
                         placeholderTextColor={
-                          Colors.light.textSecondary
+                          colors.textSecondary
                         }
                         secureTextEntry={
                           !showNewPassword
@@ -1077,7 +1086,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color={Colors.light.text}
+                          color={colors.text}
                         />
                       </Pressable>
                     </View>
@@ -1114,7 +1123,7 @@ export default function SettingsScreen() {
                         ]}
                         placeholder="Confirm new password"
                         placeholderTextColor={
-                          Colors.light.textSecondary
+                          colors.textSecondary
                         }
                         secureTextEntry={
                           !showConfirmPassword
@@ -1139,7 +1148,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color={Colors.light.text}
+                          color={colors.text}
                         />
                       </Pressable>
                     </View>
@@ -1155,7 +1164,7 @@ export default function SettingsScreen() {
                       <Ionicons
                         name="alert-circle-outline"
                         size={18}
-                        color={Colors.light.error}
+                        color={colors.error}
                       />
 
                       <AppText
@@ -1397,7 +1406,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color={Colors.light.text}
+                    color={colors.text}
                   />
                 </Pressable>
               </View>
@@ -1428,7 +1437,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color={Colors.light.text}
+                    color={colors.text}
                   />
                 </Pressable>
               </View>
@@ -1623,7 +1632,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="log-out-outline"
               size={22}
-              color={Colors.light.error}
+              color={colors.error}
             />
 
             <AppText
@@ -1648,7 +1657,7 @@ export default function SettingsScreen() {
               <Ionicons
                 name="exit-outline"
                 size={22}
-                color={Colors.light.text}
+                color={colors.text}
               />
 
               <AppText
@@ -1704,7 +1713,7 @@ export default function SettingsScreen() {
                 <Ionicons
                   name="alert-circle-outline"
                   size={18}
-                  color={Colors.light.error}
+                  color={colors.error}
                 />
 
                 <AppText
@@ -1743,7 +1752,7 @@ export default function SettingsScreen() {
                   ]}
                   placeholder="Enter current password"
                   placeholderTextColor={
-                    Colors.light.textSecondary
+                    colors.textSecondary
                   }
                   secureTextEntry={
                     !showCurrentPassword
@@ -1774,7 +1783,7 @@ export default function SettingsScreen() {
                         : "eye-off-outline"
                     }
                     size={22}
-                    color={Colors.light.text}
+                    color={colors.text}
                   />
                 </Pressable>
               </View>
@@ -1851,11 +1860,12 @@ const settingsDimensions = {
   innerRadius: 12,
 };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    scrollView: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
   content: {
     paddingHorizontal:
@@ -1867,21 +1877,21 @@ const styles = StyleSheet.create({
   /* ================= HEADER ================= */
 
   headerCard: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: settingsDimensions.borderWidth,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: settingsDimensions.borderRadius,
     padding: 18,
     marginBottom: settingsDimensions.sectionSpacing,
   },
 
   headerTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   headerSubtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -1902,9 +1912,9 @@ const styles = StyleSheet.create({
     width: "46%",
     maxWidth: 150,
     minHeight: 150,
-    backgroundColor: Colors.light.surface,
+    backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: Radius.md,
     padding: 12,
     alignItems: "center",
@@ -1914,11 +1924,11 @@ const styles = StyleSheet.create({
 
   menuBoxActive: {
     backgroundColor:
-      Colors.light.primaryWash,
+      colors.primaryWash,
   },
 
   menuBoxText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
     fontSize: 16,
     textAlign: "center",
@@ -1932,19 +1942,19 @@ const styles = StyleSheet.create({
   },
 
   infoLabel: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
     marginBottom: 4,
   },
 
   infoValue: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "500",
   },
 
   primaryButton: {
     minHeight: 44,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -1954,15 +1964,15 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 
   secondaryButton: {
     minHeight: 44,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -1970,7 +1980,7 @@ const styles = StyleSheet.create({
   },
 
   secondaryButtonText: {
-    color: Colors.light.secondary,
+    color: colors.secondary,
     fontWeight: "700",
   },
 
@@ -1998,27 +2008,27 @@ const styles = StyleSheet.create({
   },
 
   inputLabel: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
     marginBottom: 6,
   },
 
   input: {
     minHeight: 48,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 14,
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 15,
   },
 
   passwordInputContainer: {
     minHeight: 48,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.error,
+    borderColor: colors.error,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -2028,7 +2038,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     paddingHorizontal: 14,
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 15,
   },
 
@@ -2056,12 +2066,12 @@ const styles = StyleSheet.create({
   },
 
   preferenceTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
   },
 
   preferenceDescription: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 3,
     lineHeight: 18,
   },
@@ -2073,7 +2083,7 @@ const styles = StyleSheet.create({
   },
 
   groupLabel: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
     marginBottom: 8,
   },
@@ -2086,9 +2096,9 @@ const styles = StyleSheet.create({
   optionButton: {
     flex: 1,
     minHeight: 48,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -2096,25 +2106,25 @@ const styles = StyleSheet.create({
   },
 
   selectedOption: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
   optionText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "600",
     fontSize: 14,
   },
 
   selectedOptionText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   dropdownInput: {
     minHeight: 48,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     flexDirection: "row",
@@ -2123,7 +2133,7 @@ const styles = StyleSheet.create({
   },
 
   dropdownInputText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "500",
   },
 
@@ -2154,32 +2164,32 @@ const styles = StyleSheet.create({
   },
 
   modalCancelButton: {
-    backgroundColor: Colors.light.surface,
-    borderColor: Colors.light.error,
+    backgroundColor: colors.surface,
+    borderColor: colors.error,
   },
 
   modalCancelButtonText: {
-    color: Colors.light.error,
+    color: colors.error,
     fontWeight: "700",
   },
 
   modalSubmitButton: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
   modalSubmitButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 
   modalCloseButton: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
   modalCloseButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 
@@ -2190,20 +2200,20 @@ const styles = StyleSheet.create({
   },
 
   versionCard: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: settingsDimensions.borderWidth,
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
     borderRadius: settingsDimensions.borderRadius,
     padding: 18,
   },
 
   versionTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   versionNumber: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
 
@@ -2224,24 +2234,24 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 2,
     borderRadius: Radius.md,
-    backgroundColor: Colors.light.surface,
+    backgroundColor: colors.surface,
   },
 
   logOutButton: {
-    borderColor: Colors.light.error,
+    borderColor: colors.error,
   },
 
   logOutButtonText: {
-    color: Colors.light.error,
+    color: colors.error,
     fontWeight: "700",
   },
 
   exitButton: {
-    borderColor: Colors.light.text,
+    borderColor: colors.text,
   },
 
   exitButtonText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
@@ -2249,7 +2259,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: Colors.light.overlayStrong,
+    backgroundColor: colors.overlayStrong,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -2258,21 +2268,21 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 430,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
     borderWidth: 3,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 18,
     padding: 20,
     elevation: 10,
   },
 
   modalTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   modalDescription: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 7,
     marginBottom: 18,
     lineHeight: 20,
@@ -2285,7 +2295,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   warningText: {
-    color: Colors.light.error,
+    color: colors.error,
     fontSize: 13,
     fontWeight: "600",
   },

@@ -22,7 +22,10 @@ import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/
 import ActivityLogCard, { ACTIVITY_LOG_GAP } from "@/components/ActivityLogCard";
 import EmptyState from "@/components/ui/EmptyState";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
@@ -49,6 +52,13 @@ type ActivityLog = {
 };
 
 export default function ActivityLogsScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const [activityLogs, setActivityLogs] =
     useState<ActivityLog[]>([]);
 
@@ -373,7 +383,7 @@ export default function ActivityLogsScreen() {
               <Ionicons
                 name="time-outline"
                 size={19}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -386,7 +396,7 @@ export default function ActivityLogsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={18}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -412,10 +422,10 @@ export default function ActivityLogsScreen() {
                 color={
                   typeFilter === "error" ||
                   typeFilter === "critical"
-                    ? Colors.light.error
+                    ? colors.error
                     : typeFilter === "warning"
-                      ? Colors.light.secondary
-                      : Colors.light.primary
+                      ? colors.secondary
+                      : colors.primary
                 }
               />
 
@@ -429,7 +439,7 @@ export default function ActivityLogsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={18}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -523,31 +533,31 @@ export default function ActivityLogsScreen() {
             value: "all" as const,
             label: "All",
             icon: "list-outline" as const,
-            color: Colors.light.primary,
+            color: colors.primary,
           },
           {
             value: "info" as const,
             label: "Info",
             icon: "information-circle-outline" as const,
-            color: Colors.light.primary,
+            color: colors.primary,
           },
           {
             value: "warning" as const,
             label: "Warning",
             icon: "warning-outline" as const,
-            color: Colors.light.secondary,
+            color: colors.secondary,
           },
           {
             value: "error" as const,
             label: "Error",
             icon: "alert-circle-outline" as const,
-            color: Colors.light.error,
+            color: colors.error,
           },
           {
             value: "critical" as const,
             label: "Critical",
             icon: "alert-circle-outline" as const,
-            color: Colors.light.error,
+            color: colors.error,
           },
         ].map((option) => (
           <TintedOptionRow
@@ -583,10 +593,11 @@ const dashboardDimensions = {
     filterRadius: 14,
   };
 
-  const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
     scrollView: {
       flex: 1,
-      backgroundColor: Colors.light.background,
+      backgroundColor: colors.background,
     },
 
     content: {
@@ -602,10 +613,10 @@ const dashboardDimensions = {
     /* Header */
 
     headerCard: {
-      backgroundColor: Colors.glass.white,
+      backgroundColor: colors.glass.white,
 
       borderWidth: 3,
-      borderColor: Colors.light.primary,
+      borderColor: colors.primary,
 
       borderRadius:
         dashboardDimensions.cardRadius,
@@ -617,12 +628,12 @@ const dashboardDimensions = {
     },
 
     title: {
-      color: Colors.light.text,
+      color: colors.text,
       fontWeight: "700",
     },
 
     subtitle: {
-      color: Colors.light.textSecondary,
+      color: colors.textSecondary,
       marginTop: 6,
       lineHeight: 20,
     },
@@ -636,12 +647,12 @@ const dashboardDimensions = {
     },
 
     totalLabel: {
-      color: Colors.light.textSecondary,
+      color: colors.textSecondary,
       textAlign: "right",
     },
 
     totalValue: {
-      color: Colors.light.text,
+      color: colors.text,
       fontWeight: "700",
     },
 
@@ -678,11 +689,11 @@ const dashboardDimensions = {
 
       gap: 8,
 
-      backgroundColor: Colors.glass.white,
+      backgroundColor: colors.glass.white,
 
       borderWidth: 3,
 
-      borderColor: Colors.light.primary,
+      borderColor: colors.primary,
 
       borderRadius:
         dashboardDimensions.filterRadius,
@@ -691,7 +702,7 @@ const dashboardDimensions = {
     filterText: {
       flex: 1,
 
-      color: Colors.light.text,
+      color: colors.text,
 
       fontWeight: "600",
     },
