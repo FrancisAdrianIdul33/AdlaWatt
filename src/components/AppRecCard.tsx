@@ -24,6 +24,10 @@ import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
@@ -148,6 +152,13 @@ export default function AppRecCard({
 }) {
   const [mode, setMode] =
     useState<Status>("advisable");
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   const applianceCardStyles =
     useApplianceCardStyles();
@@ -448,7 +459,7 @@ export default function AppRecCard({
                   <Ionicons
                     name="add"
                     size={21}
-                    color={Colors.light.onPrimary}
+                        color={colors.onPrimary}
                   />
 
                 <AppText
@@ -484,7 +495,7 @@ export default function AppRecCard({
           <Ionicons
             name="bulb-outline"
             size={19}
-            color={Colors.light.secondary}
+            color={colors.secondary}
           />
 
           <View style={styles.tipContent}>
@@ -580,7 +591,7 @@ export default function AppRecCard({
                       <Ionicons
                         name={meta.icon}
                         size={13}
-                        color={Colors.light.onPrimary}
+                  color={colors.onPrimary}
                       />
 
                       <AppText
@@ -625,7 +636,7 @@ export default function AppRecCard({
                           itemIndex === activeIndicator
                             ? currentAppliances[0]
                                 .color
-                            : Colors.light.border,
+                            : colors.border,
                       },
                     ]}
                   />
@@ -717,7 +728,8 @@ export default function AppRecCard({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   wrapper: {
     width: "100%",
     alignItems: "center",
@@ -805,9 +817,9 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     height: 51,
     flexDirection: "row",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     padding: 3,
   },
@@ -821,15 +833,16 @@ const styles = StyleSheet.create({
   },
 
   toggleText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 13,
     fontWeight: "700",
   },
 
   activeToggleText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
+  // Frozen: dark ink on the amber caution fill in both themes.
   activeToggleTextCaution: {
     color: Colors.light.text,
   },
@@ -847,9 +860,9 @@ const styles = StyleSheet.create({
     minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     padding: 10,
     marginTop: 5,
@@ -862,14 +875,14 @@ const styles = StyleSheet.create({
   },
 
   tipTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
   },
 
   tipText: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 17,
     flexShrink: 1,
@@ -892,9 +905,9 @@ const styles = StyleSheet.create({
   getStartedBox: {
     width: "100%",
     height: 275,
-    backgroundColor: Colors.light.surface,
+    backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     paddingVertical: 22,
     paddingHorizontal: 16,
@@ -903,7 +916,7 @@ const styles = StyleSheet.create({
   },
 
   getStartedTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 16,
@@ -917,12 +930,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
   },
 
   addAppliancesButtonText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 

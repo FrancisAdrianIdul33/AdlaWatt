@@ -109,6 +109,8 @@ export default function ApplianceStatusBox({
         <Ionicons
           name={iconName}
           size={13}
+          // Frozen pairing: white on the frozen status fill,
+          // identical in both themes.
           color={Colors.light.onPrimary}
         />
 
