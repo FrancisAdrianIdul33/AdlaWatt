@@ -9,9 +9,9 @@ import {
   LineChart,
 } from "react-native-gifted-charts";
 import {
-  CHART_COLORS,
   CHART_HEIGHT,
   clampPercent,
+  useChartColors,
 } from "@/services/chartMath";
 import { useTypography } from "@/hooks/useTypography";
 
@@ -50,6 +50,8 @@ export default function BatteryLevelChart({
   // Family-only: axis sizes stay 10 by design, only the
   // typeface follows Preferences.
   const { family } = useTypography();
+  // Series colors frozen; grid/axis neutrals follow theme.
+  const chartColors = useChartColors();
 
   const isEmpty = points.length < 2;
 
@@ -85,13 +87,13 @@ export default function BatteryLevelChart({
         )}
         curved
         areaChart
-        color={CHART_COLORS.green}
+        color={chartColors.green}
         thickness={2.5}
         startFillColor={
-          CHART_COLORS.green
+          chartColors.green
         }
         endFillColor={
-          CHART_COLORS.green
+          chartColors.green
         }
         startOpacity={0.32}
         endOpacity={0.02}
@@ -107,32 +109,32 @@ export default function BatteryLevelChart({
         endSpacing={8}
         rulesType="solid"
         rulesColor={
-          CHART_COLORS.grid
+          chartColors.grid
         }
         rulesThickness={1}
         showVerticalLines={false}
         yAxisColor={
-          CHART_COLORS.grid
+          chartColors.grid
         }
         xAxisColor={
-          CHART_COLORS.grid
+          chartColors.grid
         }
         yAxisTextStyle={{
           fontSize: 10,
           fontFamily: family,
           color:
-            CHART_COLORS.axisLabel,
+            chartColors.axisLabel,
         }}
         xAxisLabelTextStyle={{
           fontSize: 10,
           fontFamily: family,
           color:
-            CHART_COLORS.axisLabel,
+            chartColors.axisLabel,
         }}
         showReferenceLine1
         referenceLine1Position={20}
         referenceLine1Config={{
-          color: CHART_COLORS.red,
+          color: chartColors.red,
           thickness: 1.5,
           type: "dashed",
           dashWidth: 4,

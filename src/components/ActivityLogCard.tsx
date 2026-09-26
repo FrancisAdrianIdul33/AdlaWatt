@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
   StyleSheet,
@@ -9,7 +9,10 @@ import {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 // ============================================================
 // ACTIVITY LOG CARD
@@ -55,20 +58,23 @@ function getActivityIcon(
   }
 }
 
-function getActivityColor(type: ActivityLogType): string {
+function getActivityColor(
+  type: ActivityLogType,
+  colors: AppColors,
+): string {
   switch (type) {
     case "info":
-      return Colors.light.primary;
+      return colors.primary;
 
     case "warning":
-      return Colors.light.secondary;
+      return colors.secondary;
 
     case "error":
     case "critical":
-      return Colors.light.error;
+      return colors.error;
 
     default:
-      return Colors.light.primary;
+      return colors.primary;
   }
 }
 
@@ -77,7 +83,14 @@ export default function ActivityLogCard({
 }: {
   item: ActivityLogItem;
 }) {
-  const color = getActivityColor(item.type);
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
+  const color = getActivityColor(item.type, colors);
 
   return (
     <View style={styles.card}>
@@ -115,12 +128,13 @@ export default function ActivityLogCard({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   card: {
     width: "100%",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 12,
   },
@@ -137,18 +151,18 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   details: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 3,
     lineHeight: 18,
   },
 
   timestamp: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 5,
     fontSize: 11,
   },

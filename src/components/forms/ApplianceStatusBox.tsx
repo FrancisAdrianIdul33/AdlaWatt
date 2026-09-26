@@ -10,7 +10,7 @@ import {
   useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import { useAppColors } from "@/hooks/useAppColors";
 
 type StatusTone =
   | "ok"
@@ -34,6 +34,7 @@ export default function ApplianceStatusBox({
   statusTone,
   imageSource = defaultImage,
 }: ApplianceStatusBoxProps) {
+  const colors = useAppColors();
   const tone: StatusTone =
     statusTone ?? (
       status === "OK to use"
@@ -43,10 +44,10 @@ export default function ApplianceStatusBox({
 
   const statusColor =
     tone === "care"
-      ? Colors.light.warning
+      ? colors.warning
       : tone === "not"
-        ? Colors.light.error
-        : Colors.light.primary;
+        ? colors.error
+        : colors.primary;
 
   const applianceCardStyles =
     useApplianceCardStyles();
@@ -111,7 +112,7 @@ export default function ApplianceStatusBox({
           size={13}
           // Frozen pairing: white on the frozen status fill,
           // identical in both themes.
-          color={Colors.light.onPrimary}
+          color={colors.onPrimary}
         />
 
         <AppText

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import React, {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -22,7 +23,10 @@ import Svg, {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 import type { ForecastResult } from "@/services/forecast";
 
@@ -178,8 +182,6 @@ const SUN_GREY = "#dcdc6d";
 
 const SUN_MODERATE = "#EDEB44";
 
-const SUN_HIGH = Colors.light.secondary;
-
 const SOLAR_ANIMATION_DURATION_MS = 2000;
 
 const SOLAR_RAYS = Array.from(
@@ -250,6 +252,15 @@ export default function ChartCard({
   // per-type branches below.
   const { width: screenWidth } = useWindowDimensions();
 
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
+  const sunHigh = colors.secondary;
+
   // ==========================================================
   // SUN GAUGE ANIMATION
   //
@@ -273,7 +284,7 @@ export default function ChartCard({
       outputRange: [
         SUN_GREY,
         SUN_MODERATE,
-        SUN_HIGH,
+        sunHigh,
       ],
     });
 
@@ -546,8 +557,8 @@ export default function ChartCard({
 
     const batteryColor =
       isLowBattery
-        ? Colors.light.error
-        : Colors.light.primary;
+        ? colors.error
+        : colors.primary;
 
     const dashOffset =
       CIRCUMFERENCE *
@@ -603,6 +614,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     const wattHourData =
@@ -611,6 +623,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     const isLowWattHours =
@@ -627,6 +640,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     /*
@@ -656,6 +670,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     const interiorTemperatureValue =
@@ -668,11 +683,13 @@ export default function ChartCard({
     const interiorTemperatureBadge =
       getTemperatureBadgeStyle(
         interiorTemperatureStatus,
+        styles,
       );
 
     const interiorTemperatureBadgeText =
       getTemperatureBadgeTextStyle(
         interiorTemperatureStatus,
+        styles,
       );
 
     return (
@@ -702,7 +719,7 @@ export default function ChartCard({
             <Ionicons
               name="flash-outline"
               size={30}
-              color={Colors.light.iconAccent}
+              color={colors.iconAccent}
             />
 
             <AppText
@@ -791,7 +808,7 @@ export default function ChartCard({
                     cx={CENTER}
                     cy={CENTER}
                     r={RADIUS}
-                    stroke="#D8D6CC"
+                    stroke={colors.border}
                     strokeWidth={STROKE}
                     fill="none"
                   />
@@ -1194,6 +1211,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     // --------------------------------------------------------
@@ -1234,7 +1252,7 @@ export default function ChartCard({
             <Ionicons
               name="sunny-outline"
               size={30}
-              color={Colors.light.iconAccent}
+              color={colors.iconAccent}
             />
 
             <AppText
@@ -1584,6 +1602,7 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+        styles,
       );
 
     // ========================================================
@@ -1635,7 +1654,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={30}
-              color={Colors.light.iconAccent}
+              color={colors.iconAccent}
             />
 
             <AppText
@@ -1717,7 +1736,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={26}
-              color={Colors.light.iconAccent}
+              color={colors.iconAccent}
             />
 
             <AppText
@@ -1751,7 +1770,7 @@ export default function ChartCard({
               <Ionicons
                 name="warning-outline"
                 size={20}
-                color={Colors.light.errorDark}
+                color={colors.errorDark}
                 style={{ marginRight: 8 }}
               />
 
@@ -1836,7 +1855,7 @@ export default function ChartCard({
                           day.peakIcon as keyof typeof Ionicons.glyphMap
                         }
                         size={26}
-                        color={Colors.light.iconAccent}
+                        color={colors.iconAccent}
                       />
 
                       <AppText
@@ -1866,7 +1885,7 @@ export default function ChartCard({
                           name="water-outline"
                           size={11}
                           color={
-                            Colors.light.primary
+                            colors.primary
                           }
                         />
 
@@ -1997,7 +2016,7 @@ export default function ChartCard({
               name="location-outline"
               size={14}
               color={
-                Colors.light.textSecondary
+                colors.textSecondary
               }
               style={{ marginRight: 4 }}
             />
@@ -2073,6 +2092,7 @@ export default function ChartCard({
       monitoring,
       weather ?? null,
       loading,
+      styles,
     );
 
   const isSafe =
@@ -2103,7 +2123,7 @@ export default function ChartCard({
         <Ionicons
           name={data.icon}
           size={28}
-          color={Colors.light.primary}
+          color={colors.primary}
         />
 
       </View>
@@ -2182,7 +2202,8 @@ function getCardData(
   type: NonBatteryChartType,
   monitoring: MonitoringData | null,
   weather: WeatherData | null,
-  loading: boolean
+  loading: boolean,
+  themedStyles: ReturnType<typeof getStyles>,
 ): CardData {
 
   switch (type) {
@@ -2272,17 +2293,17 @@ function getCardData(
 
         badgeStyle:
           solarStatus === "High"
-            ? styles.normalBadge
+            ? themedStyles.normalBadge
             : solarStatus ===
                 "Moderate"
-              ? styles.moderateBadge
-              : styles.lowBadge,
+              ? themedStyles.moderateBadge
+              : themedStyles.lowBadge,
 
         badgeTextStyle:
           solarStatus ===
           "Moderate"
-            ? styles.darkBadgeText
-            : styles.lightBadgeText,
+            ? themedStyles.darkBadgeText
+            : themedStyles.lightBadgeText,
       };
     }
 
@@ -2417,11 +2438,13 @@ function getCardData(
         badgeStyle:
           getWeatherBadgeStyle(
             description,
+            themedStyles,
           ),
 
         badgeTextStyle:
           getWeatherBadgeTextStyle(
             description,
+            themedStyles,
           ),
       };
     }
@@ -2475,11 +2498,13 @@ function getCardData(
         badgeStyle:
           getTemperatureBadgeStyle(
             status,
+            themedStyles,
           ),
 
         badgeTextStyle:
           getTemperatureBadgeTextStyle(
             status,
+            themedStyles,
           ),
       };
     }
@@ -2515,11 +2540,13 @@ function getCardData(
         badgeStyle:
           getTemperatureBadgeStyle(
             status,
+            themedStyles,
           ),
 
         badgeTextStyle:
           getTemperatureBadgeTextStyle(
             status,
+            themedStyles,
           ),
       };
     }
@@ -2615,10 +2642,11 @@ function getWeatherSeverity(
 
 function getWeatherBadgeStyle(
   description: string,
+  themedStyles: ReturnType<typeof getStyles>,
 ) {
   switch (getWeatherSeverity(description)) {
     case "clear":
-      return styles.clearWeatherBadge;
+      return themedStyles.clearWeatherBadge;
 
     case "cloudy":
       // Few / scattered / broken clouds feel "partly".
@@ -2627,25 +2655,25 @@ function getWeatherBadgeStyle(
           description.toLowerCase(),
         )
       ) {
-        return styles.partlyCloudyWeatherBadge;
+        return themedStyles.partlyCloudyWeatherBadge;
       }
 
-      return styles.overcastWeatherBadge;
+      return themedStyles.overcastWeatherBadge;
 
     case "fog":
-      return styles.fogWeatherBadge;
+      return themedStyles.fogWeatherBadge;
 
     case "light":
-      return styles.yellowWeatherBadge;
+      return themedStyles.yellowWeatherBadge;
 
     case "moderate":
-      return styles.orangeWeatherBadge;
+      return themedStyles.orangeWeatherBadge;
 
     case "severe":
-      return styles.redWeatherBadge;
+      return themedStyles.redWeatherBadge;
 
     default:
-      return styles.clearWeatherBadge;
+      return themedStyles.clearWeatherBadge;
   }
 }
 
@@ -2655,10 +2683,11 @@ function getWeatherBadgeStyle(
 
 function getWeatherBadgeTextStyle(
   description: string,
+  themedStyles: ReturnType<typeof getStyles>,
 ) {
   switch (getWeatherSeverity(description)) {
     case "clear":
-      return styles.clearWeatherBadgeText;
+      return themedStyles.clearWeatherBadgeText;
 
     case "cloudy":
       // Few / scattered / broken clouds feel "partly".
@@ -2667,25 +2696,25 @@ function getWeatherBadgeTextStyle(
           description.toLowerCase(),
         )
       ) {
-        return styles.partlyCloudyWeatherBadgeText;
+        return themedStyles.partlyCloudyWeatherBadgeText;
       }
 
-      return styles.overcastWeatherBadgeText;
+      return themedStyles.overcastWeatherBadgeText;
 
     case "fog":
-      return styles.fogWeatherBadgeText;
+      return themedStyles.fogWeatherBadgeText;
 
     case "light":
-      return styles.yellowWeatherBadgeText;
+      return themedStyles.yellowWeatherBadgeText;
 
     case "moderate":
-      return styles.orangeWeatherBadgeText;
+      return themedStyles.orangeWeatherBadgeText;
 
     case "severe":
-      return styles.redWeatherBadgeText;
+      return themedStyles.redWeatherBadgeText;
 
     default:
-      return styles.clearWeatherBadgeText;
+      return themedStyles.clearWeatherBadgeText;
   }
 }
 
@@ -2695,25 +2724,26 @@ function getWeatherBadgeTextStyle(
 
 function getTemperatureBadgeStyle(
   status: TemperatureStatus,
+  themedStyles: ReturnType<typeof getStyles>,
 ) {
 
   switch (status) {
 
     case "Nominal":
 
-      return styles.nominalTemperatureBadge;
+      return themedStyles.nominalTemperatureBadge;
 
     case "Elevated":
 
-      return styles.elevatedTemperatureBadge;
+      return themedStyles.elevatedTemperatureBadge;
 
     case "High":
 
-      return styles.highTemperatureBadge;
+      return themedStyles.highTemperatureBadge;
 
     case "Critical":
 
-      return styles.criticalTemperatureBadge;
+      return themedStyles.criticalTemperatureBadge;
 
   }
 }
@@ -2724,25 +2754,26 @@ function getTemperatureBadgeStyle(
 
 function getTemperatureBadgeTextStyle(
   status: TemperatureStatus,
+  themedStyles: ReturnType<typeof getStyles>,
 ) {
 
   switch (status) {
 
     case "Nominal":
 
-      return styles.nominalTemperatureBadgeText;
+      return themedStyles.nominalTemperatureBadgeText;
 
     case "Elevated":
 
-      return styles.elevatedTemperatureBadgeText;
+      return themedStyles.elevatedTemperatureBadgeText;
 
     case "High":
 
-      return styles.highTemperatureBadgeText;
+      return themedStyles.highTemperatureBadgeText;
 
     case "Critical":
 
-      return styles.criticalTemperatureBadgeText;
+      return themedStyles.criticalTemperatureBadgeText;
 
   }
 }
@@ -2751,7 +2782,8 @@ function getTemperatureBadgeTextStyle(
 // STYLES
 // ============================================================
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
 
   // ==========================================================
   // BATTERY
@@ -2814,14 +2846,14 @@ const styles = StyleSheet.create({
   },
 
   batteryPercentage: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
   },
 
   lowBatteryText: {
-    color: Colors.light.error,
+    color: colors.error,
   },
 
   batteryStatusRow: {
@@ -2834,7 +2866,7 @@ const styles = StyleSheet.create({
 
   batteryStatus: {
     backgroundColor:
-      Colors.light.primary,
+      colors.primary,
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 3,
@@ -2846,18 +2878,18 @@ const styles = StyleSheet.create({
 
   batteryStatusIdle: {
     backgroundColor:
-      Colors.light.error,
+      colors.error,
   },
 
   batteryStatusText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontSize: 12,
     fontWeight: "600",
   },
 
   remainingText: {
     color:
-      Colors.light.textSecondary,
+      colors.textSecondary,
     marginTop: 3,
     textAlign: "center",
     fontSize: 11,
@@ -2905,7 +2937,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricLabel: {
-    color: Colors.light.text,
+    color: colors.text,
     textAlign: "center",
     fontSize: 12,
     fontWeight: "600",
@@ -2914,7 +2946,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricValue: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -2931,10 +2963,10 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 108,
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
     borderWidth: 3,
     borderColor:
-      Colors.light.primary,
+      colors.primary,
     borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -2969,7 +3001,7 @@ const styles = StyleSheet.create({
   groupHeaderPanel: {
     width: "100%",
     backgroundColor:
-      Colors.light.primary,
+      colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -2985,7 +3017,7 @@ const styles = StyleSheet.create({
   },
 
   groupHeaderTitle: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3011,7 +3043,7 @@ const styles = StyleSheet.create({
   weatherHeaderPanel: {
     width: "100%",
     backgroundColor:
-      Colors.light.primary,
+      colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -3027,7 +3059,7 @@ const styles = StyleSheet.create({
   },
 
   weatherHeaderTitle: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3061,7 +3093,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastTag: {
-    color: Colors.light.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -3071,9 +3103,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -3096,9 +3128,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor:
-      Colors.glass.white,
+      colors.glass.white,
     borderWidth: 1.5,
-    borderColor: Colors.light.secondary,
+    borderColor: colors.secondary,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -3106,7 +3138,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastWeekday: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
@@ -3114,7 +3146,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastDate: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
@@ -3122,7 +3154,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastTemp: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -3132,7 +3164,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastTempMin: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "400",
   },
@@ -3145,13 +3177,13 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastPop: {
-    color: Colors.light.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: "600",
   },
 
   weatherForecastClass: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     textAlign: "center",
     textTransform: "capitalize",
@@ -3167,15 +3199,15 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastPillHigh: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
   },
 
   weatherForecastPillModerate: {
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: colors.secondary,
   },
 
   weatherForecastPillLow: {
-    backgroundColor: Colors.light.error,
+    backgroundColor: colors.error,
   },
 
   weatherForecastPillText: {
@@ -3184,15 +3216,15 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastPillTextHigh: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   weatherForecastPillTextModerate: {
-    color: Colors.light.text,
+    color: colors.text,
   },
 
   weatherForecastPillTextLow: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   weatherForecastFlag: {
@@ -3204,36 +3236,36 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastFlagHot: {
-    backgroundColor: Colors.light.warning,
+    backgroundColor: colors.warning,
   },
 
   weatherForecastFlagCool: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
   },
 
   weatherForecastFlagHotText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 10,
     fontWeight: "700",
   },
 
   weatherForecastFlagCoolText: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "700",
   },
 
   weatherForecastBest: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 11,
     fontWeight: "700",
     textAlign: "center",
   },
 
   weatherForecastBestStar: {
-    color: Colors.light.secondary,
+    color: colors.secondary,
   },
 
   weatherForecastErrorRow: {
@@ -3246,7 +3278,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastErrorText: {
-    color: Colors.light.errorDark,
+    color: colors.errorDark,
     flex: 1,
   },
 
@@ -3263,13 +3295,13 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastLocation: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 11,
     flex: 1,
   },
 
   weatherForecastSummary: {
-    color: Colors.light.primary,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: "600",
   },
@@ -3279,14 +3311,14 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   monitorLabel: {
-    color: Colors.light.text,
+    color: colors.text,
     textAlign: "center",
     fontWeight: "600",
     lineHeight: 17,
   },
 
   monitorValue: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 20,
     fontWeight: "700",
     textAlign: "center",
@@ -3296,12 +3328,12 @@ const styles = StyleSheet.create({
 
   safeValue: {
     color:
-      Colors.light.primary,
+      colors.primary,
   },
 
   unsafeValue: {
     color:
-      Colors.light.error,
+      colors.error,
   },
 
   // ==========================================================
@@ -3326,30 +3358,30 @@ const styles = StyleSheet.create({
 
   normalBadge: {
     backgroundColor:
-      Colors.light.primary,
+      colors.primary,
   },
 
   moderateBadge: {
     backgroundColor:
-      Colors.light.secondary,
+      colors.secondary,
   },
 
   alarmingBadge: {
     backgroundColor:
-      Colors.light.error,
+      colors.error,
   },
 
   lowBadge: {
     backgroundColor:
-      Colors.light.error,
+      colors.error,
   },
 
   lightBadgeText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   darkBadgeText: {
-    color: Colors.light.text,
+    color: colors.text,
   },
 
   // ==========================================================
@@ -3368,12 +3400,12 @@ const styles = StyleSheet.create({
 
   dodSafeBadge: {
     backgroundColor:
-      Colors.light.primary,
+      colors.primary,
   },
 
   dodUnsafeBadge: {
     backgroundColor:
-      Colors.light.error,
+      colors.error,
   },
 
   dodStatusBadgeText: {
@@ -3383,11 +3415,11 @@ const styles = StyleSheet.create({
   },
 
   dodSafeBadgeText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   dodUnsafeBadgeText: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
   },
 
   // ==========================================================
@@ -3395,43 +3427,43 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   nominalTemperatureBadge: {
-    backgroundColor: Colors.light.severity.nominal.bg,
+    backgroundColor: colors.severity.nominal.bg,
     borderWidth: 1,
-    borderColor: Colors.light.severity.nominal.border,
+    borderColor: colors.severity.nominal.border,
   },
 
   nominalTemperatureBadgeText: {
-    color: Colors.light.severity.nominal.text,
+    color: colors.severity.nominal.text,
   },
 
   elevatedTemperatureBadge: {
-    backgroundColor: Colors.light.severity.elevated.bg,
+    backgroundColor: colors.severity.elevated.bg,
     borderWidth: 1,
-    borderColor: Colors.light.severity.elevated.border,
+    borderColor: colors.severity.elevated.border,
   },
 
   elevatedTemperatureBadgeText: {
-    color: Colors.light.severity.elevated.text,
+    color: colors.severity.elevated.text,
   },
 
   highTemperatureBadge: {
-    backgroundColor: Colors.light.severity.high.bg,
+    backgroundColor: colors.severity.high.bg,
     borderWidth: 1,
-    borderColor: Colors.light.severity.high.border,
+    borderColor: colors.severity.high.border,
   },
 
   highTemperatureBadgeText: {
-    color: Colors.light.severity.high.text,
+    color: colors.severity.high.text,
   },
 
   criticalTemperatureBadge: {
-    backgroundColor: Colors.light.severity.critical.bg,
+    backgroundColor: colors.severity.critical.bg,
     borderWidth: 1,
-    borderColor: Colors.light.severity.critical.border,
+    borderColor: colors.severity.critical.border,
   },
 
   criticalTemperatureBadgeText: {
-    color: Colors.light.severity.critical.text,
+    color: colors.severity.critical.text,
   },
 
   // ==========================================================
@@ -3441,85 +3473,85 @@ const styles = StyleSheet.create({
   // CLEAR
 
   clearWeatherBadge: {
-    backgroundColor: Colors.light.weather.clear.bg,
+    backgroundColor: colors.weather.clear.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.clear.border,
+    borderColor: colors.weather.clear.border,
   },
 
   clearWeatherBadgeText: {
-    color: Colors.light.weather.clear.text,
+    color: colors.weather.clear.text,
   },
 
   // PARTLY CLOUDY
 
   partlyCloudyWeatherBadge: {
-    backgroundColor: Colors.light.weather.partlyCloudy.bg,
+    backgroundColor: colors.weather.partlyCloudy.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.partlyCloudy.border,
+    borderColor: colors.weather.partlyCloudy.border,
   },
 
   partlyCloudyWeatherBadgeText: {
-    color: Colors.light.weather.partlyCloudy.text,
+    color: colors.weather.partlyCloudy.text,
   },
 
   // OVERCAST
 
   overcastWeatherBadge: {
-    backgroundColor: Colors.light.weather.overcast.bg,
+    backgroundColor: colors.weather.overcast.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.overcast.border,
+    borderColor: colors.weather.overcast.border,
   },
 
   overcastWeatherBadgeText: {
-    color: Colors.light.weather.overcast.text,
+    color: colors.weather.overcast.text,
   },
 
   // FOG
 
   fogWeatherBadge: {
-    backgroundColor: Colors.light.weather.fog.bg,
+    backgroundColor: colors.weather.fog.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.fog.border,
+    borderColor: colors.weather.fog.border,
   },
 
   fogWeatherBadgeText: {
-    color: Colors.light.weather.fog.text,
+    color: colors.weather.fog.text,
   },
 
   // PAGASA-STYLE YELLOW
 
   yellowWeatherBadge: {
-    backgroundColor: Colors.light.weather.yellow.bg,
+    backgroundColor: colors.weather.yellow.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.yellow.border,
+    borderColor: colors.weather.yellow.border,
   },
 
   yellowWeatherBadgeText: {
-    color: Colors.light.weather.yellow.text,
+    color: colors.weather.yellow.text,
   },
 
   // PAGASA-STYLE ORANGE
 
   orangeWeatherBadge: {
-    backgroundColor: Colors.light.weather.orange.bg,
+    backgroundColor: colors.weather.orange.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.orange.border,
+    borderColor: colors.weather.orange.border,
   },
 
   orangeWeatherBadgeText: {
-    color: Colors.light.weather.orange.text,
+    color: colors.weather.orange.text,
   },
 
   // PAGASA-STYLE RED
 
   redWeatherBadge: {
-    backgroundColor: Colors.light.weather.red.bg,
+    backgroundColor: colors.weather.red.bg,
     borderWidth: 1,
-    borderColor: Colors.light.weather.red.border,
+    borderColor: colors.weather.red.border,
   },
 
   redWeatherBadgeText: {
-    color: Colors.light.weather.red.text,
+    color: colors.weather.red.text,
   },
 
   // ==========================================================
@@ -3531,7 +3563,7 @@ const styles = StyleSheet.create({
   iconAccentPanel: {
     width: 58,
     alignSelf: "stretch",
-    backgroundColor: Colors.light.color1,
+    backgroundColor: colors.color1,
     borderTopLeftRadius: 13,
     borderBottomLeftRadius: 13,
     alignItems: "center",

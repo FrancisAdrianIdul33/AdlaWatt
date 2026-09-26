@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import { StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 export type NotificationType =
   "normal" | "alert";
@@ -28,6 +31,13 @@ interface NotificationCardProps {
 export default function NotificationCard({
   notification,
 }: NotificationCardProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const safeNotification: NotificationCardData =
     notification ?? {
       id: "unknown",
@@ -49,8 +59,8 @@ export default function NotificationCard({
       : "notifications-outline";
 
   const iconColor = isAlert
-    ? Colors.light.error
-    : Colors.light.primary;
+    ? colors.error
+    : colors.primary;
 
   return (
     <View
@@ -101,19 +111,20 @@ export default function NotificationCard({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   notificationCard: {
     width: "100%",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 14,
   },
 
   unreadNotification: {
     backgroundColor:
-      Colors.glass.unread,
+      colors.glass.unread,
   },
 
   notificationWrapper: {
@@ -128,18 +139,18 @@ const styles = StyleSheet.create({
   },
 
   notificationTitle: {
-    color: Colors.light.text,
+    color: colors.text,
     fontWeight: "700",
   },
 
   notificationMessage: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 3,
     lineHeight: 18,
   },
 
   notificationTimestamp: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 5,
     fontSize: 11,
   },
