@@ -24,6 +24,7 @@ import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
+import { logAppliance } from "@/services/activityLogService";
 import {
   useAppColors,
   type AppColors,
@@ -281,6 +282,8 @@ export default function ApplianceModal({
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
+
+    logAppliance.selectionReset();
   };
 
   // ============================================================
@@ -332,6 +335,8 @@ export default function ApplianceModal({
     const selectedItems = appliances.filter(
       (item) => selected.includes(item.id),
     );
+
+    logAppliance.selectionSaved(selectedItems.length);
 
     onSave?.(selectedItems);
     onClose();
@@ -498,6 +503,8 @@ export default function ApplianceModal({
 
     onCustomAdd?.(appliance);
 
+    logAppliance.added(name, `${watts}W`);
+
     setAppliances((current) => [
       ...current,
       appliance,
@@ -649,6 +656,8 @@ export default function ApplianceModal({
 
     onCustomUpdate?.(updated);
 
+    logAppliance.updated(name);
+
     setEditingCustom(null);
     setCustomName("");
     setCustomWatts("");
@@ -702,12 +711,20 @@ export default function ApplianceModal({
       return;
     }
 
+    const removed = appliances.find(
+      (item) => item.id === id,
+    );
+
     setAppliances((current) =>
       current.filter((item) => item.id !== id),
     );
 
     setSelected((current) =>
       current.filter((item) => item !== id),
+    );
+
+    logAppliance.removed(
+      removed?.name ?? "Custom appliance",
     );
 
     onCustomDelete?.(id);

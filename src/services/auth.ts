@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import {
+  logActivity,
+  logAuth,
+  logProfile,
+} from "@/services/activityLogService";
 
 export async function registerUser(
     username: string,
@@ -105,6 +110,11 @@ export async function registerUser(
                 error: "Account could not be created.",
             };
         }
+
+        logAuth.accountCreated(
+            cleanUsername,
+            authData.user.id,
+        );
 
         return {
             success: true,
@@ -263,6 +273,10 @@ export async function loginUser(
             };
         }
 
+        logAuth.loggedIn(
+            data.user.email ?? identifier,
+        );
+
         return {
             success: true,
             user: data.user,
@@ -394,6 +408,13 @@ export async function updateAccount(
             });
 
         if (verifyError) {
+            logActivity({
+                title: "Verification Failed",
+                description:
+                    "Incorrect current password during account update.",
+                type: "warning",
+            });
+
             return {
                 success: false,
                 error: "Incorrect current password.",
@@ -525,6 +546,10 @@ export async function updateAccount(
                     };
                 }
 
+                if (passwordChanged) {
+                    logProfile.passwordChanged();
+                }
+
                 return {
                     success: true,
                     username: cleanUsername,
@@ -559,6 +584,10 @@ export async function updateAccount(
                 success: false,
                 error: profileUpdateError.message,
             };
+        }
+
+        if (passwordChanged) {
+            logProfile.passwordChanged();
         }
 
         return {

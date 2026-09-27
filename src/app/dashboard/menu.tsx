@@ -37,6 +37,11 @@ import {
   getCurrentUserProfile,
   updateAccount,
 } from "@/services/auth";
+import {
+  logAuth,
+  logProfile,
+  logSettings,
+} from "@/services/activityLogService";
 
 import { supabase } from "@/lib/supabase";
 
@@ -242,6 +247,12 @@ export default function SettingsScreen() {
       // lands as the modal closes instead of mid-save.
       await commitTheme(
         darkMode ? "dark" : "light",
+      );
+
+      logSettings.preferencesSaved(
+        `Font ${fontSize} ${fontFamily}, ${
+          darkMode ? "dark" : "light"
+        } mode.`,
       );
 
       setFontFamilyOpen(false);
@@ -547,6 +558,18 @@ export default function SettingsScreen() {
         result.email ??
         editEmail.trim().toLowerCase();
 
+      if (updatedUsername !== username) {
+        logProfile.usernameUpdated(
+          updatedUsername,
+        );
+      }
+
+      if (result.emailChangePending) {
+        logProfile.emailPending();
+      } else if (updatedEmail !== email) {
+        logProfile.emailUpdated();
+      }
+
       setUsername(updatedUsername);
       setEmail(updatedEmail);
 
@@ -631,6 +654,10 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     const logout = async () => {
+      // Logged before sign-out: after sign-out there is no
+      // session left to satisfy RLS on insert.
+      logAuth.loggedOut();
+
       try {
         await supabase.auth.signOut();
       } catch (error) {
