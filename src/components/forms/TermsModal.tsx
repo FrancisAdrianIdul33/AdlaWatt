@@ -93,7 +93,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={colors.onPrimary}
+                color={colors.headerContent}
               />
             </Pressable>
           </View>
@@ -270,7 +270,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color={colors.onPrimary}
+                  color={colors.headerContent}
                 />
 
                 <AppText
@@ -370,15 +370,15 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.headerBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
+    borderBottomColor: colors.headerBackground,
   },
 
     title: {
       fontSize: Typography.heading,
       fontWeight: "700",
-      color: colors.onPrimary,
+      color: colors.headerContent,
     },
 
     closeButton: {
@@ -421,8 +421,8 @@ const getStyles = (colors: AppColors) =>
     footer: {
       padding: Spacing.lg,
       borderTopWidth: 1,
-      borderTopColor: colors.primary,
-      backgroundColor: colors.primary,
+      borderTopColor: colors.headerBackground,
+      backgroundColor: colors.headerBackground,
     },
 
     timerContainer: {
@@ -435,12 +435,12 @@ const getStyles = (colors: AppColors) =>
     },
 
     timerText: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       textAlign: "center",
     },
 
     readyText: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       textAlign: "center",
       marginBottom: Spacing.sm,
     },

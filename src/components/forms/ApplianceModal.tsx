@@ -80,9 +80,6 @@ const areaColors: Record<string, string> = {
   "Work/Study Area": Colors.light.areas.study,
   "Bathroom Area": Colors.light.areas.bathroom,
   "Porch": Colors.light.areas.porch,
-  // Custom section follows the brand primary (same value
-  // in both themes, kept static like the area map).
-  "Custom Appliances": Colors.light.primary,
 };
 
 const getAreaColor = (
@@ -145,8 +142,12 @@ export default function ApplianceModal({
     [colors],
   );
 
+  // Custom section follows the themed brand primary so it
+  // stays correct in both light and dark mode.
   const areaColor = (area: string) =>
-    getAreaColor(area, colors.border);
+    area === "Custom Appliances"
+      ? colors.primary
+      : getAreaColor(area, colors.border);
 
   const { scaledSize, family, weight } =
     useTypography();
@@ -797,7 +798,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={colors.onPrimary}
+                color={colors.headerContent}
               />
             </Pressable>
           </View>
@@ -1158,7 +1159,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="checkmark-circle-outline"
                 size={17}
-                color={colors.onPrimary}
+                color={colors.headerContent}
               />
 
               <AppText
@@ -1255,15 +1256,15 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.headerBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
+    borderBottomColor: colors.headerBackground,
   },
 
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: colors.onPrimary,
+    color: colors.headerContent,
   },
 
   closeButton: {
@@ -1287,7 +1288,7 @@ const getStyles = (colors: AppColors) =>
   advisory: {
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: Radius.md,
     padding: 13,
     marginBottom: Spacing.lg,
@@ -1392,8 +1393,8 @@ const getStyles = (colors: AppColors) =>
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: colors.primary,
-    backgroundColor: colors.primary,
+    borderTopColor: colors.headerBackground,
+    backgroundColor: colors.headerBackground,
   },
 
   selectedInfo: {
@@ -1406,7 +1407,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   selectedText: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 14,
   },
 
