@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 
 import React, {
-  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,6 +31,8 @@ import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
 
 import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import { useSafeAsync } from "@/hooks/useSafeAsync";
 
 import {
   useAppColors,
@@ -59,9 +61,6 @@ export default function NotificationsScreen() {
     [colors],
   );
 
-  const [notifications, setNotifications] =
-    useState<NotificationData[]>([]);
-
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("All");
 
@@ -87,15 +86,14 @@ export default function NotificationsScreen() {
   // LOAD CURRENT USER'S NOTIFICATIONS
   // ============================================
 
-  useEffect(() => {
-    const loadNotifications = async () => {
+  const loadNotifications =
+    async (): Promise<NotificationData[]> => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setNotifications([]);
-        return;
+        return [];
       }
 
       const { data, error } = await supabase
@@ -109,13 +107,9 @@ export default function NotificationsScreen() {
         });
 
       if (error) {
-        console.error(
-          "Error loading notifications:",
-          error.message,
+        throw new Error(
+          "We couldn't load your notifications. Check your connection and try again.",
         );
-
-        setNotifications([]);
-        return;
       }
 
       const formattedNotifications: NotificationData[] =
@@ -155,11 +149,24 @@ export default function NotificationsScreen() {
           };
         });
 
-      setNotifications(formattedNotifications);
+      return formattedNotifications;
     };
 
-    loadNotifications();
-  }, []);
+  const {
+    data: loadedNotifications,
+    error: loadError,
+    loading: isLoading,
+    retry: retryLoad,
+  } = useSafeAsync(loadNotifications, []);
+
+  const notifications = useMemo(
+    () => loadedNotifications ?? [],
+    [loadedNotifications],
+  );
+
+  const hasLoadedData = notifications.length > 0;
+  const showList =
+    hasLoadedData || (!isLoading && !loadError);
 
   // ============================================
   // TOTAL NOTIFICATIONS
@@ -345,39 +352,43 @@ export default function NotificationsScreen() {
   // ============================================
 
   const handleMarkAsRead = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      console.error(
-        "No authenticated user found.",
-      );
+      if (!user) {
+        console.error(
+          "No authenticated user found.",
+        );
 
-      return;
-    }
+        return;
+      }
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
 
-    if (error) {
+      if (error) {
+        console.error(
+          "Error marking notifications as read:",
+          error.message,
+        );
+
+        return;
+      }
+
+      retryLoad();
+    } catch (thrown) {
       console.error(
         "Error marking notifications as read:",
-        error.message,
+        thrown instanceof Error
+          ? thrown.message
+          : thrown,
       );
-
-      return;
     }
-
-    setNotifications((current) =>
-      current.map((notification) => ({
-        ...notification,
-        isRead: true,
-      })),
-    );
   };
 
   // ============================================
@@ -516,8 +527,26 @@ export default function NotificationsScreen() {
           </Pressable>
         </View>
 
+        {/* Loading / Error */}
+        {isLoading && !hasLoadedData && (
+          <View style={styles.statusBlock}>
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+            />
+          </View>
+        )}
+
+        {loadError && !hasLoadedData && (
+          <ErrorState
+            message={loadError}
+            onRetry={retryLoad}
+          />
+        )}
+
         {/* Recent */}
-        {recentNotifications.length > 0 && (
+        {showList &&
+          recentNotifications.length > 0 && (
           <View style={styles.section}>
             <AppText
               variant="body"
@@ -542,7 +571,8 @@ export default function NotificationsScreen() {
         )}
 
         {/* Read Notifications */}
-        {earlierNotifications.length > 0 && (
+        {showList &&
+          earlierNotifications.length > 0 && (
           <View
             style={styles.notificationList}
           >
@@ -558,13 +588,14 @@ export default function NotificationsScreen() {
         )}
 
         {/* Empty State */}
-        {currentPageNotifications.length === 0 && (
-          <EmptyState
-            icon="notifications-off-outline"
-            title="No Notifications"
-            description="No notifications found for the selected filters."
-          />
-        )}
+        {showList &&
+          currentPageNotifications.length === 0 && (
+            <EmptyState
+              icon="notifications-off-outline"
+              title="No Notifications"
+              description="No notifications found for the selected filters."
+            />
+          )}
 
         {/* Pagination - Always Visible */}
         <Pagination
@@ -845,5 +876,12 @@ const getStyles = (colors: AppColors) =>
     width: "100%",
 
     gap: 12,
+  },
+
+  statusBlock: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
   },
 });

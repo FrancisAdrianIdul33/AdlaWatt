@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 
 import React, {
-  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,6 +21,8 @@ import AppText from "@/components/ui/AppText";
 import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
 import ActivityLogCard, { ACTIVITY_LOG_GAP } from "@/components/ActivityLogCard";
 import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import { useSafeAsync } from "@/hooks/useSafeAsync";
 
 import {
   useAppColors,
@@ -59,9 +61,6 @@ export default function ActivityLogsScreen() {
     [colors],
   );
 
-  const [activityLogs, setActivityLogs] =
-    useState<ActivityLog[]>([]);
-
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("All");
 
@@ -90,16 +89,15 @@ export default function ActivityLogsScreen() {
   // LOAD CURRENT USER'S ACTIVITY LOGS
   // ============================================
 
-  useEffect(() => {
-    const loadActivityLogs = async () => {
+  const loadActivityLogs =
+    async (): Promise<ActivityLog[]> => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setActivityLogs([]);
         setTotalActivityLogs(0);
-        return;
+        return [];
       }
 
       const {
@@ -118,14 +116,9 @@ export default function ActivityLogsScreen() {
         });
 
       if (error) {
-        console.error(
-          "Error loading activity logs:",
-          error.message,
+        throw new Error(
+          "We couldn't load your activity logs. Check your connection and try again.",
         );
-
-        setActivityLogs([]);
-        setTotalActivityLogs(0);
-        return;
       }
 
       const logs: ActivityLog[] = (data ?? []).map(
@@ -166,15 +159,28 @@ export default function ActivityLogsScreen() {
         },
       );
 
-      setActivityLogs(logs);
-
       setTotalActivityLogs(
         count ?? logs.length,
       );
+
+      return logs;
     };
 
-    loadActivityLogs();
-  }, []);
+  const {
+    data: loadedLogs,
+    error: loadError,
+    loading: isLoading,
+    retry: retryLoad,
+  } = useSafeAsync(loadActivityLogs, []);
+
+  const activityLogs = useMemo(
+    () => loadedLogs ?? [],
+    [loadedLogs],
+  );
+
+  const hasLoadedData = activityLogs.length > 0;
+  const showList =
+    hasLoadedData || (!isLoading && !loadError);
 
   // ============================================
   // FILTER ACTIVITY LOGS
@@ -445,24 +451,44 @@ export default function ActivityLogsScreen() {
           </View>
         </View>
 
+        {/* Loading / Error */}
+
+        {isLoading && !hasLoadedData && (
+          <View style={styles.statusBlock}>
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+            />
+          </View>
+        )}
+
+        {loadError && !hasLoadedData && (
+          <ErrorState
+            message={loadError}
+            onRetry={retryLoad}
+          />
+        )}
+
         {/* Activity Cards */}
 
-        <View style={styles.activityList}>
-          {currentPageLogs.length === 0 ? (
-            <EmptyState
-              icon="document-text-outline"
-              title="No Activity Logs"
-              description="No activities match the selected filters."
-            />
-          ) : (
-            currentPageLogs.map((activity) => (
-              <ActivityLogCard
-                key={activity.id}
-                item={activity}
+        {showList && (
+          <View style={styles.activityList}>
+            {currentPageLogs.length === 0 ? (
+              <EmptyState
+                icon="document-text-outline"
+                title="No Activity Logs"
+                description="No activities match the selected filters."
               />
-            ))
-          )}
-        </View>
+            ) : (
+              currentPageLogs.map((activity) => (
+                <ActivityLogCard
+                  key={activity.id}
+                  item={activity}
+                />
+              ))
+            )}
+          </View>
+        )}
 
         {/* Pagination */}
 
@@ -719,5 +745,12 @@ const getStyles = (colors: AppColors) =>
       gap: ACTIVITY_LOG_GAP,
 
       zIndex: 1,
+    },
+
+    statusBlock: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 40,
     },
   });
