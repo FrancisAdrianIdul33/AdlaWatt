@@ -21,7 +21,6 @@ import {
   useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
-import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
 import {
@@ -29,7 +28,10 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control, Touch } from "@/constants/sizing";
+import { Control } from "@/constants/sizing";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -53,7 +55,10 @@ type DecoratedAppliance = Appliance & {
   color: string;
 };
 
-const badgeMeta = (status: Status) => {
+// Themed primary is passed in so the "OK to use" badge tracks
+// the active theme (teal in dark mode) instead of freezing
+// the light green. Warning/error are identical in both themes.
+const badgeMeta = (status: Status, primary: string) => {
   if (
     status === "care"
   ) {
@@ -77,7 +82,7 @@ const badgeMeta = (status: Status) => {
   }
 
   return {
-    color: Colors.light.primary,
+    color: primary,
     icon: "checkmark-circle-outline" as const,
     label: "OK to use",
   };
@@ -113,7 +118,10 @@ const TOGGLE_META: {
   {
     mode: "advisable",
     label: "Advisable",
-    color: Colors.light.primary,
+    // Resolved to the themed primary at render time so the
+    // active segment tracks dark mode (warning/error are
+    // identical in both themes).
+    color: "themed-primary",
     accessibilityLabel:
       "Show advisable appliances",
   },
@@ -137,15 +145,6 @@ const defaultImage = require(
   "@/assets/images/adlawatt-icon.png",
 );
 
-const tips = [
-  "Use lower-wattage appliances first to extend the available battery energy.",
-  "Avoid using several high-power appliances at the same time.",
-  "Turn off appliances when they are not needed to conserve stored energy.",
-  "Prioritize essential appliances during a power interruption.",
-];
-
-
-
 export default function AppRecCard({
   battery,
 }: {
@@ -165,8 +164,6 @@ export default function AppRecCard({
     useApplianceCardStyles();
 
   const [index, setIndex] = useState(0);
-
-  const [tipIndex, setTipIndex] = useState(0);
 
   const [appliances, setAppliances] =
     useState<Appliance[]>([]);
@@ -211,7 +208,10 @@ export default function AppRecCard({
             ...item,
             status,
             color:
-              badgeMeta(status).color,
+              badgeMeta(
+                status,
+                colors.primary,
+              ).color,
           };
         });
       }
@@ -240,10 +240,13 @@ export default function AppRecCard({
           ...item,
           status,
           color:
-            badgeMeta(status).color,
+            badgeMeta(
+              status,
+              colors.primary,
+            ).color,
         };
       });
-    }, [appliances, battery]);
+    }, [appliances, battery, colors.primary]);
 
   // ============================================
   // FILTER APPLIANCES BY STATUS
@@ -374,23 +377,6 @@ export default function AppRecCard({
   }, [filteredAppliances.length]);
 
   // ============================================
-  // ROTATING TIP
-  // ============================================
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTipIndex(
-        (currentIndex) =>
-          (currentIndex + 1) %
-          tips.length,
-      );
-    }, 10000);
-
-    return () =>
-      clearInterval(timer);
-  }, []);
-
-  // ============================================
   // OPEN / CLOSE APPLIANCE MODAL
   // ============================================
 
@@ -425,54 +411,63 @@ export default function AppRecCard({
   if (!hasSelectedAppliances) {
     return (
       <>
-        <View style={styles.wrapper}>
-          <View style={styles.getStartedBox}>
-            <AppText
-              variant="body"
-              style={styles.getStartedTitle}
-            >
-              Welcome to AdlaWatt, Get started!
-            </AppText>
+        <View style={styles.recCard}>
+          <RecHeader
+            styles={styles}
+            colors={colors}
+          />
 
-            <Pressable
-              onPress={openApplianceModal}
-              onPressIn={() =>
-                animateButton(0.95)
-              }
-              onPressOut={() =>
-                animateButton(1)
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Add Appliances"
-            >
-              <Animated.View
-                style={[
-                  styles.addAppliancesButton,
-                  {
-                    transform: [
-                      {
-                        scale: buttonScale,
-                      },
-                    ],
-                  },
-                ]}
+          <View style={styles.recBody}>
+            <View style={styles.recContent}>
+            <View style={styles.getStartedContent}>
+              <AppText
+                variant="body"
+                style={styles.getStartedTitle}
               >
+                Welcome to AdlaWatt, Get started!
+              </AppText>
+
+              <Pressable
+                onPress={openApplianceModal}
+                onPressIn={() =>
+                  animateButton(0.95)
+                }
+                onPressOut={() =>
+                  animateButton(1)
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Add Appliances"
+              >
+                <Animated.View
+                  style={[
+                    styles.addAppliancesButton,
+                    {
+                      transform: [
+                        {
+                          scale: buttonScale,
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Ionicons
                     name="add"
                     size={21}
-                        color={colors.onPrimary}
+                    color={colors.onPrimary}
                   />
 
-                <AppText
-                  variant="caption"
-                  style={
-                    styles.addAppliancesButtonText
-                  }
-                >
-                  Add Appliances
-                </AppText>
-              </Animated.View>
-            </Pressable>
+                  <AppText
+                    variant="caption"
+                    style={
+                      styles.addAppliancesButtonText
+                    }
+                  >
+                    Add Appliances
+                  </AppText>
+                </Animated.View>
+              </Pressable>
+            </View>
+            </View>
           </View>
         </View>
 
@@ -490,41 +485,50 @@ export default function AppRecCard({
 
   return (
     <>
-      <View style={styles.wrapper}>
-        {/* Rotating Tip */}
-        <View style={styles.tip}>
-          <Ionicons
-            name="bulb-outline"
-            size={19}
-            color={colors.secondary}
+      <View style={styles.recCard}>
+        <RecHeader
+          styles={styles}
+          colors={colors}
+        />
+
+        <View style={styles.recBody}>
+          {/* Status Toggle (top — this card's signature order) */}
+          <SlidingToggle<Status>
+            value={mode}
+            onChange={setMode}
+            style={styles.toggleColors}
+            options={TOGGLE_META.map(
+              ({
+                mode: segmentMode,
+                label,
+                color,
+                accessibilityLabel,
+              }) => ({
+                value: segmentMode,
+                label,
+                activeColor:
+                  color === "themed-primary"
+                    ? colors.primary
+                    : color,
+                activeInk:
+                  segmentMode === "care"
+                    ? Colors.light.text
+                    : undefined,
+                accessibilityLabel,
+              }),
+            )}
           />
 
-          <View style={styles.tipContent}>
-            <AppText
-              variant="caption"
-              style={styles.tipTitle}
-            >
-              Tip
-            </AppText>
-
-            <AppText
-              variant="caption"
-              style={styles.tipText}
-            >
-              {tips[tipIndex]}
-            </AppText>
-          </View>
-        </View>
-
-        {/* Appliances / Empty State */}
-        {filteredAppliances.length > 0 ? (
-          <>
+          {/* Appliances / Empty Text */}
+          {filteredAppliances.length > 0 ? (
+          <View style={styles.recContent}>
             <View style={styles.applianceRow}>
               {currentAppliances.map(
                 (appliance) => {
                   const meta =
                     badgeMeta(
                       appliance.status,
+                      colors.primary,
                     );
 
                   return (
@@ -644,80 +648,38 @@ export default function AppRecCard({
                 );
               })}
             </View>
-          </>
+          </View>
         ) : (
-          <View
-            style={
-              styles.recommendationEmptyState
-            }
-          >
-            <EmptyState
-              icon="hardware-chip-outline"
-              title={
+          <View style={styles.recContent}>
+          <View style={styles.emptyContent}>
+            <Ionicons
+              name="hardware-chip-outline"
+              size={48}
+              color={colors.textSecondary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.emptyTitle}
+            >
+              {
                 EMPTY_STATE_META[mode]
                   .title
               }
-              description={
+            </AppText>
+
+            <AppText
+              variant="caption"
+              style={styles.emptyText}
+            >
+              {
                 EMPTY_STATE_META[mode]
                   .description
               }
-            />
+            </AppText>
+          </View>
           </View>
         )}
-
-        {/* Status Toggle */}
-        <View style={styles.toggle}>
-          {TOGGLE_META.map(
-            ({
-              mode: segmentMode,
-              label,
-              color,
-              accessibilityLabel,
-            }) => {
-              const active =
-                mode === segmentMode;
-
-              return (
-                <Pressable
-                  key={segmentMode}
-                  onPress={() =>
-                    setMode(
-                      segmentMode,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    accessibilityLabel
-                  }
-                  style={({ pressed }) => [
-                    styles.toggleButton,
-                    active && {
-                      backgroundColor:
-                        color,
-                    },
-                    pressed &&
-                    styles.pressed,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.toggleText,
-                      active &&
-                      (segmentMode ===
-                        "care"
-                        ? styles
-                            .activeToggleTextCaution
-                        : styles
-                            .activeToggleText),
-                    ]}
-                  >
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            },
-          )}
         </View>
       </View>
 
@@ -729,39 +691,107 @@ export default function AppRecCard({
   );
 }
 
+function RecHeader({
+  styles,
+  colors,
+}: {
+  styles: ReturnType<typeof getStyles>;
+  colors: AppColors;
+}) {
+  return (
+    <View style={styles.recHeaderPanel}>
+      <View style={styles.recHeaderLeft}>
+        <Ionicons
+          name="medal-outline"
+          size={26}
+          color={colors.headerContent}
+        />
+
+        <AppText
+          variant="heading"
+          style={styles.recHeaderTitle}
+        >
+          Appliance Recommendation
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
-  wrapper: {
+  // ============================================
+  // CARD SHELL + HEADER
+  //
+  // Same language as the monitoring cards: bordered shell
+  // with edge-to-edge header bar, then a padded body.
+  // Signature order inside: toggle, content, dots.
+  // ============================================
+
+  recCard: {
     width: "100%",
+    backgroundColor:
+      colors.glass.white,
+    borderWidth: 3,
+    borderColor:
+      colors.cardBorder,
+    borderRadius: 15,
+    flexDirection: "column",
+    alignItems: "stretch",
+    overflow: "hidden",
+  },
+
+  recHeaderPanel: {
+    width: "100%",
+    backgroundColor:
+      colors.headerBackground,
+    flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    justifyContent: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
 
-  // ============================================
-  // FIXED RECOMMENDATION CONTAINER
-  //
-  // This represents your imaginary box.
-  // Everything inside follows this fixed space.
-  // ============================================
-
-  fixedRecommendationContainer: {
-    width: "100%",
-
-    // Fixed total height based on your
-    // intended Get Started layout.
-    height: 380,
-
-    justifyContent: "space-between",
+  recHeaderLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
   },
 
-  // ============================================
-  // TOP SECTION
-  //
-  // Always sticks to the top.
-  // ============================================
+  recHeaderTitle: {
+    color: colors.headerContent,
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+    flexShrink: 1,
+  },
 
-  recommendationTopSection: {
+  recBody: {
     width: "100%",
+    padding: 16,
+    paddingBottom: 8,
+    gap: 16,
+  },
+
+  // Fixed content slot = carousel height (240 row + 8 gap +
+  // 24 dots). Empty and get-started center in the same slot
+  // so the card never changes height between states.
+  recContent: {
+    width: "100%",
+    height: 272,
+  },
+
+  // Fixed content slot = carousel height (240 row + 8 gap +
+  // 33 dots). Empty and get-started center in the same slot
+  // so the card never jumps between states and the dots sit
+  // tight between the boxes and the card bottom.
+  recSlot: {
+    width: "100%",
+    height: 281,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
 
   // ============================================
@@ -785,11 +815,12 @@ const getStyles = (colors: AppColors) =>
 
   indicator: {
     width: "100%",
-    height: 33,
+    height: 24,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
+    marginTop: 8,
   },
 
   dot: {
@@ -799,119 +830,49 @@ const getStyles = (colors: AppColors) =>
   },
 
   // ============================================
-  // BOTTOM SECTION
-  //
-  // Always sticks to bottom of the fixed container.
-  // ============================================
-
-  recommendationBottomSection: {
-    width: "100%",
-    alignItems: "center",
-  },
-
-  // ============================================
   // STATUS TOGGLE
   // ============================================
 
-  toggle: {
+  toggleColors: {
     width: "100%",
     maxWidth: 360,
-    minHeight: 58,
-    flexDirection: "row",
+    alignSelf: "center",
     backgroundColor: colors.glass.white,
-    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: Radius.md,
-    padding: 3,
   },
 
-  toggleButton: {
+  // ============================================
+  // EMPTY TEXT (no box — lives on the card body)
+  // ============================================
+
+  emptyContent: {
+    width: "100%",
     flex: 1,
-    minHeight: Touch.target,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.md,
+    gap: 8,
   },
 
-  toggleText: {
+  emptyTitle: {
     color: colors.text,
-    fontSize: 14,
     fontWeight: "700",
+    textAlign: "center",
   },
 
-  activeToggleText: {
-    color: colors.onPrimary,
-  },
-
-  // Frozen: dark ink on the amber caution fill in both themes.
-  activeToggleTextCaution: {
-    color: Colors.light.text,
-  },
-
-  // ============================================
-  // VIEW ALL
-  // ============================================
-
-  // ============================================
-  // TIP
-  // ============================================
-
-  tip: {
-    width: "100%",
-    minHeight: 72,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.glass.white,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: Radius.md,
-    padding: 10,
-    marginTop: 5,
-    marginBottom: 14,
-  },
-
-  tipContent: {
-    flex: 1,
-    marginLeft: 8,
-  },
-
-  tipTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-
-  tipText: {
+  emptyText: {
     color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 17,
-    flexShrink: 1,
+    textAlign: "center",
+    lineHeight: 20,
   },
 
   // ============================================
-  // EMPTY STATE
+  // MODE 1 - GET STARTED (inside the card)
   // ============================================
 
-  recommendationEmptyState: {
-
+  getStartedContent: {
     width: "100%",
-    height: 275,
-  },
-
-  // ============================================
-  // MODE 1 - GET STARTED
-  // ============================================
-
-  getStartedBox: {
-    width: "100%",
-    height: 275,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: Radius.md,
-    paddingVertical: 22,
-    paddingHorizontal: 16,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },

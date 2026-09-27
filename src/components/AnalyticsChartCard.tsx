@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  Pressable,
   StyleSheet,
   View,
 } from "react-native";
@@ -14,7 +13,9 @@ import {
   ChartFrequency,
   FREQUENCIES,
 } from "@/services/analyticsService";
-import { Touch } from "@/constants/sizing";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 
 /* ============================================================
    PROPS
@@ -94,55 +95,20 @@ export default function AnalyticsChartCard({
         </AppText>
 
         {/* Frequency */}
-        <View
-          style={
-            styles.frequencyToggle
-          }
-        >
-          {FREQUENCIES.map(
-            (option) => {
-              const active =
-                frequency ===
-                option;
-
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() =>
-                    onFrequencyChange(
-                      option,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    `${title} ${option} view`
-                  }
-                  accessibilityState={{
-                    selected: active,
-                  }}
-                  style={({ pressed }) => [
-                    styles.frequencyButton,
-                    active &&
-                      styles.frequencyButtonActive,
-                    pressed &&
-                      styles.pressed,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.frequencyText,
-                      active &&
-                        styles.frequencyTextActive,
-                    ]}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              );
-            },
+        <SlidingToggle<ChartFrequency>
+          value={frequency}
+          onChange={onFrequencyChange}
+          style={styles.frequencyToggleColors}
+          options={FREQUENCIES.map(
+            (option) => ({
+              value: option,
+              label: option,
+              activeColor: colors.primary,
+              accessibilityLabel:
+                `${title} ${option} view`,
+            }),
           )}
-        </View>
+        />
 
         {/* Chart Area */}
         <View
@@ -208,42 +174,17 @@ const getStyles = (colors: AppColors) =>
       marginBottom: 12,
     },
 
-    frequencyToggle: {
+    frequencyToggleColors: {
       width: "100%",
-      minHeight: 58,
-      flexDirection: "row",
       backgroundColor:
         colors.scrimFaint,
-      borderWidth: 2,
       borderColor:
         colors.border,
       borderRadius: 12,
-      padding: 3,
       marginBottom: 14,
     },
 
-    frequencyButton: {
-      flex: 1,
-      minHeight: Touch.target,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 9,
-    },
 
-    frequencyButtonActive: {
-      backgroundColor:
-        colors.primary,
-    },
-
-    frequencyText: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: "700",
-    },
-
-    frequencyTextActive: {
-      color: colors.onPrimary,
-    },
 
     chartArea: {
       width: "100%",

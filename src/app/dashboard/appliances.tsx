@@ -32,7 +32,10 @@ import {
 import {
   Radius,
 } from "@/constants/theme";
-import { Control, Touch } from "@/constants/sizing";
+import { Control } from "@/constants/sizing";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 import { supabase } from "@/lib/supabase";
 import {
   type BatteryStateInput,
@@ -494,63 +497,31 @@ export default function AppliancesScreen() {
         </View>
 
         {/* Status Filter */}
-        <View style={styles.statusToggle}>
-          {TOGGLE_META_BASE.map(
+        <SlidingToggle
+          value={statusFilter}
+          onChange={setStatusFilter}
+          style={styles.statusToggleColors}
+          options={TOGGLE_META_BASE.map(
             ({
               filter,
               label,
               tone,
               accessibilityLabel,
-            }) => {
-              const active =
-                statusFilter === filter;
-              const color =
-                getToggleColor(
-                  colors,
-                  tone,
-                );
-
-              return (
-                <Pressable
-                  key={filter}
-                  onPress={() =>
-                    setStatusFilter(
-                      filter,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    accessibilityLabel
-                  }
-                  style={({ pressed }) => [
-                    styles.statusButton,
-                    active && {
-                      backgroundColor:
-                        color,
-                    },
-                    pressed &&
-                    styles.pressed,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusText,
-                      active &&
-                      (filter === "Caution"
-                        ? styles
-                            .activeStatusTextCaution
-                        : styles
-                            .activeStatusText),
-                    ]}
-                  >
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            },
+            }) => ({
+              value: filter,
+              label,
+              activeColor: getToggleColor(
+                colors,
+                tone,
+              ),
+              activeInk:
+                filter === "Caution"
+                  ? Colors.light.text
+                  : undefined,
+              accessibilityLabel,
+            }),
           )}
-        </View>
+        />
 
         {/* Appliances */}
         <View style={[applianceCardGrid, { marginTop: 20 }]}>
@@ -794,40 +765,13 @@ const getStyles = (colors: AppColors) =>
     marginBottom: 10,
   },
 
-  statusToggle: {
+  statusToggleColors: {
     width: "100%",
     maxWidth: 360,
     alignSelf: "center",
-    minHeight: 58,
-    flexDirection: "row",
     backgroundColor: colors.glass.white,
-    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: Radius.md,
-    padding: 3,
     marginTop: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    minHeight: Touch.target,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: Radius.md,
-  },
-
-  statusText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  activeStatusText: {
-    color: colors.onPrimary,
-  },
-
-  // Frozen: dark ink on the amber caution fill in both themes.
-  activeStatusTextCaution: {
-    color: Colors.light.text,
   },
 });

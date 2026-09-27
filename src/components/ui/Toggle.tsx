@@ -1,18 +1,14 @@
 import React, { useMemo } from "react";
 
-import {
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
-
-import AppText from "@/components/ui/AppText";
+import { StyleSheet } from "react-native";
 
 import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
-import { Touch } from "@/constants/sizing";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 
 // ============================================================
 // TYPES
@@ -44,47 +40,34 @@ export default function Toggle({
   );
 
   return (
-    <View style={styles.statusToggle}>
-      {(
-        [
-          "All",
-          "Advisable",
-          "notAdvisable",
-        ] as ToggleOption[]
-      ).map((option) => (
-        <Pressable
-          key={option}
-          onPress={() =>
-            onChange(option)
-          }
-          style={({ pressed }) => [
-            styles.statusButton,
-            value === option && {
-              backgroundColor:
-                option === "Advisable"
-                  ? colors.primary
-                  : option === "notAdvisable"
-                    ? colors.error
-                    : colors.primary,
-            },
-            pressed && styles.pressed,
-          ]}
-        >
-          <AppText
-            variant="caption"
-            style={[
-              styles.statusText,
-              value === option &&
-                styles.activeStatusText,
-            ]}
-          >
-            {option === "notAdvisable"
-              ? "Not Advisable"
-              : option}
-          </AppText>
-        </Pressable>
-      ))}
-    </View>
+    <SlidingToggle<ToggleOption>
+      value={value}
+      onChange={onChange}
+      style={styles.shellColors}
+      options={[
+        {
+          value: "All",
+          label: "All",
+          activeColor: colors.primary,
+          accessibilityLabel:
+            "Show all appliances",
+        },
+        {
+          value: "Advisable",
+          label: "Advisable",
+          activeColor: colors.primary,
+          accessibilityLabel:
+            "Show advisable appliances",
+        },
+        {
+          value: "notAdvisable",
+          label: "Not Advisable",
+          activeColor: colors.error,
+          accessibilityLabel:
+            "Show not advisable appliances",
+        },
+      ]}
+    />
   );
 }
 
@@ -94,36 +77,11 @@ export default function Toggle({
 
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
-  statusToggle: {
+  shellColors: {
     width: "100%",
-    flexDirection: "row",
     backgroundColor: colors.glass.white,
-    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: 14,
-    padding: 3,
     marginTop: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    minHeight: Touch.target,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 11,
-  },
-
-  statusText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  activeStatusText: {
-    color: colors.onPrimary,
-  },
-
-  pressed: {
-    opacity: 0.7,
   },
 });
