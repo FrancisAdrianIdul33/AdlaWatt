@@ -289,7 +289,7 @@ export default function RegisterScreen() {
               <Ionicons
                 name="document-text-outline"
                 size={22}
-                color={colors.primaryText}
+                color={colors.linkText}
               />
             </Pressable>
           </View>

@@ -51,7 +51,7 @@ function ThemedAuth() {
       <View style={styles.fallback}>
         <ActivityIndicator
           size="large"
-          color={colors.primary}
+          color={colors.accentContent}
         />
       </View>
     );

@@ -441,7 +441,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="flash-outline"
                 size={18}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -474,7 +474,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="location-outline"
                 size={18}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText

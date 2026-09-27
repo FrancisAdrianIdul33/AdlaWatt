@@ -773,7 +773,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="person"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -800,7 +800,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="settings"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -827,7 +827,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="book-outline"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -854,7 +854,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="hardware-chip"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -881,7 +881,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="list"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -908,7 +908,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="information-circle"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -1950,7 +1950,7 @@ const getStyles = (colors: AppColors) =>
 
   menuBoxActive: {
     backgroundColor:
-      colors.primaryWash,
+      colors.selectedWash,
   },
 
   menuBoxText: {
@@ -2043,7 +2043,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 48,
     backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     paddingHorizontal: 14,
     color: colors.text,
@@ -2228,7 +2228,7 @@ const getStyles = (colors: AppColors) =>
   versionCard: {
     backgroundColor: colors.glass.white,
     borderWidth: settingsDimensions.borderWidth,
-    borderColor: colors.secondary,
+    borderColor: colors.cardBorder,
     borderRadius: settingsDimensions.borderRadius,
     padding: 18,
   },

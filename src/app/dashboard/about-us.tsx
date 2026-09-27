@@ -153,7 +153,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="call-outline"
               size={24}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -172,7 +172,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="mail-outline"
               size={24}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText

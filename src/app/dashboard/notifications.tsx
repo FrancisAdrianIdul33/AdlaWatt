@@ -454,7 +454,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="time-outline"
                 size={18}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -467,7 +467,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={colors.primary}
+                color={colors.accentContent}
               />
             </Pressable>
           </View>
@@ -488,7 +488,7 @@ export default function NotificationsScreen() {
                 color={
                   typeFilter === "alert"
                     ? colors.error
-                    : colors.primary
+                    : colors.accentContent
                 }
               />
 
@@ -502,7 +502,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={colors.primary}
+                color={colors.accentContent}
               />
             </Pressable>
           </View>
@@ -532,7 +532,7 @@ export default function NotificationsScreen() {
           <View style={styles.statusBlock}>
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={colors.accentContent}
             />
           </View>
         )}
@@ -661,13 +661,13 @@ export default function NotificationsScreen() {
             value: "All" as const,
             label: "All",
             icon: "list-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "normal" as const,
             label: "Normal",
             icon: "notifications-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "alert" as const,

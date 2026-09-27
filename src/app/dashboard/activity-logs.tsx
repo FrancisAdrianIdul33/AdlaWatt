@@ -389,7 +389,7 @@ export default function ActivityLogsScreen() {
               <Ionicons
                 name="time-outline"
                 size={19}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -431,7 +431,7 @@ export default function ActivityLogsScreen() {
                     ? colors.error
                     : typeFilter === "warning"
                       ? colors.secondary
-                      : colors.primary
+                      : colors.accentContent
                 }
               />
 
@@ -457,7 +457,7 @@ export default function ActivityLogsScreen() {
           <View style={styles.statusBlock}>
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={colors.accentContent}
             />
           </View>
         )}
@@ -559,13 +559,13 @@ export default function ActivityLogsScreen() {
             value: "all" as const,
             label: "All",
             icon: "list-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "info" as const,
             label: "Info",
             icon: "information-circle-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "warning" as const,
