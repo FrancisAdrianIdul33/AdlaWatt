@@ -815,6 +815,33 @@ export default function SettingsScreen() {
           <Pressable
             onPress={() =>
               router.push(
+                Routes.USER_MANUAL,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open User Manual"
+            style={({ pressed }) => [
+              styles.menuBox,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="book-outline"
+              size={60}
+              color={colors.primary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
+            >
+              User Manual
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              router.push(
                 Routes.COMPONENTS,
               )
             }
