@@ -22,6 +22,7 @@ import Svg, {
 } from "react-native-svg";
 
 import AppText from "@/components/ui/AppText";
+import { Colors } from "@/constants/colors";
 
 import {
   useAppColors,
@@ -1341,7 +1342,7 @@ export default function ChartCard({
                 <AppText
                   variant="heading"
                   style={
-                    styles.batteryPercentage
+                    styles.solarCenterText
                   }
                 >
                   {solarInput}
@@ -1393,7 +1394,7 @@ export default function ChartCard({
                   style={[
                     styles.batteryStatusText,
                     solarStatus === "Moderate"
-                      ? styles.darkBadgeText
+                      ? styles.solarModerateText
                       : null,
                   ]}
                 >
@@ -2850,6 +2851,21 @@ const getStyles = (colors: AppColors) =>
     fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
+  },
+
+  // Frozen: dark ink on the yellow sun fill in both themes.
+  // batteryPercentage can't be reused here — it follows the
+  // theme and goes light in dark mode, unreadable on yellow.
+  solarCenterText: {
+    color: Colors.light.text,
+    fontSize: 36,
+    fontWeight: "800",
+    lineHeight: 30,
+  },
+
+  // Frozen: dark ink on the moderate (amber) solar badge.
+  solarModerateText: {
+    color: Colors.light.text,
   },
 
   lowBatteryText: {
