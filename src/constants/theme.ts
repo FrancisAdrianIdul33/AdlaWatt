@@ -2,68 +2,10 @@ import "@/global.css";
 
 import { Platform } from "react-native";
 
-/*
-|--------------------------------------------------------------------------
-| Colors
-|--------------------------------------------------------------------------
-*/
-
-export const Colors = {
-  light: {
-    // Brand
-    primary: "#00A86B",
-    secondary: "#FFA500",
-
-    // Backgrounds
-    background: "#F0EAD6",
-    surface: "#FFFFFF",
-
-    // Text
-    text: "#1a1a1a",
-    textSecondary: "#1c1c1c",
-    onPrimary: "#FFFFFF",
-
-    // Status
-    success: "#22C55E",
-    warning: "#F59E0B",
-    error: "#EF4444",
-
-    // UI
-    border: "#D8D2C2",
-    divider: "#E5E5E5",
-    disabled: "#BDBDBD",
-  },
-
-  dark: {
-    // Brand
-    primary: "#00A86B",
-    secondary: "#FFA500",
-
-    // Backgrounds
-    background: "#121212",
-    surface: "#1E1E1E",
-
-    // Text
-    text: "#FFFFFF",
-    textSecondary: "#D1D5DB",
-    onPrimary: "#FFFFFF",
-
-    // Status
-    success: "#22C55E",
-    warning: "#F59E0B",
-    error: "#EF4444",
-
-    // UI
-    border: "#2E2E2E",
-    divider: "#3A3A3A",
-    disabled: "#5C5C5C",
-  },
-} as const;
-
-export type ThemeColor =
-  keyof typeof Colors.light &
-  keyof typeof Colors.dark;
-
+// NOTE: The legacy Colors palette was removed. Single source of
+// truth is src/constants/colors.ts consumed via useAppColors().
+// This module keeps sizing-adjacent tokens (Fonts, Spacing,
+// Radius, Typography) only.
 /*
 |--------------------------------------------------------------------------
 | Fonts
