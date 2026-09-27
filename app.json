@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "AdlaWatt",
-    "slug": "ADLAWATT",
+    "slug": "adlawatt",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adlawatt-icon.png",
@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/adlawatt-icon.png",
-      "bundleIdentifier": "com.teamadlawatt.ADLAWATT",
+      "bundleIdentifier": "com.teamadlawatt.adlawatt",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -20,7 +20,11 @@
         "foregroundImage": "./assets/images/adlawatt-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.teamadlawatt.ADLAWATT"
+      "package": "com.teamadlawatt.adlawatt",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -38,9 +42,6 @@
           }
         }
       ],
-      "expo-sqlite",
-      "expo-web-browser",
-      "@react-native-community/datetimepicker",
       [
         "expo-location",
         {
@@ -57,6 +58,7 @@
       "eas": {
         "projectId": "ba375929-16f4-4a21-b339-8b43e93ecfd2"
       }
-    }
+    },
+    "owner": "fadrians-team"
   }
 }
