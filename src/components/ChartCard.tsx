@@ -720,7 +720,7 @@ export default function ChartCard({
             <Ionicons
               name="flash-outline"
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -1253,7 +1253,7 @@ export default function ChartCard({
             <Ionicons
               name="sunny-outline"
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -1655,7 +1655,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -2982,7 +2982,7 @@ const getStyles = (colors: AppColors) =>
       colors.glass.white,
     borderWidth: 3,
     borderColor:
-      colors.primary,
+      colors.cardBorder,
     borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -3017,7 +3017,7 @@ const getStyles = (colors: AppColors) =>
   groupHeaderPanel: {
     width: "100%",
     backgroundColor:
-      colors.primary,
+      colors.headerBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -3033,7 +3033,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   groupHeaderTitle: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3059,7 +3059,7 @@ const getStyles = (colors: AppColors) =>
   weatherHeaderPanel: {
     width: "100%",
     backgroundColor:
-      colors.primary,
+      colors.headerBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -3075,7 +3075,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherHeaderTitle: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3121,7 +3121,7 @@ const getStyles = (colors: AppColors) =>
     backgroundColor:
       colors.glass.white,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 8,

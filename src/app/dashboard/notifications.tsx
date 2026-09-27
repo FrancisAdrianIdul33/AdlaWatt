@@ -728,7 +728,7 @@ const getStyles = (colors: AppColors) =>
     borderWidth:
       notificationDimensions.borderWidth,
 
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
 
     borderRadius:
       notificationDimensions.cardRadius,

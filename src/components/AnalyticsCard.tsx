@@ -164,7 +164,7 @@ export default function AnalyticsCards({
           <Ionicons
             name="document-text-outline"
             size={30}
-            color={colors.iconAccent}
+            color={colors.headerContent}
           />
 
           <AppText
@@ -357,7 +357,7 @@ const getStyles = (colors: AppColors) =>
         colors.glass.white,
       borderWidth: 3,
       borderColor:
-        colors.primary,
+        colors.cardBorder,
       borderRadius: 15,
       flexDirection: "column",
       alignItems: "stretch",
@@ -369,7 +369,7 @@ const getStyles = (colors: AppColors) =>
     reportHeaderPanel: {
       width: "100%",
       backgroundColor:
-        colors.primary,
+        colors.headerBackground,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
@@ -379,7 +379,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     reportHeaderTitle: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,

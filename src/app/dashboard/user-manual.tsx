@@ -97,7 +97,7 @@ const getStyles = (colors: AppColors) =>
       borderWidth:
         manualDimensions.borderWidth,
 
-      borderColor: colors.primary,
+      borderColor: colors.cardBorder,
 
       borderRadius:
         manualDimensions.cardRadius,

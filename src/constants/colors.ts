@@ -112,6 +112,15 @@ export const Colors = {
     onPrimarySoft: "rgba(255, 255, 255, 0.9)",
     primarySoft: "#99DCC4",
     primaryPressed: "#33B98A",
+    // Card header bars: green in light, pure black in dark.
+    // Header content (titles, icons) rides on top.
+    headerBackground: "#00805A",
+    headerContent: "#FFFFFF",
+    // Card shells: green borders in light, navbar-icon white
+    // (#E3E3E3, same value as bar.text) in dark. Controls,
+    // inputs, toggles, and appliance/component boxes keep
+    // their green; only card containers use this.
+    cardBorder: "#00805A",
 
     // ——— 10 · accents (use sparingly) ———
     secondary: "#FFBF00",
@@ -181,6 +190,15 @@ export const Colors = {
     onPrimarySoft: "rgba(18, 18, 18, 0.9)",
     primarySoft: "#1B3B30",
     primaryPressed: "#20A578",
+    // Card header bars: pure black in dark (green in light).
+    // Content on top uses the agreed near-white (#E3E3E3,
+    // ~14.6:1 on black) since dark onPrimary is near-black.
+    headerBackground: "#000000",
+    headerContent: "#E3E3E3",
+    // Card shells: navbar-icon white in dark (green in
+    // light). Same value as bar.text so borders match the
+    // navbar icons by construction.
+    cardBorder: "#E3E3E3",
 
     // ——— 10 · accents (tamed for dark mode) ———
     secondary: "#FCD34D",

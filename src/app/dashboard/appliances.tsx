@@ -714,7 +714,7 @@ const getStyles = (colors: AppColors) =>
   card: {
     backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: dimensions.radius,
     padding: 18,
     marginBottom: 16,
