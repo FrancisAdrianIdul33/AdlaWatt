@@ -7,6 +7,11 @@ import {
   logActivity,
   type ActivityLogType,
 } from "@/services/activityLogService";
+import {
+  classifyBatteryState,
+  computeWattCap,
+  parseWattageRange,
+} from "@/services/recommendation";
 
 // ============================================================
 // TYPES
@@ -67,15 +72,21 @@ const STALE_MONITORING_INTERVAL_MS =
   10 * 1000;
 
 // ------------------------------------------------------------
-// OPTIONAL SAFE THRESHOLDS
+// OPTIONAL SAFE THRESHOLDS (DISABLED — all null)
 // ------------------------------------------------------------
 //
-// Set these values when the actual system thresholds have been
-// finalized.
+// Set a real value to enable its rule; null keeps the rule
+// dormant (each check early-returns). The monitoring table
+// does NOT define these thresholds.
 //
-// The monitoring table does NOT define these thresholds.
-// Therefore, null means the corresponding notification rule
-// remains disabled.
+//   SAFE_CURRENT_LOAD_THRESHOLD → checkHighCurrentLoad
+//     ("High Current Load", alert, logs critical)
+//   SAFE_BATTERY_VOLTAGE_MIN → checkBatteryVoltageTooLow
+//     ("Battery Voltage Too Low", alert, logs critical)
+//   SAFE_BATTERY_VOLTAGE_MAX → checkBatteryVoltageTooHigh
+//     ("Battery Voltage Too High", alert, logs critical)
+//
+// See implementation plan/notification_catalog.md.
 // ------------------------------------------------------------
 
 const SAFE_CURRENT_LOAD_THRESHOLD:
@@ -99,6 +110,10 @@ let currentUserId:
   string | null = null;
 
 let monitoringChannel:
+  | ReturnType<typeof supabase.channel>
+  | null = null;
+
+let componentsChannel:
   | ReturnType<typeof supabase.channel>
   | null = null;
 
@@ -1370,23 +1385,15 @@ const checkDepthOfDischarge =
       return;
     }
 
+    // dod_status is binary (Safe | Unsafe), so any arrival
+    // at Safe comes from Unsafe: only the transition-accurate
+    // title fires (the generic "Safe" title was a duplicate).
     if (
       current.dod_status ===
         "Safe" &&
-      previous.dod_status !==
-        "Safe"
+      previous.dod_status ===
+        "Unsafe"
     ) {
-
-      await createNotification(
-        userId,
-        {
-          title:
-            "Depth of Discharge Safe",
-          description:
-            "The dod_status value is Safe.",
-          type: "normal",
-        },
-      );
 
       await createNotification(
         userId,
@@ -1420,6 +1427,141 @@ const checkDepthOfDischarge =
       );
     }
   };
+
+
+// ------------------------------------------------------------
+// APPLIANCES BECAME ADVISABLE
+// ------------------------------------------------------------
+//
+// Fires when the battery tier recovers to Safe while the
+// user still has selected appliances waiting. Tier comes
+// from the shared recommendation engine so the rule and
+// the UI verdicts can never disagree.
+// ------------------------------------------------------------
+
+const checkAppliancesBecameAdvisable = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+): Promise<void> => {
+
+  if (previous === null) {
+    return;
+  }
+
+  const toTier = (row: MonitoringData): string =>
+    classifyBatteryState({
+      soc: row.battery_level,
+      voltage: row.voltage,
+      remainingWh: row.watt_hours,
+      dod: row.dod_status,
+    }).tier;
+
+  if (
+    toTier(previous) === "Safe" ||
+    toTier(current) !== "Safe"
+  ) {
+    return;
+  }
+
+  const { count, error } = await supabase
+    .from("appliances")
+    .select("app_id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("selection", true);
+
+  if (error) {
+    console.error(
+      "Appliances-became-advisable check error:",
+      error.message,
+    );
+
+    return;
+  }
+
+  if ((count ?? 0) <= 0) {
+    return;
+  }
+
+  await createNotification(
+    userId,
+    {
+      title: "Appliances Became Advisable",
+      description:
+        "The battery recovered to a safe level. Selected appliances are advisable again.",
+      type: "normal",
+      logAs: "info",
+    },
+  );
+};
+
+
+// ------------------------------------------------------------
+// HIGH LOAD WHILE BATTERY LOW
+// ------------------------------------------------------------
+//
+// Compares the combined mid-wattage of selected appliances
+// against the charge-scaled safe cap while SoC is at or
+// below the 20% cutoff. The 10-minute notification cooldown
+// protects against refires while the condition persists.
+// ------------------------------------------------------------
+
+const checkHighLoadWhileBatteryLow = async (
+  userId: string,
+  current: MonitoringData,
+): Promise<void> => {
+
+  const level = current.battery_level ?? 0;
+
+  if (level > 20) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("appliances")
+    .select("wattage")
+    .eq("user_id", userId)
+    .eq("selection", true);
+
+  if (error) {
+    console.error(
+      "High-load-while-low check error:",
+      error.message,
+    );
+
+    return;
+  }
+
+  const combinedMidWatts = (data ?? []).reduce(
+    (total, row) =>
+      total +
+      (parseWattageRange(row.wattage)?.mid ?? 0),
+    0,
+  );
+
+  if (combinedMidWatts <= 0) {
+    return;
+  }
+
+  const safeCap = Math.round(
+    computeWattCap(level),
+  );
+
+  if (combinedMidWatts <= safeCap) {
+    return;
+  }
+
+  await createNotification(
+    userId,
+    {
+      title: "High Load While Battery Low",
+      description:
+        `Selected appliances draw about ${combinedMidWatts}W against a ${safeCap}W safe cap at ${level}% battery.`,
+      type: "alert",
+      logAs: "critical",
+    },
+  );
+};
 
 
 // ------------------------------------------------------------
@@ -1996,6 +2138,9 @@ const checkHighCurrentLoad =
 // ------------------------------------------------------------
 // BATTERY VOLTAGE TOO LOW
 // ------------------------------------------------------------
+//
+// Disabled until SAFE_BATTERY_VOLTAGE_MIN is configured.
+// ------------------------------------------------------------
 
 const checkBatteryVoltageTooLow =
   async (
@@ -2038,6 +2183,9 @@ const checkBatteryVoltageTooLow =
 
 // ------------------------------------------------------------
 // BATTERY VOLTAGE TOO HIGH
+// ------------------------------------------------------------
+//
+// Disabled until SAFE_BATTERY_VOLTAGE_MAX is configured.
 // ------------------------------------------------------------
 
 const checkBatteryVoltageTooHigh =
@@ -2405,6 +2553,17 @@ const processMonitoringNotifications =
         previous,
       );
 
+      await checkAppliancesBecameAdvisable(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkHighLoadWhileBatteryLow(
+        userId,
+        current,
+      );
+
     } catch (error) {
 
       console.error(
@@ -2716,13 +2875,189 @@ export const unsubscribeFromNotificationMonitoring =
         monitoringChannel,
       );
 
-      monitoringChannel =
-        null;
+    monitoringChannel =
+      null;
     }
+
+    await stopComponentsNotificationWatcher();
 
     stopStaleMonitoringCheck();
 
     resetNotificationState();
+  };
+
+
+// ============================================================
+// COMPONENT STATUS RULES
+// ============================================================
+//
+// Components change independently of monitoring rows, so
+// they get their own watcher on the components table.
+// Titles stay fixed (live names go in description) so
+// cooldown keys and activity mirrors stay stable.
+//
+// Critical-component set: power-path hardware whose failure
+// threatens the system (matches the hardware list).
+// ============================================================
+
+const CRITICAL_COMPONENTS: readonly string[] = [
+  "Relay",
+  "INA228",
+  "Voltage Sensor",
+];
+
+interface ComponentStatusPayload {
+  component_name?: string;
+  status?: string;
+}
+
+const checkComponentStatusTransition = async (
+  userId: string,
+  previous: ComponentStatusPayload | null,
+  current: ComponentStatusPayload,
+): Promise<void> => {
+
+  const previousStatus = previous?.status;
+  const currentStatus = current.status;
+  const componentName =
+    current.component_name ?? "Component";
+
+  if (
+    previousStatus === "Active" &&
+    currentStatus === "Inactive"
+  ) {
+
+    const critical =
+      CRITICAL_COMPONENTS.includes(
+        componentName,
+      );
+
+    await createNotification(
+      userId,
+      {
+        title: "Component Went Inactive",
+        description:
+          `${componentName} changed from Active to Inactive.`,
+        type: "alert",
+        logAs: critical
+          ? "critical"
+          : "warning",
+      },
+    );
+
+    return;
+  }
+
+  if (
+    previousStatus === "Inactive" &&
+    currentStatus === "Active"
+  ) {
+
+    await createNotification(
+      userId,
+      {
+        title: "Component Back Online",
+        description:
+          `${componentName} changed from Inactive to Active.`,
+        type: "normal",
+        logAs: "info",
+      },
+    );
+  }
+};
+
+const startComponentsNotificationWatcher =
+  async (
+    userId: string,
+  ): Promise<void> => {
+
+    if (componentsChannel) {
+      await supabase.removeChannel(
+        componentsChannel,
+      );
+
+      componentsChannel =
+        null;
+    }
+
+    componentsChannel =
+      supabase
+        .channel(
+          `notification-components-${userId}-${Date.now()}`,
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "components",
+            filter:
+              `user_id=eq.${userId}`,
+          },
+          async (payload) => {
+
+            const previous =
+              payload.old as ComponentStatusPayload | null;
+
+            const current =
+              payload.new as ComponentStatusPayload;
+
+            if (!current) {
+              return;
+            }
+
+            await checkComponentStatusTransition(
+              userId,
+              previous,
+              current,
+            );
+          },
+        )
+        .subscribe(
+          (status) => {
+
+            if (
+              status ===
+                "SUBSCRIBED"
+            ) {
+
+              console.log(
+                "Notification service components watcher subscribed.",
+              );
+            }
+
+            if (
+              status ===
+                "CHANNEL_ERROR" ||
+              status ===
+                "TIMED_OUT" ||
+              status ===
+                "CLOSED"
+            ) {
+
+              console.warn(
+                "Notification service components channel issue:",
+                status,
+              );
+            }
+          },
+        );
+  };
+
+const stopComponentsNotificationWatcher =
+  async (): Promise<void> => {
+
+    if (
+      componentsChannel
+    ) {
+
+      await supabase.removeChannel(
+        componentsChannel,
+      );
+
+      componentsChannel =
+        null;
+    }
   };
 
 
@@ -2939,6 +3274,10 @@ export const startMonitoringNotificationWatcher =
             }
           },
         );
+
+    await startComponentsNotificationWatcher(
+      user.id,
+    );
 
     return monitoringChannel;
   };

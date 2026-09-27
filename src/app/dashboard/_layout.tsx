@@ -8,6 +8,13 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 
+// Side-effect import: starts the auth-aware notification
+// watchers (monitoring + components) per
+// implementation plan/notification_catalog.md. The service
+// owns its lifecycle (starts on SIGNED_IN, stops on
+// SIGNED_OUT) and never throws into the UI.
+import "@/services/notificationService";
+
 // ============================================================
 // DASHBOARD LAYOUT
 //
