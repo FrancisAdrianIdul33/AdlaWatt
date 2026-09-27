@@ -30,6 +30,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control, Touch } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 import {
@@ -1978,7 +1979,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   primaryButton: {
-    minHeight: 44,
+    minHeight: Control.button,
     backgroundColor: colors.primary,
     borderRadius: 12,
     alignItems: "center",
@@ -1994,7 +1995,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   secondaryButton: {
-    minHeight: 44,
+    minHeight: Control.button,
     backgroundColor: colors.glass.white,
     borderWidth: 3,
     borderColor: colors.secondary,
@@ -2061,15 +2062,15 @@ const getStyles = (colors: AppColors) =>
 
   passwordInput: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     paddingHorizontal: 14,
     color: colors.text,
     fontSize: 15,
   },
 
   eyeButton: {
-    width: 42,
-    height: 42,
+    width: Touch.target,
+    height: Touch.target,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2181,7 +2182,7 @@ const getStyles = (colors: AppColors) =>
 
   modalFooterButton: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,

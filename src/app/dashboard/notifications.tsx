@@ -36,6 +36,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { OptionRow } from "@/constants/sizing";
 
 import { supabase } from "@/lib/supabase";
 
@@ -670,7 +671,7 @@ const notificationDimensions = {
   borderWidth: 3,
   cardRadius: 16,
 
-  filterHeight: 42,
+  filterHeight: OptionRow.minHeight,
   filterRadius: 12,
 
   buttonRadius: 12,

@@ -5,7 +5,6 @@ import {
     SafeAreaView,
     ScrollView,
     StyleSheet,
-    useWindowDimensions,
     View,
 } from "react-native";
 
@@ -13,6 +12,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useScreenPadding } from "@/constants/sizing";
 
 interface ScreenContainerProps {
   children: ReactNode;
@@ -30,8 +30,7 @@ export default function ScreenContainer({
   children,
   scrollable = true,
 }: ScreenContainerProps) {
-  const { width } = useWindowDimensions();
-  const wide = width >= 768;
+  const padding = useScreenPadding();
 
   const colors = useAppColors();
 
@@ -44,7 +43,7 @@ export default function ScreenContainer({
     <ScrollView
       contentContainerStyle={[
         styles.scrollContent,
-        wide && styles.scrollContentWide,
+        { paddingHorizontal: padding },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -81,13 +80,7 @@ const getStyles = (colors: AppColors) =>
 
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
     paddingVertical: 24,
-  },
-
-  scrollContentWide: {
-    paddingHorizontal: 32,
-    paddingVertical: 32,
   },
 
   authColumn: {

@@ -490,7 +490,7 @@ export default function AnalyticsScreen() {
    ============================================================ */
 
 const analyticsDimensions = {
-  horizontalPadding: 14,
+  horizontalPadding: 16,
   sectionSpacing: 18,
 
   /*

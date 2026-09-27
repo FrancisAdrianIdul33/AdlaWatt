@@ -32,6 +32,7 @@ import {
 import {
   Radius,
 } from "@/constants/theme";
+import { Control, Touch } from "@/constants/sizing";
 import { supabase } from "@/lib/supabase";
 import {
   type BatteryStateInput,
@@ -739,7 +740,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   addButton: {
-    height: 46,
+    minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -760,7 +761,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   filterButton: {
-    height: 46,
+    minHeight: Control.button,
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
@@ -797,7 +798,7 @@ const getStyles = (colors: AppColors) =>
     width: "100%",
     maxWidth: 360,
     alignSelf: "center",
-    height: 51,
+    minHeight: 58,
     flexDirection: "row",
     backgroundColor: colors.glass.white,
     borderWidth: 2,
@@ -809,7 +810,7 @@ const getStyles = (colors: AppColors) =>
 
   statusButton: {
     flex: 1,
-    height: 41,
+    minHeight: Touch.target,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
@@ -817,7 +818,7 @@ const getStyles = (colors: AppColors) =>
 
   statusText: {
     color: colors.text,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
 

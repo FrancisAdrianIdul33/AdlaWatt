@@ -21,6 +21,7 @@ import AppButton from "@/components/ui/AppButton";
 import { useAppColors } from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
 import { Radius, Spacing } from "@/constants/theme";
+import { Touch } from "@/constants/sizing";
 import Copyright from "@/components/ui/Copyright";
 
 import { registerUser } from "@/services/auth";
@@ -345,8 +346,8 @@ const styles = StyleSheet.create({
   },
 
   termsIconButton: {
-    width: 42,
-    height: 42,
+    width: Touch.target,
+    height: Touch.target,
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",

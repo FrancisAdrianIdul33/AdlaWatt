@@ -29,6 +29,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
 
 import weatherJson from "@/data/weather.json";
 
@@ -666,7 +667,7 @@ const getStyles = (colors: AppColors) =>
   quickNavButton: {
     width: "100%",
     maxWidth: 360,
-    height: 46,
+    minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

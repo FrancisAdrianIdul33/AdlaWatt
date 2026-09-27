@@ -28,6 +28,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Touch } from "@/constants/sizing";
 import { supabase } from "@/lib/supabase";
 
 // ============================================
@@ -610,7 +611,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
 
     alignSelf: "center",
 
-    height: 51,
+    minHeight: 58,
 
     flexDirection: "row",
 
@@ -634,7 +635,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
 
     flex: 1,
 
-    height: 41,
+    minHeight: Touch.target,
 
     alignItems: "center",
 
@@ -648,7 +649,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
 
     color: colors.text,
 
-    fontSize: 13,
+    fontSize: 14,
 
     fontWeight: "700",
 

@@ -279,7 +279,7 @@ function DeveloperProfile({
    ========================================================= */
 
 const aboutDimensions = {
-  horizontalPadding: 14,
+  horizontalPadding: 16,
 
   sectionSpacing: 18,
 
@@ -460,7 +460,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   roleText: {
-    fontSize: 10,
+    fontSize: 12,
 
     fontWeight: "700",
 
