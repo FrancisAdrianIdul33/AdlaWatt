@@ -39,13 +39,29 @@ export const Control = {
   buttonGap: 12,
   /** Gap above a major action button. */
   buttonGapAbove: 16,
+  /**
+   * Segmented-toggle shell height. Exact fit, no waste:
+   * shell 58 = 48 segment + 6 padding + 4 border. Breathing
+   * room comes from the capsule (pill hugs text) sitting
+   * inside the 48 segment, not from a taller shell. Shells
+   * must also set alignItems: "center" or row-stretch
+   * distorts the segments.
+   */
+  segmentedShell: 58,
+  /** Segmented shell padding: shell-to-pill distance. */
+  segmentPad: 3,
+  /** Capsule pill padding: close to the text. */
+  capsulePadH: 18,
+  capsulePadV: 10,
+  /** Capsule pill radius (fully rounded). */
+  capsuleRadius: 999,
 } as const;
 
 export const Field = {
   /** Recommended single-line / dropdown trigger height. */
   height: 56,
   /** Minimum single-line field height. */
-  minHeight: 52,
+  minHeight: 50,
   /** Horizontal internal padding. */
   padding: 16,
   /** Input text size (never below 16 for typed fields). */
