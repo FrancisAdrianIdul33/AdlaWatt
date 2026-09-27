@@ -22,6 +22,7 @@ import {
   ReportType,
   formatReportDate,
 } from "@/services/analyticsService";
+import { Control, OptionRow } from "@/constants/sizing";
 
 /* ============================================================
    DATE PICKER
@@ -414,7 +415,7 @@ const getStyles = (colors: AppColors) =>
 
     reportSelect: {
       width: "100%",
-      minHeight: 42,
+      minHeight: OptionRow.minHeight,
       borderWidth: 2,
       borderColor:
         colors.primary,
@@ -433,7 +434,7 @@ const getStyles = (colors: AppColors) =>
 
     dateFieldButton: {
       width: "100%",
-      minHeight: 42,
+      minHeight: OptionRow.minHeight,
       backgroundColor:
         colors.washFaint,
       borderWidth: 1,
@@ -461,7 +462,7 @@ const getStyles = (colors: AppColors) =>
 
     exportPrimaryButton: {
       flex: 1,
-      minHeight: 44,
+      minHeight: Control.button,
       backgroundColor:
         colors.primary,
       borderRadius: 12,

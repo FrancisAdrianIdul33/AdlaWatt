@@ -14,6 +14,7 @@ import {
   ChartFrequency,
   FREQUENCIES,
 } from "@/services/analyticsService";
+import { Touch } from "@/constants/sizing";
 
 /* ============================================================
    PROPS
@@ -209,7 +210,7 @@ const getStyles = (colors: AppColors) =>
 
     frequencyToggle: {
       width: "100%",
-      height: 46,
+      minHeight: 58,
       flexDirection: "row",
       backgroundColor:
         colors.scrimFaint,
@@ -223,7 +224,7 @@ const getStyles = (colors: AppColors) =>
 
     frequencyButton: {
       flex: 1,
-      height: 36,
+      minHeight: Touch.target,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 9,

@@ -120,13 +120,13 @@ export default function BatteryLevelChart({
           chartColors.grid
         }
         yAxisTextStyle={{
-          fontSize: 10,
+          fontSize: 12,
           fontFamily: family,
           color:
             chartColors.axisLabel,
         }}
         xAxisLabelTextStyle={{
-          fontSize: 10,
+          fontSize: 12,
           fontFamily: family,
           color:
             chartColors.axisLabel,

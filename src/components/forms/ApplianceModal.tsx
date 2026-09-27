@@ -33,6 +33,7 @@ import {
   Spacing,
   Typography,
 } from "@/constants/theme";
+import { Control, Field, Touch } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 import { supabase } from "@/lib/supabase";
@@ -1256,8 +1257,8 @@ const getStyles = (colors: AppColors) =>
   },
 
   closeButton: {
-    width: 40,
-    height: 40,
+    width: Touch.target,
+    height: Touch.target,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1333,7 +1334,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   customButton: {
-    minHeight: 46,
+    minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1354,7 +1355,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   input: {
-    height: 44,
+    minHeight: Field.minHeight,
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: Radius.md,
@@ -1406,7 +1407,7 @@ const getStyles = (colors: AppColors) =>
 
   resetButton: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
@@ -1421,7 +1422,7 @@ const getStyles = (colors: AppColors) =>
 
   actionButton: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
@@ -1452,7 +1453,7 @@ const getStyles = (colors: AppColors) =>
 
   customAction: {
     flex: 1,
-    height: 42,
+    minHeight: Control.button,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surface,

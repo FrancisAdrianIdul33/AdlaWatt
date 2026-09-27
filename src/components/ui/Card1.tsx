@@ -300,7 +300,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   statusBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },

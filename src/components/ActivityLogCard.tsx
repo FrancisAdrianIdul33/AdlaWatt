@@ -164,6 +164,6 @@ const getStyles = (colors: AppColors) =>
   timestamp: {
     color: colors.textSecondary,
     marginTop: 5,
-    fontSize: 11,
+    fontSize: 12,
   },
 });

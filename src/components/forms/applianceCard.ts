@@ -90,7 +90,7 @@ export const getApplianceCardStyles = (
 
     name: {
       width: "100%",
-      height: 40,
+      minHeight: 40,
       flexShrink: 0,
       color: colors.text,
       fontSize: 16,
@@ -102,10 +102,10 @@ export const getApplianceCardStyles = (
 
     watts: {
       width: "100%",
-      height: 18,
+      minHeight: 18,
       flexShrink: 0,
       color: colors.textSecondary,
-      fontSize: 13,
+      fontSize: 14,
       textAlign: "center",
       marginTop: 2,
     },
@@ -126,7 +126,7 @@ export const getApplianceCardStyles = (
 
     statusText: {
       color: colors.onPrimary,
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "700",
       flexShrink: 1,
     },

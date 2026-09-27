@@ -20,6 +20,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 
 // ============================================================
 // CUSTOM CALENDAR VIEWER
@@ -369,6 +370,7 @@ export function CalendarModal({
           >
             {cell && (
               <Pressable
+                hitSlop={3}
                 onPress={() => {
                   onChange(
                     cell.date,
@@ -429,8 +431,8 @@ const getStyles = (colors: AppColors) =>
     },
 
     navButton: {
-      width: 44,
-      height: 44,
+      width: Touch.target,
+      height: Touch.target,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 12,

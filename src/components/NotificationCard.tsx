@@ -152,6 +152,6 @@ const getStyles = (colors: AppColors) =>
   notificationTimestamp: {
     color: colors.textSecondary,
     marginTop: 5,
-    fontSize: 11,
+    fontSize: 12,
   },
 });

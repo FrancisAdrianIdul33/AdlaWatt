@@ -2908,7 +2908,7 @@ const getStyles = (colors: AppColors) =>
       colors.textSecondary,
     marginTop: 3,
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 12,
   },
 
   // ==========================================================
@@ -3110,7 +3110,7 @@ const getStyles = (colors: AppColors) =>
 
   weatherForecastTag: {
     color: colors.primary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
 
@@ -3227,7 +3227,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastPillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
 
@@ -3263,19 +3263,19 @@ const getStyles = (colors: AppColors) =>
 
   weatherForecastFlagHotText: {
     color: colors.text,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
   },
 
   weatherForecastFlagCoolText: {
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
   },
 
   weatherForecastBest: {
     color: colors.text,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
   },
@@ -3312,13 +3312,13 @@ const getStyles = (colors: AppColors) =>
 
   weatherForecastLocation: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     flex: 1,
   },
 
   weatherForecastSummary: {
     color: colors.primary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
 
@@ -3367,7 +3367,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   statusBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },

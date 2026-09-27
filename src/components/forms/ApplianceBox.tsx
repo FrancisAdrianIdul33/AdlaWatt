@@ -19,6 +19,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control, Touch } from "@/constants/sizing";
 
 type ApplianceBoxProps = {
   name: string;
@@ -357,10 +358,10 @@ const getStyles = (colors: AppColors) =>
 
   menuBack: {
     alignSelf: "flex-start",
-    width: 32,
-    height: 32,
+    width: Touch.target,
+    height: Touch.target,
 
-    borderRadius: 16,
+    borderRadius: 24,
 
     alignItems: "center",
     justifyContent: "center",
@@ -379,10 +380,10 @@ const getStyles = (colors: AppColors) =>
   },
 
   iconButton: {
-    width: 44,
-    height: 44,
+    width: Touch.target,
+    height: Touch.target,
 
-    borderRadius: 22,
+    borderRadius: 24,
 
     alignItems: "center",
     justifyContent: "center",
@@ -418,6 +419,7 @@ const getStyles = (colors: AppColors) =>
 
   confirmButton: {
     width: "100%",
+    minHeight: Control.button,
     paddingVertical: 9,
     borderRadius: Radius.md,
 

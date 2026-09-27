@@ -29,6 +29,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control, Touch } from "@/constants/sizing";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -815,7 +816,7 @@ const getStyles = (colors: AppColors) =>
   toggle: {
     width: "100%",
     maxWidth: 360,
-    height: 51,
+    minHeight: 58,
     flexDirection: "row",
     backgroundColor: colors.glass.white,
     borderWidth: 2,
@@ -826,7 +827,7 @@ const getStyles = (colors: AppColors) =>
 
   toggleButton: {
     flex: 1,
-    height: 41,
+    minHeight: Touch.target,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
@@ -834,7 +835,7 @@ const getStyles = (colors: AppColors) =>
 
   toggleText: {
     color: colors.text,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
 
@@ -923,7 +924,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   addAppliancesButton: {
-    height: 46,
+    minHeight: Control.button,
     width: "100%",
     paddingHorizontal: 18,
     flexDirection: "row",
