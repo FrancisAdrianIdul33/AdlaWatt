@@ -143,6 +143,16 @@ export const Colors = {
       grid: "rgba(46, 46, 46, 0.10)",
       axisLabel: "#8E8E93",
     },
+
+    // ——— navbar chrome (brand in light, monochrome in dark) ———
+    bar: {
+      background: "#00A86B",
+      text: "#FFFFFF",
+      muted: "rgba(255, 255, 255, 0.6)",
+      accent: "#FFBF00",
+      capsule: "#F0EAD6",
+      online: "#00A86B",
+    },
   },
 
   dark: {
@@ -197,6 +207,16 @@ export const Colors = {
       orange: "#F97316",
       grid: "rgba(255, 255, 255, 0.15)",
       axisLabel: "#A1A1AA",
+    },
+
+    // ——— navbar chrome (brand in light, monochrome in dark) ———
+    bar: {
+      background: "#000000",
+      text: "#FFFFFF",
+      muted: "#A0A0A0",
+      accent: "#3A3A3A",
+      capsule: "#1E1E1E",
+      online: "#FFFFFF",
     },
   },
 

@@ -90,8 +90,8 @@ export default function NavBarBottom() {
                 size={navBarBottomDimensions.iconSize}
                 color={
                   isActive
-                    ? colors.iconAccent
-                    : colors.onPrimaryMuted
+                    ? colors.bar.text
+                    : colors.bar.muted
                 }
               />
 
@@ -127,7 +127,7 @@ const getStyles = (colors: AppColors) =>
     accentLine: {
       width: "100%",
       height: 3,
-      backgroundColor: colors.secondary,
+      backgroundColor: colors.bar.accent,
     },
 
     container: {
@@ -136,7 +136,7 @@ const getStyles = (colors: AppColors) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-evenly",
-      backgroundColor: colors.primary,
+      backgroundColor: colors.bar.background,
     },
 
   tab: {
@@ -148,12 +148,13 @@ const getStyles = (colors: AppColors) =>
   },
 
   label: {
-    color: colors.onPrimarySoft,
+    color: colors.bar.muted,
     fontSize: 11,
     fontWeight: "600",
   },
 
   activeLabel: {
+    color: colors.bar.text,
     fontWeight: "700",
   },
 

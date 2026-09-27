@@ -206,7 +206,7 @@ export default function NavBar({
               size={
                 navBarDimensions.notificationIconSize
               }
-              color={colors.onPrimary}
+              color={colors.bar.text}
             />
 
             {hasUnreadNotifications && (
@@ -266,7 +266,7 @@ const getNavBarStyles = (colors: AppColors) =>
     justifyContent: "space-between", // ← changed
     paddingHorizontal:
       navBarDimensions.horizontalPadding,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.bar.background,
   },
 
   actions: {
@@ -297,7 +297,7 @@ const getNavBarStyles = (colors: AppColors) =>
   accentLine: {
     width: "100%",
     height: navBarDimensions.accentHeight,
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.bar.accent,
   },
 
   // Device status capsule
@@ -305,7 +305,7 @@ const getNavBarStyles = (colors: AppColors) =>
     width: navBarDimensions.deviceStatusWidth,
     height: navBarDimensions.deviceStatusHeight,
     borderRadius: navBarDimensions.deviceStatusRadius,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bar.capsule,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -319,7 +319,7 @@ const getNavBarStyles = (colors: AppColors) =>
   },
 
   onlineDot: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.bar.online,
   },
 
   offlineDot: {
