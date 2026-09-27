@@ -162,11 +162,21 @@ export default function ApplianceModal({
   // ============================================================
 
   const loadAppliances = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setAppliances([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("appliances")
       .select(
         "app_id, appliance_name, wattage, area, type, status",
       )
+      .eq("user_id", user.id)
       .order("area")
       .order("appliance_name");
 
