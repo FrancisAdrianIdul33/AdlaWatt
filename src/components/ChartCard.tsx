@@ -1607,21 +1607,25 @@ export default function ChartCard({
       );
 
     // ========================================================
-    // EXACT-3 FIT
+    // EXACT-3 FIT (WITH ROUNDING SLACK)
     //
     // Cell width is computed from the live screen width so
     // exactly three boxes (Today + next two days) fill the
     // strip on every screen: strip = screen - 52 (screen and
     // row padding), minus two 8px gaps, divided by three.
+    // The old zero-slack formula filled the strip to the
+    // fractional pixel, so sub-pixel floor rounding shaved
+    // ~1px and clipped the third box. The extra -4 and the
+    // floor() below are the safety margin: do not remove.
     // Clamped so small phones stay usable and tablets stop
     // growing, leaving the rest to the horizontal scroll.
     // ========================================================
 
     const forecastCellWidth = Math.min(
-      108,
+      104,
       Math.max(
-        84,
-        (screenWidth - 52 - 16) / 3
+        80,
+        Math.floor((screenWidth - 72) / 3)
       )
     );
 
@@ -3145,7 +3149,7 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "center",
     backgroundColor:
       colors.glass.white,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.secondary,
     borderRadius: 12,
     paddingHorizontal: 8,
