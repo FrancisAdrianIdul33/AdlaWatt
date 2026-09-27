@@ -4,7 +4,7 @@ export const Routes = {
   REGISTER: "/auth/register",
 
   // Dashboard
-  DASHBOARD: "/dashboard/dashboard",
+  DASHBOARD: "/dashboard",
 
   // Dashboard Pages
   APPLIANCES: "/dashboard/appliances",
