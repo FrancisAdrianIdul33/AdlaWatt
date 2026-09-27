@@ -32,7 +32,7 @@ export default function TermsModal({
     () => getStyles(colors),
     [colors],
   );
-  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [secondsRemaining, setSecondsRemaining] = useState(5);
   const [canAgree, setCanAgree] = useState(false);
 
   useEffect(() => {

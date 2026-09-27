@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, type Ref } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -16,12 +16,14 @@ import { useTypography } from "@/hooks/useTypography";
 interface AppInputProps extends TextInputProps {
   label?: string;
   error?: string;
+  inputRef?: Ref<TextInput>;
 }
 
 export default function AppInput({
   label,
   error,
   style,
+  inputRef,
   ...props
 }: AppInputProps) {
   const { scaledSize, family, weight } =
@@ -44,6 +46,7 @@ export default function AppInput({
 
       <TextInput
         {...props}
+        ref={inputRef}
         allowFontScaling={false}
         placeholderTextColor={colors.textSecondary}
         style={[

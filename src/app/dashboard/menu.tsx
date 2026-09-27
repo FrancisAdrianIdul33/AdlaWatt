@@ -127,9 +127,7 @@ export default function SettingsScreen() {
     useState<FontSizeOption>("Medium");
 
   const [fontFamily, setFontFamily] =
-    useState<FontFamilyOption>(
-      "System Default",
-    );
+    useState<FontFamilyOption>("Inter");
 
   const [language, setLanguage] =
     useState("English");

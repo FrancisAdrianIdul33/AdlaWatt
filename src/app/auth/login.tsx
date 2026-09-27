@@ -1,28 +1,37 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 import AppInput from "@/components/ui/AppInput";
 import Copyright from "@/components/ui/Copyright";
 import PasswordInput from "@/components/ui/PasswordInput";
+import AuthFooter from "@/components/layout/AuthFooter";
 import AuthHeader from "@/components/layout/AuthHeader";
+import AuthLogo from "@/components/layout/AuthLogo";
+import AuthWarning from "@/components/layout/AuthWarning";
 import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";
-import AppLogo from "@/components/ui/AppLogo";
-import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 
 import { loginUser } from "@/services/auth";
-
-import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
+  if (loading) {
+    return;
+  }
+
   setWarning("");
 
   const identifier = usernameOrEmail.trim();
@@ -57,6 +66,8 @@ export default function LoginScreen() {
   }
 
   try {
+    setLoading(true);
+
     const result = await loginUser(
       identifier,
       cleanPassword,
@@ -75,6 +86,8 @@ export default function LoginScreen() {
     setWarning(
       "Something went wrong. Please try again.",
     );
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -85,13 +98,7 @@ export default function LoginScreen() {
   return (
     <ScreenContainer>
       <View style={styles.container}>
-        {/* AdlaWatt Logo */}
-        <View style={styles.logoContainer}>
-          <AppLogo
-            width={350}
-            height={200}
-          />
-        </View>
+        <AuthLogo />
 
         <AuthHeader
           title="Welcome Back"
@@ -106,6 +113,11 @@ export default function LoginScreen() {
             placeholder="Enter your username or email"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="username"
+            returnKeyType="next"
+            onSubmitEditing={() =>
+              passwordRef.current?.focus()
+            }
           />
 
           <PasswordInput
@@ -113,54 +125,26 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             placeholder="Enter your password"
+            autoComplete="password"
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+            inputRef={passwordRef}
           />
 
-         {warning ? (
-  <View
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 12,
-    }}
-  >
-    <Ionicons
-      name="warning-outline"
-      size={20}
-      color={Colors.light.errorDark}
-      style={{ marginRight: 8 }}
-    />
+          <AuthWarning message={warning} />
 
-    <AppText
-      variant="caption"
-      style={{
-        color: Colors.light.errorDark,
-        flex: 1,
-      }}
-    >
-      {warning}
-    </AppText>
-  </View>
-) : null}
-
-<AppButton
-  title="Login"
-  onPress={handleLogin}
-/>
+          <AppButton
+            title={loading ? "Signing In..." : "Sign In"}
+            onPress={handleLogin}
+            disabled={loading}
+          />
         </View>
 
-        <View style={styles.registerContainer}>
-          <AppText variant="caption">
-            {"Don't have an account?"}
-          </AppText>
-
-          <AppText
-            variant="body"
-            style={styles.registerLink}
-            onPress={handleRegister}
-          >
-            Create Account
-          </AppText>
-        </View>
+        <AuthFooter
+          prompt="Don't have an account?"
+          actionLabel="Create Account"
+          onAction={handleRegister}
+        />
 
         <Copyright />
       </View>
@@ -175,24 +159,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
 
-  logoContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
   form: {
     width: "100%",
-  },
-
-  registerContainer: {
-    alignItems: "center",
-    marginTop: 28,
-  },
-
-  registerLink: {
-    color: Colors.light.primary,
-    fontWeight: "600",
-    marginTop: 6,
   },
 });

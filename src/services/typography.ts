@@ -22,10 +22,10 @@ export type FontFamilyOption =
 
 export const FONT_FAMILY_OPTIONS: FontFamilyOption[] =
   [
+    "Inter",
     "System Default",
     "Times New Roman",
     "Roboto",
-    "Inter",
     "Monospace",
   ];
 

@@ -22,7 +22,7 @@ export interface TypographyPreferences {
 export const DEFAULT_TYPOGRAPHY: TypographyPreferences =
   {
     fontSize: "Medium",
-    fontFamily: "System Default",
+    fontFamily: "Inter",
   };
 
 export const TYPOGRAPHY_STORAGE_KEY =

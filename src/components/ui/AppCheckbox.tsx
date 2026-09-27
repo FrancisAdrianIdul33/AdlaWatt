@@ -62,11 +62,12 @@ const getStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 12,
+    minHeight: 44,
   },
 
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
 
     borderWidth: 1.5,
     borderColor: colors.primary,

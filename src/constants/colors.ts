@@ -99,7 +99,14 @@ export const Colors = {
     onSurfaceMuted: "#747775",
 
     // ——— 30 · primary brand ———
-    primary: "#00A86B",
+    // White on `primary` is 4.96:1 (WCAG 1.4.3 AA) — the
+    // lightest shade of the brand green that passes for
+    // button labels and navbar text.
+    primary: "#00805A",
+    // Text-on-cream accessible green (5.87:1 on background).
+    // Body/large brand fills stay `primary`; running text
+    // and links on cream must use this to meet WCAG 1.4.3.
+    primaryText: "#00663F",
     onPrimary: "#FFFFFF",
     onPrimaryMuted: "rgba(255, 255, 255, 0.6)",
     onPrimarySoft: "rgba(255, 255, 255, 0.9)",
@@ -122,8 +129,8 @@ export const Colors = {
     warning: "#F59E0B",
 
     // ——— washes + overlays ———
-    primaryWash: "rgba(0, 168, 107, 0.08)",
-    washFaint: "rgba(0, 168, 107, 0.06)",
+    primaryWash: "rgba(0, 128, 90, 0.08)",
+    washFaint: "rgba(0, 128, 90, 0.06)",
     scrimFaint: "rgba(0, 0, 0, 0.04)",
     overlay: "rgba(0, 0, 0, 0.40)",
     overlayStrong: "rgba(0, 0, 0, 0.50)",
@@ -146,12 +153,12 @@ export const Colors = {
 
     // ——— navbar chrome (brand in light, monochrome in dark) ———
     bar: {
-      background: "#00A86B",
+      background: "#00805A",
       text: "#FFFFFF",
       muted: "rgba(255, 255, 255, 0.6)",
       accent: "#FFBF00",
       capsule: "#F0EAD6",
-      online: "#00A86B",
+      online: "#00805A",
     },
   },
 
@@ -165,6 +172,10 @@ export const Colors = {
 
     // ——— 30 · primary brand (desaturated for dark mode) ———
     primary: "#33C191",
+    // Text-on-black accessible green (8.19:1 on background).
+    // Running text and links on dark surfaces must use this
+    // to meet WCAG 1.4.3.
+    primaryText: "#33C191",
     onPrimary: "#121212",
     onPrimaryMuted: "rgba(18, 18, 18, 0.6)",
     onPrimarySoft: "rgba(18, 18, 18, 0.9)",
