@@ -49,7 +49,7 @@ export default function AppSearchBox({
       <Ionicons
         name="search"
         size={20}
-        color={colors.primary}
+        color={colors.accentContent}
         style={styles.icon}
       />
     </View>
@@ -67,7 +67,7 @@ const getStyles = (colors: AppColors) =>
     backgroundColor: colors.surface,
     color: colors.textSecondary,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     minHeight: Field.height,
     paddingLeft: Field.padding,

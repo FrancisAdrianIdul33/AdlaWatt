@@ -818,7 +818,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="battery-half-outline"
                   size={24}
-                  color={colors.primary}
+                  color={colors.accentContent}
                 />
 
                 <View style={styles.advisoryText}>
@@ -983,7 +983,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={20}
-                  color={colors.primary}
+                  color={colors.accentContent}
                 />
 
                 <AppText
@@ -1015,7 +1015,7 @@ export default function ApplianceModal({
                         styles.sectionLine,
                         {
                           backgroundColor:
-                            colors.primary,
+                            colors.border,
                         },
                       ]}
                     />
@@ -1486,7 +1486,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   addText: {
-    color: colors.primary,
+    color: colors.accentContent,
     fontWeight: "700",
   },
 
@@ -1512,7 +1512,7 @@ const getStyles = (colors: AppColors) =>
 
   successText: {
     flex: 1,
-    color: colors.primary,
+    color: colors.accentContent,
     fontWeight: "600",
   },
 });

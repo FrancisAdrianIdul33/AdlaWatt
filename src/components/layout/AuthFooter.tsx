@@ -75,9 +75,10 @@ const getStyles = (colors: AppColors) =>
   },
 
   action: {
-    color: colors.primaryText,
+    color: colors.linkText,
     fontWeight: "600",
     marginTop: 6,
     textAlign: "center",
+    textDecorationLine: "underline",
   },
 });

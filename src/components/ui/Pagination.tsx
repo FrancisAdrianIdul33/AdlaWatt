@@ -52,7 +52,7 @@ export default function Pagination({
           color={
             isFirstPage
               ? colors.textSecondary
-              : colors.primary
+              : colors.accentContent
           }
         />
 
@@ -92,7 +92,7 @@ export default function Pagination({
           color={
             isLastPage
               ? colors.textSecondary
-              : colors.primary
+              : colors.accentContent
           }
         />
 
@@ -129,7 +129,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 58,
     backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -141,7 +141,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 58,
     backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",

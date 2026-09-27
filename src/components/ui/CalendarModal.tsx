@@ -276,7 +276,7 @@ export function CalendarModal({
             name="chevron-back"
             size={20}
             color={
-              colors.primary
+              colors.accentContent
             }
           />
         </Pressable>
@@ -317,7 +317,7 @@ export function CalendarModal({
             size={20}
             color={
               canGoNext
-                ? colors.primary
+                ? colors.accentContent
                 : colors.border
             }
           />

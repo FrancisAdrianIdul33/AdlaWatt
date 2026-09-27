@@ -64,7 +64,7 @@ function getActivityColor(
 ): string {
   switch (type) {
     case "info":
-      return colors.primary;
+      return colors.accentContent;
 
     case "warning":
       return colors.secondary;
@@ -74,7 +74,7 @@ function getActivityColor(
       return colors.error;
 
     default:
-      return colors.primary;
+      return colors.accentContent;
   }
 }
 

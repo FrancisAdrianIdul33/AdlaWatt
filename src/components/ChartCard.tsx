@@ -1886,7 +1886,7 @@ export default function ChartCard({
                           name="water-outline"
                           size={11}
                           color={
-                            colors.primary
+                            colors.accentContent
                           }
                         />
 
@@ -2124,7 +2124,7 @@ export default function ChartCard({
         <Ionicons
           name={data.icon}
           size={28}
-          color={colors.primary}
+          color={colors.accentContent}
         />
 
       </View>
@@ -3109,7 +3109,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastTag: {
-    color: colors.primary,
+    color: colors.accentContent,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -3193,7 +3193,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastPop: {
-    color: colors.primary,
+    color: colors.accentContent,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -3317,7 +3317,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastSummary: {
-    color: colors.primary,
+    color: colors.accentContent,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -3344,7 +3344,7 @@ const getStyles = (colors: AppColors) =>
 
   safeValue: {
     color:
-      colors.primary,
+      colors.accentContent,
   },
 
   unsafeValue: {

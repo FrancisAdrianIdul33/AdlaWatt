@@ -88,7 +88,7 @@ function DatePickerField({
         <Ionicons
           name="calendar-outline"
           size={16}
-          color={colors.primary}
+          color={colors.accentContent}
         />
       </Pressable>
 
@@ -237,7 +237,7 @@ export default function AnalyticsCards({
                   name="chevron-down-outline"
                   size={15}
                   color={
-                    colors.primary
+                    colors.accentContent
                   }
                 />
               </Pressable>
@@ -436,7 +436,7 @@ const getStyles = (colors: AppColors) =>
       width: "100%",
       minHeight: OptionRow.minHeight,
       backgroundColor:
-        colors.washFaint,
+        colors.selectedWash,
       borderWidth: 1,
       borderColor:
         colors.border,

@@ -128,7 +128,7 @@ export function RadioOptionRow({
             : "radio-button-off-outline"
         }
         size={18}
-        color={colors.primary}
+        color={colors.accentContent}
       />
 
       <AppText
@@ -265,7 +265,7 @@ const getDropdownModalStyles = (colors: AppColors) =>
     },
 
     optionSelected: {
-      backgroundColor: colors.primaryWash,
+      backgroundColor: colors.selectedWash,
     },
 
     optionText: {

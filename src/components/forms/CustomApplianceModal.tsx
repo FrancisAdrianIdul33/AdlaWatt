@@ -218,7 +218,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     addText: {
-      color: colors.primary,
+      color: colors.accentContent,
       fontWeight: "700",
     },
 

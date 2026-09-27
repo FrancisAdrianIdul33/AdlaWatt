@@ -60,7 +60,7 @@ export default function NotificationCard({
 
   const iconColor = isAlert
     ? colors.error
-    : colors.primary;
+    : colors.accentContent;
 
   return (
     <View

@@ -108,7 +108,7 @@ export default function ModalBox<T extends string>({
                   }
                   size={18}
                   color={
-                    colors.primary
+                    colors.accentContent
                   }
                 />
 
@@ -194,7 +194,7 @@ const getStyles = (colors: AppColors) =>
 
     selectedModalOption: {
       backgroundColor:
-        colors.primaryWash,
+        colors.selectedWash,
     },
 
     modalOptionText: {
@@ -204,6 +204,6 @@ const getStyles = (colors: AppColors) =>
     selectedModalOptionText: {
       fontWeight: "700",
       color:
-        colors.primary,
+        colors.accentContent,
     },
   });

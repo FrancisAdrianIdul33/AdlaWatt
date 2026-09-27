@@ -120,7 +120,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="pencil"
             size={22}
-            color={colors.primary}
+            color={colors.accentContent}
           />
         </Pressable>
 
@@ -139,7 +139,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="camera"
             size={22}
-            color={colors.primary}
+            color={colors.accentContent}
           />
         </Pressable>
 
@@ -158,7 +158,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="archive"
             size={22}
-            color={colors.primary}
+            color={colors.accentContent}
           />
         </Pressable>
 
