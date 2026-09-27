@@ -9,6 +9,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 import AppText from "@/components/ui/AppText";
 
 interface AppCheckboxProps {
@@ -62,7 +63,7 @@ const getStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 12,
-    minHeight: 44,
+    minHeight: Touch.target,
   },
 
   checkbox: {
@@ -77,7 +78,7 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "center",
     alignItems: "center",
 
-    marginRight: 10,
+    marginRight: 12,
 
     backgroundColor: colors.surface,
   },

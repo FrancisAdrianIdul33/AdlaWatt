@@ -13,6 +13,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
 
 type AppButton1Props = {
   title: string;
@@ -63,20 +64,20 @@ const getStyles = (colors: AppColors) =>
     button: {
       width: "100%",
       maxWidth: 360,
-      height: 46,
+      minHeight: Control.button,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
+      gap: 8,
       backgroundColor: colors.primary,
       borderRadius: Radius.md,
-      marginTop: 12,
+      marginTop: Control.buttonGap,
       marginBottom: 15,
     },
 
     text: {
       color: colors.onPrimary,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: "700",
     },
 

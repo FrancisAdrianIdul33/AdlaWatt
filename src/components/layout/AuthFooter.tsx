@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet } from "react-native";
+import { Touch } from "@/constants/sizing";
 
 import AppText from "@/components/ui/AppText";
 import {
@@ -65,7 +66,7 @@ const getStyles = (colors: AppColors) =>
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: Touch.target,
     marginTop: 28,
   },
 

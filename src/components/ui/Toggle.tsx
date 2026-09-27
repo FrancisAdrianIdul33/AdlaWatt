@@ -12,6 +12,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 
 // ============================================================
 // TYPES
@@ -106,7 +107,7 @@ const getStyles = (colors: AppColors) =>
 
   statusButton: {
     flex: 1,
-    minHeight: 40,
+    minHeight: Touch.target,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 11,
@@ -114,7 +115,7 @@ const getStyles = (colors: AppColors) =>
 
   statusText: {
     color: colors.text,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
 

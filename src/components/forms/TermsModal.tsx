@@ -15,6 +15,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
+import { Touch } from "@/constants/sizing";
 
 interface TermsModalProps {
   visible: boolean;
@@ -381,8 +382,8 @@ const getStyles = (colors: AppColors) =>
     },
 
     closeButton: {
-      width: 40,
-      height: 40,
+      width: Touch.target,
+      height: Touch.target,
       alignItems: "center",
       justifyContent: "center",
     },

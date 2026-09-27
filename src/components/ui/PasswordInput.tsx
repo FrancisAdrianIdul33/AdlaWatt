@@ -13,6 +13,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Field, Touch } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 interface PasswordInputProps {
@@ -129,11 +130,12 @@ export default function PasswordInput({
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     container: {
-      marginBottom: 18,
+      marginBottom: Field.fieldGap,
     },
 
     label: {
-      marginBottom: 8,
+      marginBottom: Field.labelGap,
+      fontSize: 14,
       fontWeight: "600",
     },
 
@@ -151,11 +153,12 @@ const getStyles = (colors: AppColors) =>
 
       borderRadius: 12,
 
-      paddingHorizontal: 16,
+      minHeight: Field.height,
+      paddingHorizontal: Field.padding,
       paddingVertical: 14,
       paddingRight: 52,
 
-      fontSize: 16,
+      fontSize: Field.textSize,
     },
 
     inputError: {
@@ -164,10 +167,10 @@ const getStyles = (colors: AppColors) =>
 
     toggle: {
       position: "absolute",
-      right: 6,
+      right: 4,
       top: 0,
       bottom: 0,
-      width: 40,
+      width: Touch.target,
       alignItems: "center",
       justifyContent: "center",
     },

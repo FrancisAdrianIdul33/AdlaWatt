@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useAppColors";
 
 import { Routes } from "@/constants/routes";
+import { Bar, Touch } from "@/constants/sizing";
 
 import { supabase } from "@/lib/supabase";
 
@@ -234,11 +235,11 @@ export default function NavBar({
 }
 
 const navBarDimensions = {
-  height: 72,
+  height: Bar.appBar,
   horizontalPadding: 16,
-  iconButtonWidth: 42,
-  iconButtonHeight: 42,
-  notificationIconSize: 27,
+  iconButtonWidth: Touch.target,
+  iconButtonHeight: Touch.target,
+  notificationIconSize: Touch.icon,
   notificationDotSize: 8,
   accentHeight: 3,
 
@@ -272,7 +273,7 @@ const getNavBarStyles = (colors: AppColors) =>
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
   },
 
   iconButton: {

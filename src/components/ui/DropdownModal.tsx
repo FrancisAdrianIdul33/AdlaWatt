@@ -15,6 +15,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 
 // ============================================================
 // STANDARD DROPDOWN MODAL
@@ -71,6 +72,7 @@ export function DropdownModal({
 
             <Pressable
               onPress={onClose}
+              style={dropdownModalStyles.closeButton}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
@@ -242,6 +244,13 @@ const getDropdownModalStyles = (colors: AppColors) =>
       color: colors.text,
       fontWeight: "700",
       fontSize: 17,
+    },
+
+    closeButton: {
+      width: Touch.target,
+      height: Touch.target,
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     option: {

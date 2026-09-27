@@ -11,6 +11,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import AppText from "@/components/ui/AppText";
+import { Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 interface AppInputProps extends TextInputProps {
@@ -73,11 +74,12 @@ export default function AppInput({
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: Field.fieldGap,
   },
 
   label: {
-    marginBottom: 8,
+    marginBottom: Field.labelGap,
+    fontSize: 14,
     fontWeight: "600",
   },
 
@@ -90,10 +92,11 @@ input: {
 
   borderRadius: 12,
 
-  paddingHorizontal: 16,
+  minHeight: Field.height,
+  paddingHorizontal: Field.padding,
   paddingVertical: 14,
 
-  fontSize: 16,
+  fontSize: Field.textSize,
 },
 
   inputError: {

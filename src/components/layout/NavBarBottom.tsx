@@ -16,6 +16,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Bar, Type } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 // ============================================================
@@ -114,8 +115,8 @@ export default function NavBarBottom() {
 }
 
 const navBarBottomDimensions = {
-  height: 72,
-  iconSize: 25,
+  height: Bar.bottomNav,
+  iconSize: Bar.bottomNavIcon,
 };
 
 const getStyles = (colors: AppColors) =>
@@ -149,7 +150,7 @@ const getStyles = (colors: AppColors) =>
 
   label: {
     color: colors.bar.muted,
-    fontSize: 11,
+    fontSize: Type.caption,
     fontWeight: "600",
   },
 

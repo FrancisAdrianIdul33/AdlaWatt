@@ -2,6 +2,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
@@ -68,10 +69,11 @@ const getStyles = (colors: AppColors) =>
     borderWidth: 2,
     borderColor: colors.primary,
     borderRadius: 12,
-    paddingLeft: 16,
+    minHeight: Field.height,
+    paddingLeft: Field.padding,
     paddingRight: 48, // Space reserved for the icon
     paddingVertical: 14,
-    fontSize: 16,
+    fontSize: Field.textSize,
   },
 
   icon: {
