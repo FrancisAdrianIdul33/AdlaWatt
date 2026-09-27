@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import {
   Image,
@@ -11,10 +11,13 @@ import {
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 
 type ApplianceBoxProps = {
@@ -53,6 +56,16 @@ export default function ApplianceBox({
   const [deleteMode, setDeleteMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
 
+  const applianceCardStyles =
+    useApplianceCardStyles();
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const handleDeleteConfirm = () => {
     setDeleteMode(false);
     setMenuMode(false);
@@ -82,7 +95,7 @@ export default function ApplianceBox({
         <MaterialCommunityIcons
           name="arrow-left"
           size={24}
-          color={Colors.light.text}
+          color={colors.text}
         />
       </Pressable>
 
@@ -106,7 +119,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="pencil"
             size={22}
-            color={Colors.light.primary}
+            color={colors.primary}
           />
         </Pressable>
 
@@ -125,7 +138,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="camera"
             size={22}
-            color={Colors.light.primary}
+            color={colors.primary}
           />
         </Pressable>
 
@@ -144,7 +157,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="archive"
             size={22}
-            color={Colors.light.primary}
+            color={colors.primary}
           />
         </Pressable>
 
@@ -163,7 +176,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="delete"
             size={22}
-            color="#EF4444"
+            color={colors.error}
           />
         </Pressable>
       </View>
@@ -175,7 +188,7 @@ export default function ApplianceBox({
       <MaterialCommunityIcons
         name="alert-circle-outline"
         size={30}
-        color="#EF4444"
+        color={colors.error}
       />
 
       <AppText
@@ -238,7 +251,7 @@ export default function ApplianceBox({
             borderColor: color,
             backgroundColor: selected
               ? color
-              : Colors.light.surface,
+              : colors.surface,
           },
         ]}
       >
@@ -246,7 +259,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="check"
             size={18}
-            color="#FFFFFF"
+            color={colors.onPrimary}
           />
         )}
       </View>
@@ -320,7 +333,8 @@ export default function ApplianceBox({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   selectionCircle: {
     position: "absolute",
     top: 10,
@@ -387,7 +401,7 @@ const styles = StyleSheet.create({
   },
 
   deleteQuestion: {
-    color: "#000000",
+    color: colors.text,
     fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
@@ -412,20 +426,20 @@ const styles = StyleSheet.create({
   },
 
   noButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
   },
 
   yesButton: {
-    backgroundColor: "#EF4444",
+    backgroundColor: colors.error,
   },
 
   noButtonText: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "600",
   },
 
   yesButtonText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontWeight: "600",
   },
 

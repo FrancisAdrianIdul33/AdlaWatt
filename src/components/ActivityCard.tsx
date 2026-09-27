@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import {
   Pressable,
@@ -15,11 +15,21 @@ import ActivityLogCard, {
 } from "@/components/ActivityLogCard";
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
 
 export default function ActivityCard() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const [activities, setActivities] =
     useState<ActivityLogItem[]>([]);
 
@@ -135,7 +145,8 @@ export default function ActivityCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -143,15 +154,15 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     marginBottom: 10,
   },
 
   viewAll: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontWeight: "700",
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,

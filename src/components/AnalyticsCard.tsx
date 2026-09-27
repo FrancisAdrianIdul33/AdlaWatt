@@ -1,4 +1,5 @@
 import React, {
+  useMemo,
   useState,
 } from "react";
 import {
@@ -11,7 +12,10 @@ import AppText from "@/components/ui/AppText";
 import {
   CalendarModal,
 } from "@/components/ui/CalendarModal";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   AnalyticsRange,
   ReportFrequency,
@@ -38,6 +42,13 @@ function DatePickerField({
     calendarVisible,
     setCalendarVisible,
   ] = useState(false);
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   return (
     <View
@@ -76,7 +87,7 @@ function DatePickerField({
         <Ionicons
           name="calendar-outline"
           size={16}
-          color={Colors.light.primary}
+          color={colors.primary}
         />
       </Pressable>
 
@@ -123,6 +134,13 @@ export default function AnalyticsCards({
   onToDateChange,
   generateReport,
 }: AnalyticsCardsProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <>
       {/* ======================================================
@@ -145,7 +163,7 @@ export default function AnalyticsCards({
           <Ionicons
             name="document-text-outline"
             size={30}
-            color="#FACC15"
+            color={colors.iconAccent}
           />
 
           <AppText
@@ -218,7 +236,7 @@ export default function AnalyticsCards({
                   name="chevron-down-outline"
                   size={15}
                   color={
-                    Colors.light.primary
+                    colors.primary
                   }
                 />
               </Pressable>
@@ -261,7 +279,7 @@ export default function AnalyticsCards({
               <Ionicons
                 name="download-outline"
                 size={17}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
 
               <AppText
@@ -289,7 +307,7 @@ export default function AnalyticsCards({
               <Ionicons
                 name="document-outline"
                 size={17}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
 
               <AppText
@@ -322,7 +340,7 @@ export const analyticsDimensions = {
    STYLES
    ============================================================ */
 
-const styles =
+const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     buttonPressed: {
       opacity: 0.72,
@@ -335,10 +353,10 @@ const styles =
     reportCard: {
       width: "100%",
       backgroundColor:
-        Colors.glass.white,
+        colors.glass.white,
       borderWidth: 3,
       borderColor:
-        Colors.light.primary,
+        colors.primary,
       borderRadius: 15,
       flexDirection: "column",
       alignItems: "stretch",
@@ -350,7 +368,7 @@ const styles =
     reportHeaderPanel: {
       width: "100%",
       backgroundColor:
-        Colors.light.primary,
+        colors.primary,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
@@ -360,7 +378,7 @@ const styles =
     },
 
     reportHeaderTitle: {
-      color: "#FFFFFF",
+      color: colors.onPrimary,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -373,7 +391,7 @@ const styles =
 
     reportSubtitle: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
       lineHeight: 19,
     },
 
@@ -389,7 +407,7 @@ const styles =
 
     reportControlLabel: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
       fontWeight: "600",
       marginBottom: 5,
     },
@@ -399,7 +417,7 @@ const styles =
       minHeight: 42,
       borderWidth: 2,
       borderColor:
-        Colors.light.primary,
+        colors.primary,
       borderRadius: 12,
       paddingHorizontal: 12,
       flexDirection: "row",
@@ -409,7 +427,7 @@ const styles =
     },
 
     reportSelectText: {
-      color: "#000000",
+      color: colors.text,
       fontWeight: "600",
     },
 
@@ -417,10 +435,10 @@ const styles =
       width: "100%",
       minHeight: 42,
       backgroundColor:
-        "rgba(0, 168, 107, 0.06)",
+        colors.washFaint,
       borderWidth: 1,
       borderColor:
-        Colors.light.border,
+        colors.border,
       borderRadius: 12,
       paddingHorizontal: 12,
       flexDirection: "row",
@@ -430,7 +448,7 @@ const styles =
     },
 
     dateFieldText: {
-      color: "#000000",
+      color: colors.text,
       fontWeight: "600",
     },
 
@@ -445,7 +463,7 @@ const styles =
       flex: 1,
       minHeight: 44,
       backgroundColor:
-        Colors.light.primary,
+        colors.primary,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
@@ -455,7 +473,7 @@ const styles =
     },
 
     exportPrimaryText: {
-      color: "#FFFFFF",
+      color: colors.onPrimary,
       fontWeight: "700",
     },
   });

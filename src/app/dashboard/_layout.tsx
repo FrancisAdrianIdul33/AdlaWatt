@@ -1,22 +1,44 @@
 import { Slot } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
 
 import { SettingsProvider } from "@/context/SettingsContext";
+import {
+  ThemeProvider,
+  useTheme,
+} from "@/context/ThemeContext";
 
 // ============================================================
 // DASHBOARD LAYOUT
 //
-// Single shared typography instance for the whole dashboard.
-// Save in Menu propagates to all dashboard screens via this
-// provider. Auth screens are intentionally excluded (no
-// provider there — they fall back to DEFAULT_TYPOGRAPHY).
-// Sizes/layouts are untouched: only fontFamily/weight flow
-// through prefs; each screen keeps its intentional sizes.
+// Single shared typography + theme instances for the whole
+// dashboard. Save in Menu propagates typography to all
+// dashboard screens; the Dark Mode toggle applies instantly.
+// Auth screens are intentionally excluded (no providers
+// there — they fall back to defaults and always render
+// light). StatusBar follows the active theme.
 // ============================================================
+
+function ThemedDashboard() {
+  const { theme } = useTheme();
+
+  return (
+    <SettingsProvider>
+      {/* Native-only: expo-status-bar is a no-op on web. */}
+      {Platform.OS !== "web" && (
+        <StatusBar
+          style={theme === "dark" ? "light" : "dark"}
+        />
+      )}
+      <Slot />
+    </SettingsProvider>
+  );
+}
 
 export default function DashboardLayout() {
   return (
-    <SettingsProvider>
-      <Slot />
-    </SettingsProvider>
+    <ThemeProvider>
+      <ThemedDashboard />
+    </ThemeProvider>
   );
 }

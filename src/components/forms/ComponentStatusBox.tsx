@@ -6,10 +6,10 @@ import {
 } from "react-native";
 
 import {
-  applianceCardStyles,
+  useApplianceCardStyles,
 } from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import { useAppColors } from "@/hooks/useAppColors";
 
 type ComponentStatus =
   | "Active"
@@ -30,12 +30,16 @@ export default function ComponentStatusBox({
   status,
   imageSource = defaultImage,
 }: ComponentStatusBoxProps) {
+  const colors = useAppColors();
   const isActive =
     status === "Active" || status === "Connected";
 
   const statusColor = isActive
-    ? Colors.light.primary
-    : "#EF4444";
+    ? colors.primary
+    : colors.error;
+
+  const applianceCardStyles =
+    useApplianceCardStyles();
 
   return (
     <View

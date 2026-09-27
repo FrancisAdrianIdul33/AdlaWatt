@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -10,7 +10,10 @@ import {
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
 
 interface TermsModalProps {
@@ -24,6 +27,11 @@ export default function TermsModal({
   onClose,
   onAgree,
 }: TermsModalProps) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   const [secondsRemaining, setSecondsRemaining] = useState(10);
   const [canAgree, setCanAgree] = useState(false);
 
@@ -84,7 +92,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
             </Pressable>
           </View>
@@ -261,7 +269,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color="#FFFFFF"
+                  color={colors.onPrimary}
                 />
 
                 <AppText
@@ -315,6 +323,11 @@ interface SectionProps {
 }
 
 function Section({ title, text }: SectionProps) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   return (
     <View style={styles.section}>
       <AppText
@@ -334,124 +347,125 @@ function Section({ title, text }: SectionProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "flex-end",
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "flex-end",
+    },
 
-  modal: {
-    height: "92%",
-    backgroundColor: Colors.light.background,
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    overflow: "hidden",
-  },
+    modal: {
+      height: "92%",
+      backgroundColor: colors.background,
+      borderTopLeftRadius: Radius.lg,
+      borderTopRightRadius: Radius.lg,
+      overflow: "hidden",
+    },
 
-header: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: Spacing.lg,
-  paddingVertical: Spacing.md,
-  backgroundColor: Colors.light.primary,
-  borderBottomWidth: 1,
-  borderBottomColor: Colors.light.primary,
-},
-
-  title: {
-    fontSize: Typography.heading,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  content: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-
-  contentContainer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    backgroundColor: Colors.light.background,
-  },
-
-  updated: {
-    color: Colors.light.textSecondary,
-    marginBottom: Spacing.lg,
-  },
-
-  section: {
-    marginBottom: Spacing.lg,
-  },
-
-  sectionTitle: {
-    fontWeight: "700",
-    marginBottom: Spacing.sm,
-  },
-
-  sectionText: {
-    lineHeight: 21,
-    color: Colors.light.textSecondary,
-  },
-
-  footer: {
-    padding: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.primary,
-    backgroundColor: Colors.light.primary,
-  },
-
-  timerContainer: {
-    minHeight: 36,
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary,
   },
 
-  timerText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
+    title: {
+      fontSize: Typography.heading,
+      fontWeight: "700",
+      color: colors.onPrimary,
+    },
 
-  readyText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: Spacing.sm,
-  },
+    closeButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  agreeButton: {
-    minHeight: 48,
-    borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    content: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  agreeButtonDisabled: {
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
-  },
+    contentContainer: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+      backgroundColor: colors.background,
+    },
 
-  agreeButtonText: {
-    color: "#000000",
-    fontWeight: "700",
-  },
+    updated: {
+      color: colors.textSecondary,
+      marginBottom: Spacing.lg,
+    },
 
-  agreeButtonPressed: {
-    backgroundColor: Colors.glass.whiteStrong,
-  },
+    section: {
+      marginBottom: Spacing.lg,
+    },
 
-  agreeButtonTextDisabled: {
-    color: "rgba(255, 255, 255, 0.75)",
-  },
-});
+    sectionTitle: {
+      fontWeight: "700",
+      marginBottom: Spacing.sm,
+    },
+
+    sectionText: {
+      lineHeight: 21,
+      color: colors.textSecondary,
+    },
+
+    footer: {
+      padding: Spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+
+    timerContainer: {
+      minHeight: 36,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+
+    timerText: {
+      color: colors.onPrimary,
+      textAlign: "center",
+    },
+
+    readyText: {
+      color: colors.onPrimary,
+      textAlign: "center",
+      marginBottom: Spacing.sm,
+    },
+
+    agreeButton: {
+      minHeight: 48,
+      borderRadius: Radius.md,
+      backgroundColor: colors.primarySoft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    agreeButtonDisabled: {
+      backgroundColor: colors.glass.disabled,
+    },
+
+    agreeButtonText: {
+      color: colors.text,
+      fontWeight: "700",
+    },
+
+    agreeButtonPressed: {
+      backgroundColor: colors.glass.whiteStrong,
+    },
+
+    agreeButtonTextDisabled: {
+      color: colors.glass.disabledText,
+    },
+  });

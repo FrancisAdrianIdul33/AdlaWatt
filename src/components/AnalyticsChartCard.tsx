@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -6,7 +6,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   ChartFrequency,
   FREQUENCIES,
@@ -39,6 +42,13 @@ export default function AnalyticsChartCard({
   onFrequencyChange,
   children,
 }: AnalyticsChartCardProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View
       style={
@@ -54,7 +64,7 @@ export default function AnalyticsChartCard({
         <Ionicons
           name={icon}
           size={26}
-          color="#FACC15"
+          color={colors.iconAccent}
         />
 
         <AppText
@@ -150,15 +160,15 @@ export default function AnalyticsChartCard({
    STYLES
    ============================================================ */
 
-const styles =
+const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     card: {
       width: "100%",
       backgroundColor:
-        Colors.glass.white,
+        colors.glass.white,
       borderWidth: 3,
       borderColor:
-        Colors.light.primary,
+        colors.primary,
       borderRadius: 15,
       flexDirection: "column",
       alignItems: "stretch",
@@ -169,7 +179,7 @@ const styles =
     headerPanel: {
       width: "100%",
       backgroundColor:
-        Colors.light.primary,
+        colors.primary,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
@@ -179,7 +189,7 @@ const styles =
     },
 
     headerTitle: {
-      color: "#FFFFFF",
+      color: colors.onPrimary,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -192,7 +202,7 @@ const styles =
 
     subtitle: {
       color:
-        Colors.light.textSecondary,
+        colors.textSecondary,
       lineHeight: 19,
       marginBottom: 12,
     },
@@ -202,10 +212,10 @@ const styles =
       height: 46,
       flexDirection: "row",
       backgroundColor:
-        "rgba(0, 0, 0, 0.04)",
+        colors.scrimFaint,
       borderWidth: 2,
       borderColor:
-        Colors.light.border,
+        colors.border,
       borderRadius: 12,
       padding: 3,
       marginBottom: 14,
@@ -221,17 +231,17 @@ const styles =
 
     frequencyButtonActive: {
       backgroundColor:
-        Colors.light.primary,
+        colors.primary,
     },
 
     frequencyText: {
-      color: Colors.light.text,
+      color: colors.text,
       fontSize: 12,
       fontWeight: "700",
     },
 
     frequencyTextActive: {
-      color: "#FFFFFF",
+      color: colors.onPrimary,
     },
 
     chartArea: {

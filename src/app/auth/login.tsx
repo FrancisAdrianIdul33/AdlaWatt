@@ -126,14 +126,14 @@ export default function LoginScreen() {
     <Ionicons
       name="warning-outline"
       size={20}
-      color="#D32F2F"
+      color={Colors.light.errorDark}
       style={{ marginRight: 8 }}
     />
 
     <AppText
       variant="caption"
       style={{
-        color: "#D32F2F",
+        color: Colors.light.errorDark,
         flex: 1,
       }}
     >

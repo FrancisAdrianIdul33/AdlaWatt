@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 export type SolarStatus = "Low" | "Moderate" | "High";
 
@@ -34,6 +37,11 @@ export default function Card1({
   totalEnergy = 0,
   loading = false,
 }: Card1Props) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   const displayValue = (
     value: number | string,
     unit: string,
@@ -46,7 +54,7 @@ export default function Card1({
           <Ionicons
             name="sunny-outline"
             size={36}
-            color="#FACC15"
+            color={colors.iconAccent}
           />
           <AppText
             variant="heading"
@@ -75,13 +83,15 @@ export default function Card1({
       <View style={styles.grid}>
         <View style={styles.row}>
           <MetricCell
+            styles={styles}
             label="Solar Input"
             value={displayValue(solarInput, "W")}
             badge={solarStatus}
-            badgeStyle={getSolarBadgeStyle(solarStatus)}
-            badgeTextStyle={getSolarBadgeTextStyle(solarStatus)}
+            badgeStyle={getSolarBadgeStyle(solarStatus, styles)}
+            badgeTextStyle={getSolarBadgeTextStyle(solarStatus, styles)}
           />
           <MetricCell
+            styles={styles}
             label="Voltage"
             value={displayValue(solarVoltage, "V")}
           />
@@ -89,10 +99,12 @@ export default function Card1({
 
         <View style={styles.row}>
           <MetricCell
+            styles={styles}
             label="Current"
             value={displayValue(solarCurrent, "A")}
           />
           <MetricCell
+            styles={styles}
             label="Total Energy"
             value={displayValue(totalEnergy, "Wh")}
           />
@@ -103,12 +115,13 @@ export default function Card1({
 }
 
 function MetricCell({
+  styles,
   label,
   value,
   badge,
   badgeStyle,
   badgeTextStyle,
-}: MetricCellProps) {
+}: MetricCellProps & { styles: ReturnType<typeof getStyles> }) {
   return (
     <View style={styles.metricCell}>
       <AppText
@@ -149,7 +162,7 @@ function MetricCell({
   );
 }
 
-function getSolarBadgeStyle(status: SolarStatus) {
+function getSolarBadgeStyle(status: SolarStatus, styles: ReturnType<typeof getStyles>) {
   switch (status) {
     case "High":
       return styles.highBadge;
@@ -161,19 +174,20 @@ function getSolarBadgeStyle(status: SolarStatus) {
   }
 }
 
-function getSolarBadgeTextStyle(status: SolarStatus) {
+function getSolarBadgeTextStyle(status: SolarStatus, styles: ReturnType<typeof getStyles>) {
   return status === "Moderate"
     ? styles.darkBadgeText
     : styles.lightBadgeText;
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   card: {
     width: "100%",
     minHeight: 300,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 15,
     overflow: "hidden",
   },
@@ -181,7 +195,7 @@ const styles = StyleSheet.create({
   header: {
     width: "100%",
     minHeight: 30,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -198,7 +212,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontSize: 20,
     fontWeight: "600",
     marginLeft: 10,
@@ -212,13 +226,13 @@ const styles = StyleSheet.create({
   },
 
   timerLabel: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontSize: 13,
     lineHeight: 16,
   },
 
   timerValue: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontSize: 19,
     fontWeight: "600",
     lineHeight: 23,
@@ -250,7 +264,7 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    color: "#000000",
+    color: colors.text,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "600",
@@ -259,7 +273,7 @@ const styles = StyleSheet.create({
   },
 
   metricValue: {
-    color: "#000000",
+    color: colors.text,
     fontSize: 25,
     fontWeight: "700",
     textAlign: "center",
@@ -292,22 +306,22 @@ const styles = StyleSheet.create({
   },
 
   highBadge: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
   },
 
   moderateBadge: {
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: colors.secondary,
   },
 
   lowBadge: {
-    backgroundColor: Colors.light.error,
+    backgroundColor: colors.error,
   },
 
   lightBadgeText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
   },
 
   darkBadgeText: {
-    color: "#000000",
+    color: colors.text,
   },
 });

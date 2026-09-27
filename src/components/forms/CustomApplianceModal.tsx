@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
   Pressable,
@@ -12,7 +12,10 @@ import {
   DropdownModal,
 } from "@/components/ui/DropdownModal";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   Radius,
 } from "@/constants/theme";
@@ -48,6 +51,13 @@ export default function CustomApplianceModal({
   onCancel,
   onAdd,
 }: CustomApplianceModalProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const { scaledSize, family, weight } =
     useTypography();
 
@@ -76,7 +86,7 @@ export default function CustomApplianceModal({
         onChangeText={onNameChange}
         placeholder="Enter valid appliance name"
         placeholderTextColor={
-          Colors.light.textSecondary
+          colors.textSecondary
         }
         allowFontScaling={false}
         style={[styles.input, inputFontStyle]}
@@ -88,7 +98,7 @@ export default function CustomApplianceModal({
         onChangeText={onWattsChange}
         placeholder="Enter wattage like 15-20"
         placeholderTextColor={
-          Colors.light.textSecondary
+          colors.textSecondary
         }
         allowFontScaling={false}
         style={[styles.input, inputFontStyle]}
@@ -149,66 +159,67 @@ export default function CustomApplianceModal({
   );
 }
 
-const styles = StyleSheet.create({
-  infoNote: {
-    color: Colors.light.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    infoNote: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+      marginBottom: 10,
+    },
 
-  input: {
-    height: 44,
-    borderWidth: 2,
-    borderColor: Colors.light.border,
-    borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    color: "#000000",
-    fontSize: 14,
-    marginBottom: 8,
-  },
+    input: {
+      height: 44,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      color: colors.text,
+      fontSize: 14,
+      marginBottom: 8,
+    },
 
-  customError: {
-    color: "#EF4444",
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
+    customError: {
+      color: colors.error,
+      fontSize: 12,
+      fontWeight: "600",
+      marginBottom: 2,
+    },
 
-  customActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
+    customActions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 10,
+    },
 
-  customAction: {
-    flex: 1,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-  },
+    customAction: {
+      flex: 1,
+      height: 42,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderRadius: Radius.md,
+    },
 
-  cancelAction: {
-    borderColor: "#EF4444",
-  },
+    cancelAction: {
+      borderColor: colors.error,
+    },
 
-  addAction: {
-    borderColor: Colors.light.primary,
-  },
+    addAction: {
+      borderColor: colors.primary,
+    },
 
-  cancelText: {
-    color: "#EF4444",
-    fontWeight: "700",
-  },
+    cancelText: {
+      color: colors.error,
+      fontWeight: "700",
+    },
 
-  addText: {
-    color: Colors.light.primary,
-    fontWeight: "700",
-  },
+    addText: {
+      color: colors.primary,
+      fontWeight: "700",
+    },
 
   pressed: {
     opacity: 0.7,

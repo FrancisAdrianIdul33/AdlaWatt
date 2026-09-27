@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -23,6 +24,10 @@ import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   Radius,
   Spacing,
@@ -68,17 +73,22 @@ const databaseToUiArea: Record<string, string> = {
  * UI area colors
  */
 const areaColors: Record<string, string> = {
-  "Living Area": Colors.light.primary,
-  "Bedroom": "#9B59B6",
-  "Kitchen Area": Colors.light.secondary,
-  "Work/Study Area": "#4A90E2",
-  "Bathroom Area": "#16A085",
-  "Porch": "#E67E22",
+  "Living Area": Colors.light.areas.living,
+  "Bedroom": Colors.light.areas.bedroom,
+  "Kitchen Area": Colors.light.areas.kitchen,
+  "Work/Study Area": Colors.light.areas.study,
+  "Bathroom Area": Colors.light.areas.bathroom,
+  "Porch": Colors.light.areas.porch,
+  // Custom section follows the brand primary (same value
+  // in both themes, kept static like the area map).
   "Custom Appliances": Colors.light.primary,
 };
 
-const getAreaColor = (area: string) =>
-  areaColors[area] ?? Colors.light.border;
+const getAreaColor = (
+  area: string,
+  fallback: string,
+) =>
+  areaColors[area] ?? fallback;
 
 export default function ApplianceModal({
   visible,
@@ -126,6 +136,16 @@ export default function ApplianceModal({
 
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
+  const areaColor = (area: string) =>
+    getAreaColor(area, colors.border);
 
   const { scaledSize, family, weight } =
     useTypography();
@@ -766,7 +786,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="close"
                 size={24}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
             </Pressable>
           </View>
@@ -786,7 +806,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="battery-half-outline"
                   size={24}
-                  color={Colors.light.primary}
+                  color={colors.primary}
                 />
 
                 <View style={styles.advisoryText}>
@@ -833,7 +853,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="add-circle-outline"
                   size={20}
-                  color="#FFFFFF"
+                  color={colors.onPrimary}
                 />
 
                 <AppText
@@ -870,7 +890,7 @@ export default function ApplianceModal({
                   }}
                   placeholder="Enter valid appliance name"
                   placeholderTextColor={
-                    Colors.light.textSecondary
+                    colors.textSecondary
                   }
                   allowFontScaling={false}
                   style={[styles.input, inputFontStyle]}
@@ -889,7 +909,7 @@ export default function ApplianceModal({
                   }}
                   placeholder="Enter wattage like 15-20"
                   placeholderTextColor={
-                    Colors.light.textSecondary
+                    colors.textSecondary
                   }
                   allowFontScaling={false}
                   style={[styles.input, inputFontStyle]}
@@ -951,7 +971,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={20}
-                  color={Colors.light.primary}
+                  color={colors.primary}
                 />
 
                 <AppText
@@ -983,7 +1003,7 @@ export default function ApplianceModal({
                         styles.sectionLine,
                         {
                           backgroundColor:
-                            Colors.light.primary,
+                            colors.primary,
                         },
                       ]}
                     />
@@ -1008,7 +1028,7 @@ export default function ApplianceModal({
                             name={appliance.name}
                             wattage={appliance.watts}
                             color={
-                              Colors.light.primary
+                              colors.primary
                             }
                             selected={isSelected}
                             isCustom
@@ -1059,15 +1079,15 @@ export default function ApplianceModal({
                       {section}
                     </AppText>
 
-                    <View
-                      style={[
-                        styles.sectionLine,
-                        {
-                          backgroundColor:
-                            getAreaColor(section),
-                        },
-                      ]}
-                    />
+                      <View
+                        style={[
+                          styles.sectionLine,
+                          {
+                            backgroundColor:
+                              areaColor(section),
+                          },
+                        ]}
+                      />
                   </View>
 
                   <View style={styles.grid}>
@@ -1082,7 +1102,7 @@ export default function ApplianceModal({
                           key={appliance.id}
                           name={appliance.name}
                           wattage={appliance.watts}
-                          color={getAreaColor(
+                          color={areaColor(
                             appliance.area,
                           )}
                           selected={isSelected}
@@ -1107,7 +1127,7 @@ export default function ApplianceModal({
                     name="search-outline"
                     size={28}
                     color={
-                      Colors.light.textSecondary
+                      colors.textSecondary
                     }
                   />
 
@@ -1127,7 +1147,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="checkmark-circle-outline"
                 size={17}
-                color="#FFFFFF"
+                color={colors.onPrimary}
               />
 
               <AppText
@@ -1202,16 +1222,17 @@ export default function ApplianceModal({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
 
   modal: {
     height: "92%",
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: "hidden",
@@ -1223,15 +1244,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.primary,
+    borderBottomColor: colors.primary,
   },
 
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: colors.onPrimary,
   },
 
   closeButton: {
@@ -1243,19 +1264,19 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
 
   contentContainer: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
 
   advisory: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: Radius.md,
     padding: 13,
     marginBottom: Spacing.lg,
@@ -1272,13 +1293,13 @@ const styles = StyleSheet.create({
   },
 
   advisoryTitle: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     fontSize: 20,
   },
 
   advisoryDescription: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
     marginTop: 3,
     fontSize: 14,
@@ -1293,7 +1314,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#1b1b1b",
+    color: colors.text,
     fontWeight: "700",
     fontSize: 20,
   },
@@ -1317,12 +1338,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: Radius.md,
   },
 
   customButtonText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1335,11 +1356,11 @@ const styles = StyleSheet.create({
   input: {
     height: 44,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     paddingHorizontal: 12,
-    color: "#000000",
+    color: colors.text,
     fontSize: 14,
   },
 
@@ -1353,15 +1374,15 @@ const styles = StyleSheet.create({
   },
 
   noResultsText: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
   },
 
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.primary,
-    backgroundColor: Colors.light.primary,
+    borderTopColor: colors.primary,
+    backgroundColor: colors.primary,
   },
 
   selectedInfo: {
@@ -1374,7 +1395,7 @@ const styles = StyleSheet.create({
   },
 
   selectedText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontSize: 14,
   },
 
@@ -1389,11 +1410,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: colors.primarySoft,
   },
 
   resetText: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1404,11 +1425,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: colors.primarySoft,
   },
 
   actionText: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1418,7 +1439,7 @@ const styles = StyleSheet.create({
   },
 
   buttonPressed: {
-    backgroundColor: Colors.glass.whiteStrong,
+    backgroundColor: colors.glass.whiteStrong,
     opacity: 1,
   },
 
@@ -1434,38 +1455,38 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderWidth: 2,
     borderRadius: Radius.md,
   },
 
   cancelAction: {
-    borderColor: "#EF4444",
+    borderColor: colors.error,
   },
 
   addAction: {
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
   },
 
   cancelText: {
-    color: "#EF4444",
+    color: colors.error,
     fontWeight: "700",
   },
 
   addText: {
-    color: Colors.light.primary,
+    color: colors.primary,
     fontWeight: "700",
   },
 
   infoNote: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
     marginBottom: 2,
   },
 
   customError: {
-    color: "#EF4444",
+    color: colors.error,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1479,7 +1500,7 @@ const styles = StyleSheet.create({
 
   successText: {
     flex: 1,
-    color: Colors.light.primary,
+    color: colors.primary,
     fontWeight: "600",
   },
 });

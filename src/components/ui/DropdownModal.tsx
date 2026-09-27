@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 
 import {
   Modal,
@@ -11,7 +11,10 @@ import {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 // ============================================================
 // STANDARD DROPDOWN MODAL
@@ -36,6 +39,11 @@ export function DropdownModal({
   onClose,
   children,
 }: DropdownModalProps) {
+  const colors = useAppColors();
+  const dropdownModalStyles = useMemo(
+    () => getDropdownModalStyles(colors),
+    [colors],
+  );
   return (
     <Modal
       visible={visible}
@@ -69,7 +77,7 @@ export function DropdownModal({
               <Ionicons
                 name="close-outline"
                 size={22}
-                color="#000000"
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -97,6 +105,11 @@ export function RadioOptionRow({
   selected,
   onPress,
 }: RadioOptionRowProps) {
+  const colors = useAppColors();
+  const dropdownModalStyles = useMemo(
+    () => getDropdownModalStyles(colors),
+    [colors],
+  );
   return (
     <Pressable
       style={[
@@ -113,7 +126,7 @@ export function RadioOptionRow({
             : "radio-button-off-outline"
         }
         size={18}
-        color={Colors.light.primary}
+        color={colors.primary}
       />
 
       <AppText
@@ -161,6 +174,11 @@ export function TintedOptionRow({
   selected,
   onPress,
 }: TintedOptionRowProps) {
+  const colors = useAppColors();
+  const dropdownModalStyles = useMemo(
+    () => getDropdownModalStyles(colors),
+    [colors],
+  );
   return (
     <Pressable
       style={[
@@ -194,57 +212,58 @@ export function TintedOptionRow({
   );
 }
 
-const dropdownModalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.40)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
+const getDropdownModalStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
 
-  card: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: "#FFFFFF",
-    borderRadius: MODAL_RADIUS,
-    padding: 17,
-  },
+    card: {
+      width: "100%",
+      maxWidth: 420,
+      backgroundColor: colors.surface,
+      borderRadius: MODAL_RADIUS,
+      padding: 17,
+    },
 
-  header: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
+    header: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
 
-  title: {
-    color: "#000000",
-    fontWeight: "700",
-    fontSize: 17,
-  },
+    title: {
+      color: colors.text,
+      fontWeight: "700",
+      fontSize: 17,
+    },
 
-  option: {
-    width: "100%",
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginVertical: 2,
-  },
+    option: {
+      width: "100%",
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      marginVertical: 2,
+    },
 
-  optionSelected: {
-    backgroundColor: "rgba(0, 168, 107, 0.08)",
-  },
+    optionSelected: {
+      backgroundColor: colors.primaryWash,
+    },
 
-  optionText: {
-    color: "#000000",
-  },
+    optionText: {
+      color: colors.text,
+    },
 
-  optionTextSelected: {
-    fontWeight: "700",
-  },
-});
+    optionTextSelected: {
+      fontWeight: "700",
+    },
+  });

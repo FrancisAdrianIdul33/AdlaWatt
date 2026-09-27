@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
     Modal,
@@ -10,7 +10,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 interface ModalBoxProps<T extends string> {
   visible: boolean;
@@ -29,6 +32,11 @@ export default function ModalBox<T extends string>({
   onSelect,
   onClose,
 }: ModalBoxProps<T>) {
+  const colors = useAppColors();
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
   return (
     <Modal
       visible={visible}
@@ -68,7 +76,7 @@ export default function ModalBox<T extends string>({
               <Ionicons
                 name="close-outline"
                 size={22}
-                color="#000000"
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -96,7 +104,7 @@ export default function ModalBox<T extends string>({
                   }
                   size={18}
                   color={
-                    Colors.light.primary
+                    colors.primary
                   }
                 />
 
@@ -124,66 +132,67 @@ export default function ModalBox<T extends string>({
    STYLES
    ============================================================ */
 
-const styles = StyleSheet.create({
-  /* ========================================================
-     MODALS
-  ======================================================== */
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    /* ========================================================
+       MODALS
+    ======================================================== */
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor:
-      "rgba(0, 0, 0, 0.40)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor:
+        colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
 
-  modalCard: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor:
-      "#FFFFFF",
-    borderRadius: 18,
-    padding: 17,
-  },
+    modalCard: {
+      width: "100%",
+      maxWidth: 420,
+      backgroundColor:
+        colors.surface,
+      borderRadius: 18,
+      padding: 17,
+    },
 
-  modalHeader: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent:
-      "space-between",
-    marginBottom: 8,
-  },
+    modalHeader: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      marginBottom: 8,
+    },
 
-  modalTitle: {
-    color: "#000000",
-    fontWeight: "700",
-    fontSize: 17,
-  },
+    modalTitle: {
+      color: colors.text,
+      fontWeight: "700",
+      fontSize: 17,
+    },
 
-  modalOption: {
-    width: "100%",
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
+    modalOption: {
+      width: "100%",
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+    },
 
-  selectedModalOption: {
-    backgroundColor:
-      "rgba(0, 168, 107, 0.08)",
-  },
+    selectedModalOption: {
+      backgroundColor:
+        colors.primaryWash,
+    },
 
-  modalOptionText: {
-    color: "#000000",
-  },
+    modalOptionText: {
+      color: colors.text,
+    },
 
-  selectedModalOptionText: {
-    fontWeight: "700",
-    color:
-      Colors.light.primary,
-  },
-});
+    selectedModalOptionText: {
+      fontWeight: "700",
+      color:
+        colors.primary,
+    },
+  });

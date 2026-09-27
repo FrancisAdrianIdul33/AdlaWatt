@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
   ViewStyle,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import AppText from "./AppText";
 
 interface AppButtonProps {
@@ -21,6 +24,13 @@ export default function AppButton({
   disabled = false,
   style,
 }: AppButtonProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <Pressable
       onPress={onPress}
@@ -39,9 +49,10 @@ export default function AppButton({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   button: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     marginTop: 15,
     borderRadius: 12,
     paddingVertical: 16,

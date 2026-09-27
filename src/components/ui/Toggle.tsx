@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
   Pressable,
@@ -8,7 +8,10 @@ import {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 // ============================================================
 // TYPES
@@ -32,6 +35,13 @@ export default function Toggle({
   value,
   onChange,
 }: ToggleProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View style={styles.statusToggle}>
       {(
@@ -51,10 +61,10 @@ export default function Toggle({
             value === option && {
               backgroundColor:
                 option === "Advisable"
-                  ? Colors.light.primary
+                  ? colors.primary
                   : option === "notAdvisable"
-                    ? "#EF4444"
-                    : Colors.light.primary,
+                    ? colors.error
+                    : colors.primary,
             },
             pressed && styles.pressed,
           ]}
@@ -81,13 +91,14 @@ export default function Toggle({
 // STYLES
 // ============================================================
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   statusToggle: {
     width: "100%",
     flexDirection: "row",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 3,
     marginTop: 10,
@@ -102,13 +113,13 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 13,
     fontWeight: "700",
   },
 
   activeStatusText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
   },
 
   pressed: {

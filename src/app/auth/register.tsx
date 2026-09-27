@@ -278,7 +278,7 @@ export default function RegisterScreen() {
               <Ionicons
                 name="warning-outline"
                 size={20}
-                color="#D32F2F"
+                color={Colors.light.errorDark}
                 style={{ marginRight: 8, marginTop: 1 }}
               />
 
@@ -286,7 +286,7 @@ export default function RegisterScreen() {
                 variant="caption"
                 style={{
                   flex: 1,
-                  color: "#D32F2F",
+                  color: Colors.light.errorDark,
                 }}
               >
                 {warning}

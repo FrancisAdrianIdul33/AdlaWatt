@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { router, usePathname } from "expo-router";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import {
   Pressable,
@@ -12,22 +12,11 @@ import {
 
 import AppText from "@/components/ui/AppText";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
-
-// ============================================================
-// ICON COLORS
-// ============================================================
-
-// Active tab icon - matches the ChartCard.tsx icon hex (#FACC15).
-const ACTIVE_ICON = "#FACC15";
-
-// Inactive tab icons balance against the green body.
-const IDLE_ICON = "rgba(255, 255, 255, 0.6)";
-
-// Every label sits at ~90% white so the text stays readable on
-// top of the primary green while keeping the icon the focus.
-const LABEL_COLOR = "rgba(255, 255, 255, 0.9)";
 
 // ============================================================
 // TABS (left -> right)
@@ -62,6 +51,12 @@ const TABS = [
 
 export default function NavBarBottom() {
   const pathname = usePathname();
+  const colors = useAppColors();
+
+  const navBarBottomStyles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   return (
     <View style={navBarBottomStyles.wrapper}>
@@ -95,8 +90,8 @@ export default function NavBarBottom() {
                 size={navBarBottomDimensions.iconSize}
                 color={
                   isActive
-                    ? ACTIVE_ICON
-                    : IDLE_ICON
+                    ? colors.bar.text
+                    : colors.bar.muted
                 }
               />
 
@@ -123,25 +118,26 @@ const navBarBottomDimensions = {
   iconSize: 25,
 };
 
-const navBarBottomStyles = StyleSheet.create({
-  wrapper: {
-    width: "100%",
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    wrapper: {
+      width: "100%",
+    },
 
-  accentLine: {
-    width: "100%",
-    height: 3,
-    backgroundColor: Colors.light.secondary,
-  },
+    accentLine: {
+      width: "100%",
+      height: 3,
+      backgroundColor: colors.bar.accent,
+    },
 
-  container: {
-    height: navBarBottomDimensions.height,
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-evenly",
-    backgroundColor: Colors.light.primary,
-  },
+    container: {
+      height: navBarBottomDimensions.height,
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-evenly",
+      backgroundColor: colors.bar.background,
+    },
 
   tab: {
     flex: 1,
@@ -152,12 +148,13 @@ const navBarBottomStyles = StyleSheet.create({
   },
 
   label: {
-    color: LABEL_COLOR,
+    color: colors.bar.muted,
     fontSize: 11,
     fontWeight: "600",
   },
 
   activeLabel: {
+    color: colors.bar.text,
     fontWeight: "700",
   },
 

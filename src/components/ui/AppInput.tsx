@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -6,7 +6,10 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import AppText from "@/components/ui/AppText";
 import { useTypography } from "@/hooks/useTypography";
 
@@ -24,6 +27,13 @@ export default function AppInput({
   const { scaledSize, family, weight } =
     useTypography();
 
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <View style={styles.container}>
       {label && (
@@ -35,7 +45,7 @@ export default function AppInput({
       <TextInput
         {...props}
         allowFontScaling={false}
-        placeholderTextColor={Colors.light.textSecondary}
+        placeholderTextColor={colors.textSecondary}
         style={[
           styles.input,
           {
@@ -57,7 +67,8 @@ export default function AppInput({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   container: {
     marginBottom: 18,
   },
@@ -68,11 +79,11 @@ const styles = StyleSheet.create({
   },
 
 input: {
-  backgroundColor: Colors.light.surface,
-  color: Colors.light.textSecondary,
+  backgroundColor: colors.surface,
+  color: colors.textSecondary,
 
   borderWidth: 1,
-  borderColor: Colors.light.border,
+  borderColor: colors.border,
 
   borderRadius: 12,
 
@@ -83,11 +94,11 @@ input: {
 },
 
   inputError: {
-    borderColor: Colors.light.error,
+    borderColor: colors.error,
   },
 
   error: {
     marginTop: 6,
-    color: Colors.light.error,
+    color: colors.error,
   },
 });

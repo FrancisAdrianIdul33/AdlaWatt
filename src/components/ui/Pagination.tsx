@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -7,7 +7,10 @@ import {
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 type PaginationProps = {
   currentPage: number;
@@ -22,6 +25,13 @@ export default function Pagination({
   onPrevious,
   onNext,
 }: PaginationProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const isFirstPage = currentPage <= 1;
   const isLastPage = currentPage >= totalPages;
 
@@ -41,8 +51,8 @@ export default function Pagination({
           size={22}
           color={
             isFirstPage
-              ? Colors.light.textSecondary
-              : Colors.light.primary
+              ? colors.textSecondary
+              : colors.primary
           }
         />
 
@@ -81,8 +91,8 @@ export default function Pagination({
           size={22}
           color={
             isLastPage
-              ? Colors.light.textSecondary
-              : Colors.light.primary
+              ? colors.textSecondary
+              : colors.primary
           }
         />
 
@@ -99,7 +109,8 @@ export default function Pagination({
     </View>
   );
 }
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   container: {
     width: "80%", // Adjust overall pagination width
     alignSelf: "center", // Always centers the pagination
@@ -116,9 +127,9 @@ const styles = StyleSheet.create({
   navigationBox: {
     flex: 1,
     minHeight: 58,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -128,9 +139,9 @@ const styles = StyleSheet.create({
   pageBox: {
     flex: 2,
     minHeight: 58,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -138,24 +149,24 @@ const styles = StyleSheet.create({
   },
 
   navigationText: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "600",
     fontSize: 12,
   },
 
   pageText: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     textAlign: "center",
     fontSize: 12,
   },
 
   disabledBox: {
-    borderColor: Colors.light.textSecondary,
+    borderColor: colors.textSecondary,
     opacity: 0.5,
   },
 
   disabledText: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
   },
 });

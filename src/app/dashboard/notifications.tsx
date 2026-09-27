@@ -32,7 +32,10 @@ import AppText from "@/components/ui/AppText";
 
 import EmptyState from "@/components/ui/EmptyState";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 
 import { supabase } from "@/lib/supabase";
 
@@ -48,6 +51,13 @@ type NotificationData = NotificationCardData & {
 };
 
 export default function NotificationsScreen() {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   const [notifications, setNotifications] =
     useState<NotificationData[]>([]);
 
@@ -432,7 +442,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="time-outline"
                 size={18}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -445,7 +455,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
             </Pressable>
           </View>
@@ -465,8 +475,8 @@ export default function NotificationsScreen() {
                 size={18}
                 color={
                   typeFilter === "alert"
-                    ? Colors.light.error
-                    : Colors.light.primary
+                    ? colors.error
+                    : colors.primary
                 }
               />
 
@@ -480,7 +490,7 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
             </Pressable>
           </View>
@@ -493,7 +503,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name="checkmark-done-outline"
               size={17}
-              color="#FFFFFF"
+              color={colors.onPrimary}
             />
 
             <AppText
@@ -619,19 +629,19 @@ export default function NotificationsScreen() {
             value: "All" as const,
             label: "All",
             icon: "list-outline" as const,
-            color: Colors.light.primary,
+            color: colors.primary,
           },
           {
             value: "normal" as const,
             label: "Normal",
             icon: "notifications-outline" as const,
-            color: Colors.light.primary,
+            color: colors.primary,
           },
           {
             value: "alert" as const,
             label: "Alert",
             icon: "alert-circle-outline" as const,
-            color: Colors.light.error,
+            color: colors.error,
           },
         ].map((option) => (
           <TintedOptionRow
@@ -666,10 +676,11 @@ const notificationDimensions = {
   buttonRadius: 12,
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background,
   },
 
   content: {
@@ -680,12 +691,12 @@ const styles = StyleSheet.create({
   /* Header */
 
   headerCard: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
 
     borderWidth:
       notificationDimensions.borderWidth,
 
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
 
     borderRadius:
       notificationDimensions.cardRadius,
@@ -696,12 +707,12 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
 
   subtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
 
     marginTop: 6,
 
@@ -721,11 +732,11 @@ const styles = StyleSheet.create({
   },
 
   totalText: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
   },
 
   totalNumber: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
 
@@ -767,18 +778,18 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 10,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
 
     borderWidth: 2,
 
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
 
     borderRadius:
       notificationDimensions.filterRadius,
   },
 
   dropdownButtonText: {
-    color: "#000000",
+    color: colors.text,
 
     fontWeight: "600",
 
@@ -801,14 +812,14 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 12,
 
-    backgroundColor: "#00A86B",
+    backgroundColor: colors.primary,
 
     borderRadius:
       notificationDimensions.buttonRadius,
   },
 
   markReadText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
 
     fontWeight: "700",
   },
@@ -820,7 +831,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: colors.text,
 
     fontWeight: "700",
 

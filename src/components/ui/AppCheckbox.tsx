@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
 
-import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import AppText from "@/components/ui/AppText";
 
 interface AppCheckboxProps {
@@ -19,6 +22,13 @@ export default function AppCheckbox({
   checked,
   onPress,
 }: AppCheckboxProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
   return (
     <Pressable
       style={styles.container}
@@ -46,7 +56,8 @@ export default function AppCheckbox({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
@@ -58,7 +69,7 @@ const styles = StyleSheet.create({
     height: 22,
 
     borderWidth: 1.5,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
 
     borderRadius: 6,
 
@@ -67,15 +78,15 @@ const styles = StyleSheet.create({
 
     marginRight: 10,
 
-    backgroundColor: Colors.light.surface,
+    backgroundColor: colors.surface,
   },
 
   checked: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
   },
 
   checkmark: {
-    color: Colors.light.onPrimary,
+    color: colors.onPrimary,
     fontSize: 14,
     fontWeight: "700",
   },

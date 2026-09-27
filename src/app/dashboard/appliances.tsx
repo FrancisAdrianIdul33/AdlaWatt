@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   Pressable,
@@ -21,6 +25,10 @@ import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
 import {
   Radius,
 } from "@/constants/theme";
@@ -75,34 +83,44 @@ const STATUS_FOR_FILTER: Record<
   notAdvisable: "notAdvisable",
 };
 
-const TOGGLE_META: {
+const TOGGLE_META_BASE: {
   filter: StatusFilter;
   label: string;
-  color: string;
+  tone: "primary" | "warning" | "error";
   accessibilityLabel: string;
 }[] = [
   {
     filter: "Advisable",
     label: "Advisable",
-    color: Colors.light.primary,
+    tone: "primary",
     accessibilityLabel:
       "Show advisable appliances",
   },
   {
     filter: "Caution",
     label: "Caution",
-    color: Colors.light.warning,
+    tone: "warning",
     accessibilityLabel:
       "Show appliances to use with care",
   },
   {
     filter: "notAdvisable",
     label: "Not Advisable",
-    color: Colors.light.error,
+    tone: "error",
     accessibilityLabel:
       "Show not advisable appliances",
   },
 ];
+
+const getToggleColor = (
+  colors: AppColors,
+  tone: "primary" | "warning" | "error",
+) =>
+  tone === "warning"
+    ? colors.warning
+    : tone === "error"
+      ? colors.error
+      : colors.primary;
 
 const statusMeta = (
   status: ApplianceStatus,
@@ -153,6 +171,13 @@ const areaMap: Record<
 export default function AppliancesScreen() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Advisable");
+
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
 
   const {
     monitoring,
@@ -389,7 +414,7 @@ export default function AppliancesScreen() {
             <Ionicons
               name="add-outline"
               size={18}
-              color="#FFFFFF"
+              color={colors.onPrimary}
             />
 
             <AppText
@@ -415,7 +440,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="flash-outline"
                 size={18}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -428,7 +453,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -448,7 +473,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="location-outline"
                 size={18}
-                color={Colors.light.primary}
+                color={colors.primary}
               />
 
               <AppText
@@ -461,7 +486,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="chevron-down-outline"
                 size={17}
-                color={Colors.light.text}
+                color={colors.text}
               />
             </Pressable>
           </View>
@@ -469,15 +494,20 @@ export default function AppliancesScreen() {
 
         {/* Status Filter */}
         <View style={styles.statusToggle}>
-          {TOGGLE_META.map(
+          {TOGGLE_META_BASE.map(
             ({
               filter,
               label,
-              color,
+              tone,
               accessibilityLabel,
             }) => {
               const active =
                 statusFilter === filter;
+              const color =
+                getToggleColor(
+                  colors,
+                  tone,
+                );
 
               return (
                 <Pressable
@@ -664,11 +694,12 @@ const dimensions = {
   gap: 10,
 };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    scrollView: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
   content: {
     padding: dimensions.padding,
@@ -680,21 +711,21 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: dimensions.radius,
     padding: 18,
     marginBottom: 16,
   },
 
   title: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
 
   subtitle: {
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary,
     marginTop: 6,
   },
 
@@ -713,13 +744,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary,
     borderRadius: 14,
     paddingHorizontal: 12,
   },
 
   addButtonText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontWeight: "700",
   },
 
@@ -733,9 +764,9 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: Colors.light.primary,
+    borderColor: colors.primary,
     borderRadius: 14,
     paddingHorizontal: 11,
     gap: 6,
@@ -743,7 +774,7 @@ const styles = StyleSheet.create({
 
   filterText: {
     flex: 1,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "600",
   },
 
@@ -757,7 +788,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     marginBottom: 10,
   },
@@ -768,9 +799,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     height: 51,
     flexDirection: "row",
-    backgroundColor: Colors.glass.white,
+    backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.border,
+    borderColor: colors.border,
     borderRadius: Radius.md,
     padding: 3,
     marginTop: 10,
@@ -785,15 +816,16 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    color: Colors.light.text,
+    color: colors.text,
     fontSize: 13,
     fontWeight: "700",
   },
 
   activeStatusText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
   },
 
+  // Frozen: dark ink on the amber caution fill in both themes.
   activeStatusTextCaution: {
     color: Colors.light.text,
   },

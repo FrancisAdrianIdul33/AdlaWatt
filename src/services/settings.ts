@@ -76,8 +76,15 @@ export async function loadTypographyPreferences(): Promise<TypographyPreferences
 export async function saveTypographyPreferences(
   prefs: TypographyPreferences,
 ): Promise<void> {
-  await AsyncStorage.setItem(
-    TYPOGRAPHY_STORAGE_KEY,
-    JSON.stringify(sanitize(prefs)),
-  );
+  // Best-effort: callers already hold the new prefs in
+  // state, so a blocked store (e.g. web private mode)
+  // must not break Save.
+  try {
+    await AsyncStorage.setItem(
+      TYPOGRAPHY_STORAGE_KEY,
+      JSON.stringify(sanitize(prefs)),
+    );
+  } catch {
+    // Intentionally ignored.
+  }
 }
