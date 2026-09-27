@@ -210,13 +210,15 @@ export const Colors = {
     },
 
     // ——— navbar chrome (brand in light, monochrome in dark) ———
+    // Dark values reuse the existing neutrals: surface, dark text,
+    // muted, border, background. No new hexes introduced.
     bar: {
-      background: "#000000",
-      text: "#FFFFFF",
+      background: "#1E1E1E",
+      text: "#E3E3E3",
       muted: "#A0A0A0",
       accent: "#3A3A3A",
-      capsule: "#1E1E1E",
-      online: "#FFFFFF",
+      capsule: "#121212",
+      online: "#E3E3E3",
     },
   },
 
