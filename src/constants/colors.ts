@@ -94,6 +94,9 @@ export const Colors = {
     // ——— 60 · dominant surfaces ———
     background: "#F0EAD6",
     surface: "#FFFFFF",
+    onBackground: "#1C1B1F",
+    onSurface: "#1C1B1F",
+    onSurfaceMuted: "#747775",
 
     // ——— 30 · primary brand ———
     primary: "#00A86B",
@@ -107,9 +110,9 @@ export const Colors = {
     secondary: "#FFBF00",
     iconAccent: "#FACC15",
 
-    // ——— type + hairlines ———
-    text: "#2e2e2e",
-    textSecondary: "#454545",
+    // ——— type + hairlines (aliases of the on-surface system) ———
+    text: "#1C1B1F",
+    textSecondary: "#747775",
     border: "#D8D2C2",
 
     // ——— status (all in active use) ———
@@ -146,22 +149,25 @@ export const Colors = {
     // ——— 60 · dominant surfaces (soft black) ———
     background: "#121212",
     surface: "#1E1E1E",
+    onBackground: "#E3E3E3",
+    onSurface: "#E3E3E3",
+    onSurfaceMuted: "#A0A0A0",
 
-    // ——— 30 · primary brand (carries over) ———
-    primary: "#00A86B",
-    onPrimary: "#FFFFFF",
-    onPrimaryMuted: "rgba(255, 255, 255, 0.6)",
-    onPrimarySoft: "rgba(255, 255, 255, 0.9)",
-    primarySoft: "#99DCC4",
-    primaryPressed: "#33B98A",
+    // ——— 30 · primary brand (desaturated for dark mode) ———
+    primary: "#33C191",
+    onPrimary: "#121212",
+    onPrimaryMuted: "rgba(18, 18, 18, 0.6)",
+    onPrimarySoft: "rgba(18, 18, 18, 0.9)",
+    primarySoft: "#1B3B30",
+    primaryPressed: "#20A578",
 
-    // ——— 10 · accents (carries over) ———
-    secondary: "#FFBF00",
-    iconAccent: "#FACC15",
+    // ——— 10 · accents (tamed for dark mode) ———
+    secondary: "#FCD34D",
+    iconAccent: "#FBBF24",
 
-    // ——— type + hairlines (grey ramp) ———
-    text: "#FFFFFF",
-    textSecondary: "#A1A1AA",
+    // ——— type + hairlines (aliases of the on-surface system) ———
+    text: "#E3E3E3",
+    textSecondary: "#A0A0A0",
     border: "#3A3A3A",
 
     // ——— status (brightened where black kills depth) ———
