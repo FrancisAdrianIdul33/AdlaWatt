@@ -642,7 +642,7 @@ const getStyles = (colors: AppColors) =>
       backgroundColor: colors.glass.white,
 
       borderWidth: 3,
-      borderColor: colors.primary,
+      borderColor: colors.cardBorder,
 
       borderRadius:
         dashboardDimensions.cardRadius,

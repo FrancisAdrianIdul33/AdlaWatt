@@ -538,7 +538,7 @@ const getStyles = (colors: AppColors) =>
       borderWidth:
         analyticsDimensions.headerBorderWidth,
       borderColor:
-        colors.secondary,
+        colors.cardBorder,
       borderRadius:
         analyticsDimensions.headerRadius,
       padding: 18,

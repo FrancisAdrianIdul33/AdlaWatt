@@ -332,7 +332,7 @@ const getStyles = (colors: AppColors) =>
     borderWidth:
       aboutDimensions.headerBorderWidth,
 
-    borderColor: colors.secondary,
+    borderColor: colors.cardBorder,
 
     borderRadius:
       aboutDimensions.headerRadius,

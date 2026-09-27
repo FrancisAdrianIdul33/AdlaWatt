@@ -639,7 +639,7 @@ const getStyles = (colors: AppColors) =>
       colors.glass.white,
     borderWidth: 3,
     borderColor:
-      colors.secondary,
+      colors.cardBorder,
     borderRadius:
       dashboardDimensions.cardRadius,
     padding: 18,

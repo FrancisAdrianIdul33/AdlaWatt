@@ -578,7 +578,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
     borderWidth: 3,
 
     borderColor:
-      colors.secondary,
+      colors.cardBorder,
 
     borderRadius: 16,
 
