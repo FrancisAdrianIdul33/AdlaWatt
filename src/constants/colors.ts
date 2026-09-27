@@ -137,6 +137,17 @@ export const Colors = {
     errorDeep: "#991B1B",
     warning: "#F59E0B",
 
+    // ——— monochrome accents (dark-only; light keeps green) ———
+    // Icons, accent text, chevrons, radios, spinners: green
+    // in light, navbar-icon white in dark.
+    accentContent: "#00805A",
+    // Links: accessible green on cream in light, white in
+    // dark (underline carries the affordance in dark mode).
+    linkText: "#00663F",
+    // Selection fills: green tint in light, neutral white
+    // tint in dark.
+    selectedWash: "rgba(0, 128, 90, 0.08)",
+
     // ——— washes + overlays ———
     primaryWash: "rgba(0, 128, 90, 0.08)",
     washFaint: "rgba(0, 128, 90, 0.06)",
@@ -214,6 +225,14 @@ export const Colors = {
     errorDark: "#FF8A80",
     errorDeep: "#FF6B60",
     warning: "#F59E0B",
+
+    // ——— monochrome accents (dark-only; light keeps green) ———
+    // Same values as bar.text so accents match the navbar
+    // icons by construction. Link underline (on AuthFooter)
+    // carries the affordance once color goes monochrome.
+    accentContent: "#E3E3E3",
+    linkText: "#E3E3E3",
+    selectedWash: "rgba(255, 255, 255, 0.08)",
 
     // ——— washes + overlays (re-weighted for black) ———
     primaryWash: "rgba(0, 168, 107, 0.16)",
