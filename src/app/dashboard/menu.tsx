@@ -47,6 +47,7 @@ import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
+import type { ThemeOption } from "@/constants/colors";
 import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
@@ -123,8 +124,8 @@ export default function SettingsScreen() {
   // PREFERENCES
   // ============================================
 
-  const [darkMode, setDarkMode] =
-    useState(false);
+  const [themeDraft, setThemeDraft] =
+    useState<ThemeOption>("system");
 
   const [colorBlindMode, setColorBlindMode] =
     useState(false);
@@ -167,10 +168,12 @@ export default function SettingsScreen() {
     setPreferences: commitTypography,
   } = useSettings();
 
-  // Dark mode is staged like typography: flipping only
-  // updates local state, Save commits the theme.
+  // Theme is staged like typography: choosing only
+  // updates local draft state, Save commits the theme.
+  // "system" (default) follows the OS color scheme.
   const {
     theme: savedTheme,
+    resolvedTheme: savedResolvedTheme,
     setTheme: commitTheme,
   } = useTheme();
 
@@ -199,7 +202,7 @@ export default function SettingsScreen() {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
-      setDarkMode(savedTheme === "dark");
+      setThemeDraft(savedTheme);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
@@ -209,13 +212,23 @@ export default function SettingsScreen() {
     savedTheme,
   ]);
 
+  const THEME_OPTIONS: readonly ThemeOption[] = [
+    "system",
+    "light",
+    "dark",
+  ];
+
+  const themeLabel = (
+    option: ThemeOption,
+  ): string =>
+    option === "system"
+      ? `System (${savedResolvedTheme === "dark" ? "Dark" : "Light"})`
+      : option === "dark"
+        ? "Dark"
+        : "Light";
+
   // Staged only: Save commits the theme together with
-  // typography. Flipping previews nothing by itself.
-  const handleDarkModeChange = (
-    value: boolean,
-  ) => {
-    setDarkMode(value);
-  };
+  // typography. Choosing previews nothing by itself.
 
   const handleClosePreferences = () => {
     if (isSavingPreferences) {
@@ -224,7 +237,7 @@ export default function SettingsScreen() {
 
     setFontSize(savedTypography.fontSize);
     setFontFamily(savedTypography.fontFamily);
-    setDarkMode(savedTheme === "dark");
+    setThemeDraft(savedTheme);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -245,14 +258,10 @@ export default function SettingsScreen() {
 
       // Theme last: the flip re-renders screens, so it
       // lands as the modal closes instead of mid-save.
-      await commitTheme(
-        darkMode ? "dark" : "light",
-      );
+      await commitTheme(themeDraft);
 
       logSettings.preferencesSaved(
-        `Font ${fontSize} ${fontFamily}, ${
-          darkMode ? "dark" : "light"
-        } mode.`,
+        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode.`,
       );
 
       setFontFamilyOpen(false);
@@ -1296,51 +1305,57 @@ export default function SettingsScreen() {
           onClose={handleClosePreferences}
         >
           <View style={styles.modalBody}>
-              {/* Dark Mode: whole row toggles so the target
-                  is the full row, not just the Switch. */}
-              <Pressable
-                onPress={() =>
-                  handleDarkModeChange(!darkMode)
-                }
-                accessibilityRole="switch"
-                accessibilityState={{
-                  checked: darkMode,
-                }}
-                accessibilityLabel="Dark Mode"
-                style={({ pressed }) => [
-                  styles.preferenceRow,
-                  pressed && styles.pressed,
-                ]}
+              {/* Themes: staged System / Light / Dark.
+                  Save commits; Cancel / X discards to saved. */}
+              <View
+                style={styles.preferenceBlock}
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Themes"
               >
-                <View
-                  style={styles.preferenceText}
+                <AppText
+                  variant="caption"
+                  style={styles.groupLabel}
                 >
-                  <AppText
-                    variant="body"
-                    style={
-                      styles.preferenceTitle
-                    }
-                  >
-                    Dark Mode
-                  </AppText>
+                  Themes
+                </AppText>
 
-                  <AppText
-                    variant="caption"
-                    style={
-                      styles.preferenceDescription
-                    }
-                  >
-                    Switch between light and dark
-                    appearance.
-                  </AppText>
+                <View style={styles.optionRow}>
+                  {THEME_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        setThemeDraft(option)
+                      }
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected:
+                          themeDraft === option,
+                      }}
+                      accessibilityLabel={`Theme ${themeLabel(option)}`}
+                      style={[
+                        styles.optionButton,
+                        themeDraft === option &&
+                          styles.selectedOption,
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.optionText,
+                          themeDraft ===
+                            option &&
+                            styles.selectedOptionText,
+                        ]}
+                      >
+                        {option === "system"
+                          ? "System"
+                          : option === "dark"
+                            ? "Dark"
+                            : "Light"}
+                      </AppText>
+                    </Pressable>
+                  ))}
                 </View>
-
-                {renderToggle(
-                  darkMode,
-                  handleDarkModeChange,
-                  true,
-                )}
-              </Pressable>
+              </View>
 
               <View style={styles.preferenceRow}>
                 <View
@@ -2321,9 +2336,9 @@ const getStyles = (colors: AppColors) =>
   modalCard: {
     width: "100%",
     maxWidth: 430,
-    backgroundColor: colors.background,
-    borderWidth: 3,
-    borderColor: colors.cardBorder,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 18,
     padding: 20,
     elevation: 10,
