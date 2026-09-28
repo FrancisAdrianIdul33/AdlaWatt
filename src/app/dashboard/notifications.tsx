@@ -9,6 +9,8 @@ import React, {
 
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,6 +57,15 @@ type NotificationData = NotificationCardData & {
   timestamp: number;
 };
 
+// ============================================================
+// PAGE-TURN SCROLL
+// ============================================================
+
+// Same glide as the dashboard home quick-nav button
+// (Appliance Recommendation): fixed 1.5s cubic in-out
+// drive to the very top whenever Prev/Next turns the page.
+const PAGE_TURN_SCROLL_MS = 1500;
+
 export default function NotificationsScreen() {
   const colors = useAppColors();
 
@@ -83,6 +94,43 @@ export default function NotificationsScreen() {
     useState(1);
 
   const notificationsPerPage = 10;
+
+  // ==========================================================
+  // PAGE-TURN SCROLL TARGETS
+  //
+  // Mirrors the dashboard home quick-nav mechanism: an
+  // Animated.Value drives the ScrollView so page turns
+  // glide to the very top over PAGE_TURN_SCROLL_MS.
+  // ==========================================================
+
+  const scrollRef =
+    useRef<ScrollView>(null);
+
+  const scrollYRef =
+    useRef(0);
+
+  const scrollOffset =
+    useRef(new Animated.Value(0)).current;
+
+  // Drive the ScrollView with the animated value so the
+  // scroll transition runs for a fixed duration.
+  useEffect(() => {
+    const scrollListenerId =
+      scrollOffset.addListener(
+        ({ value }) => {
+          scrollRef.current?.scrollTo({
+            y: value,
+            animated: false,
+          });
+        },
+      );
+
+    return () => {
+      scrollOffset.removeListener(
+        scrollListenerId,
+      );
+    };
+  }, [scrollOffset]);
 
   // ============================================
   // LOAD CURRENT USER'S NOTIFICATIONS
@@ -356,6 +404,42 @@ export default function NotificationsScreen() {
   };
 
   // ============================================
+  // PAGE TURN
+  //
+  // Glide to the very top on the CURRENT page first with
+  // the same 1.5s cubic in-out curve as the dashboard home
+  // quick-nav button, then swap the page content on
+  // arrival — so the user never sees the new page jump in
+  // at the bottom. Seeded from the live offset so the
+  // glide starts exactly where the user left off.
+  // ============================================
+
+  const goToPage = (
+    direction: "prev" | "next",
+  ) => {
+    scrollOffset.stopAnimation();
+
+    scrollOffset.setValue(
+      scrollYRef.current,
+    );
+
+    Animated.timing(scrollOffset, {
+      toValue: 0,
+      duration: PAGE_TURN_SCROLL_MS,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => {
+      // Runs on arrival (and on interruption by a newer
+      // tap, so rapid taps still step once per tap).
+      setCurrentPage((page) =>
+        direction === "prev"
+          ? Math.max(1, page - 1)
+          : Math.min(totalPages, page + 1),
+      );
+    });
+  };
+
+  // ============================================
   // TYPE LABEL
   // ============================================
 
@@ -457,9 +541,15 @@ export default function NotificationsScreen() {
       <NavBar />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={(event) => {
+          scrollYRef.current =
+            event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         {/* Header */}
         <View style={styles.headerCard}>
@@ -626,12 +716,29 @@ export default function NotificationsScreen() {
         {showList &&
           recentNotifications.length > 0 && (
           <View style={styles.section}>
-            <AppText
-              variant="body"
-              style={styles.sectionTitle}
-            >
-              Recent
-            </AppText>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons
+                name="notifications-outline"
+                size={18}
+                color={colors.accentContent}
+              />
+
+              <AppText
+                variant="body"
+                style={styles.sectionTitle}
+              >
+                Recent
+              </AppText>
+
+              <View style={styles.countPill}>
+                <AppText
+                  variant="caption"
+                  style={styles.countPillText}
+                >
+                  {recentNotifications.length}
+                </AppText>
+              </View>
+            </View>
 
             <View
               style={styles.notificationList}
@@ -648,20 +755,51 @@ export default function NotificationsScreen() {
           </View>
         )}
 
-        {/* Read Notifications */}
+        {/* Earlier */}
         {showList &&
           earlierNotifications.length > 0 && (
-          <View
-            style={styles.notificationList}
-          >
-            {earlierNotifications.map(
-              (notification) => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                />
-              ),
-            )}
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons
+                name="time-outline"
+                size={18}
+                color={colors.textSecondary}
+              />
+
+              <AppText
+                variant="body"
+                style={styles.sectionTitle}
+              >
+                Earlier
+              </AppText>
+
+              <View
+                style={[
+                  styles.countPill,
+                  styles.countPillMuted,
+                ]}
+              >
+                <AppText
+                  variant="caption"
+                  style={styles.countPillTextMuted}
+                >
+                  {earlierNotifications.length}
+                </AppText>
+              </View>
+            </View>
+
+            <View
+              style={styles.notificationList}
+            >
+              {earlierNotifications.map(
+                (notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                  />
+                ),
+              )}
+            </View>
           </View>
         )}
 
@@ -680,14 +818,10 @@ export default function NotificationsScreen() {
           currentPage={displayCurrentPage}
           totalPages={totalPages}
           onPrevious={() =>
-            setCurrentPage((page) =>
-              Math.max(1, page - 1),
-            )
+            goToPage("prev")
           }
           onNext={() =>
-            setCurrentPage((page) =>
-              Math.min(totalPages, page + 1),
-            )
+            goToPage("next")
           }
         />
 
@@ -948,6 +1082,14 @@ const getStyles = (colors: AppColors) =>
 
   section: {
     width: "100%",
+    marginBottom: 18,
+  },
+
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
   },
 
   sectionTitle: {
@@ -955,7 +1097,35 @@ const getStyles = (colors: AppColors) =>
 
     fontWeight: "700",
 
-    marginBottom: 10,
+    flex: 1,
+  },
+
+  countPill: {
+    minWidth: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    backgroundColor: colors.primary,
+  },
+
+  countPillMuted: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  countPillText: {
+    color: colors.onPrimary,
+
+    fontWeight: "700",
+  },
+
+  countPillTextMuted: {
+    color: colors.textSecondary,
+
+    fontWeight: "700",
   },
 
   /* Notification List */

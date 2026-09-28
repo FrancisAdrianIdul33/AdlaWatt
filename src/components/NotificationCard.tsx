@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React, { useMemo } from "react";
+import React, {
+  useMemo,
+  useState,
+} from "react";
 
 import { StyleSheet, View } from "react-native";
 
@@ -65,11 +68,24 @@ export default function NotificationCard({
     ? colors.error
     : colors.accentContent;
 
+  const isNew = !safeNotification.isRead;
+
   const typeLabel = isAlert ? "Alert" : "Normal";
+
+  const hasTimestamp =
+    safeNotification.date !== "" ||
+    safeNotification.time !== "";
+
+  // Measured width of the date/time line so the footer
+  // divider matches it exactly instead of spanning the
+  // full content width.
+  const [stampWidth, setStampWidth] =
+    useState<number | null>(null);
 
   return (
     <View style={styles.stackContainer}>
-      {/* Back layer: solid type color peeked on the left */}
+      {/* Back layer: solid type color peeked on the left.
+          Type signal only — never a newness signal. */}
       <View
         pointerEvents="none"
         accessible={false}
@@ -83,6 +99,10 @@ export default function NotificationCard({
         ]}
       />
 
+      {/* Single fill for both states: unread and read cards
+          are pixel-identical (surface) and never echo the
+          lower back-layer color. Newness is carried by the
+          section header + NEW dot + type pill instead. */}
       <View
         style={[
           styles.notificationCard,
@@ -91,74 +111,99 @@ export default function NotificationCard({
               ? colors.error
               : colors.accentContent,
           },
-          !safeNotification.isRead &&
-            styles.unreadNotification,
         ]}
       >
       <View style={styles.notificationWrapper}>
-        {/* Notification Icon */}
+        {/* Newness dot: unread only, type-colored to match
+            the back-layer peek of this card. */}
+        {isNew && (
+          <View
+            style={[
+              styles.newDot,
+              {
+                backgroundColor: isAlert
+                  ? colors.error
+                  : colors.accentContent,
+              },
+            ]}
+            accessible={false}
+          />
+        )}
+
+        {/* Notification Icon: carries the type signal
+            now that the pill badge is gone. */}
         <Ionicons
           name={iconName}
           size={24}
           color={iconColor}
+          accessibilityRole="text"
+          accessibilityLabel={
+            isNew
+              ? `New, Type ${typeLabel}`
+              : `Type ${typeLabel}`
+          }
         />
 
-        {/* Notification Content */}
+        {/* Notification Content: single full-width text
+            column — title, message, and footer. No pill,
+            no columns, nothing to overlap. */}
         <View style={styles.notificationContent}>
-          <View style={styles.titleRow}>
-            <AppText
-              variant="body"
-              style={styles.notificationTitle}
-            >
-              {safeNotification.title}
-            </AppText>
-
-            {/* Persistent type label: status is never
-                color-alone (Normal / Alert). */}
-            <View
-              style={[
-                styles.typePill,
-                isAlert
-                  ? styles.typePillAlert
-                  : styles.typePillNormal,
-              ]}
-              accessibilityRole="text"
-              accessibilityLabel={`Type ${typeLabel}`}
-            >
-              <AppText
-                variant="caption"
-                style={[
-                  styles.typePillText,
-                  isAlert
-                    ? styles.typePillTextAlert
-                    : styles.typePillTextNormal,
-                ]}
-              >
-                {typeLabel}
-              </AppText>
-            </View>
-          </View>
+          <AppText
+            variant="body"
+            style={styles.notificationTitle}
+            numberOfLines={2}
+          >
+            {safeNotification.title}
+          </AppText>
 
           <AppText
             variant="caption"
             style={styles.notificationMessage}
+            numberOfLines={3}
           >
             {safeNotification.message}
           </AppText>
 
-          <View style={styles.divider} />
+            {hasTimestamp && (
+              <View style={styles.footer}>
+                <View
+                  style={[
+                    styles.divider,
+                    stampWidth
+                      ? { width: stampWidth }
+                      : null,
+                  ]}
+                  accessible={false}
+                />
 
-          <AppText
-            variant="caption"
-            style={styles.notificationTimestamp}
-          >
-            {safeNotification.date}
-            {safeNotification.date &&
-            safeNotification.time
-              ? " • "
-              : ""}
-            {safeNotification.time}
-          </AppText>
+                <AppText
+                  variant="caption"
+                  style={
+                    styles.notificationTimestamp
+                  }
+                  numberOfLines={1}
+                  onLayout={(event) => {
+                    const measured = Math.round(
+                      event.nativeEvent.layout
+                        .width,
+                    );
+
+                    setStampWidth((current) =>
+                      current === measured
+                        ? current
+                        : measured,
+                    );
+                  }}
+                >
+                  {safeNotification.date}
+                  {safeNotification.date &&
+                  safeNotification.time
+                    ? " • "
+                    : ""}
+                  {safeNotification.time}
+                </AppText>
+              </View>
+            )}
         </View>
       </View>
       </View>
@@ -193,9 +238,11 @@ const getStyles = (colors: AppColors) =>
     overflow: "hidden",
   },
 
-  unreadNotification: {
-    backgroundColor:
-      colors.primaryWash,
+  newDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    flexShrink: 0,
   },
 
   notificationWrapper: {
@@ -212,44 +259,6 @@ const getStyles = (colors: AppColors) =>
   notificationTitle: {
     color: colors.text,
     fontWeight: "700",
-    flex: 1,
-    flexShrink: 1,
-  },
-
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  typePill: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-
-  typePillAlert: {
-    backgroundColor: colors.error,
-  },
-
-  typePillNormal: {
-    backgroundColor: colors.primary,
-  },
-
-  typePillText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  typePillTextAlert: {
-    color: colors.onPrimary,
-  },
-
-  typePillTextNormal: {
-    color: colors.onPrimary,
   },
 
   notificationMessage: {
@@ -259,9 +268,14 @@ const getStyles = (colors: AppColors) =>
   },
 
   divider: {
+    width: "100%",
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 8,
+  },
+
+  footer: {
+    alignItems: "flex-start",
   },
 
   notificationTimestamp: {
