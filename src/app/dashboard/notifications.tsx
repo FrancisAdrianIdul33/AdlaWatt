@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 
 import React, {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -112,6 +114,11 @@ export default function NotificationsScreen() {
         );
       }
 
+      // Dedupe by content (title + description), keeping the
+      // newest row: rule refires can store near-identical rows
+      // and the list must never show the same entry twice.
+      const seen = new Set<string>();
+
       const formattedNotifications: NotificationData[] =
         (data ?? []).map((notification) => {
           const dateObject = new Date(
@@ -147,6 +154,16 @@ export default function NotificationsScreen() {
 
             timestamp: dateObject.getTime(),
           };
+        })
+        .filter((notification) => {
+          const key = `${notification.title}|||${notification.message}`;
+
+          if (seen.has(key)) {
+            return false;
+          }
+
+          seen.add(key);
+          return true;
         });
 
       return formattedNotifications;
@@ -159,10 +176,36 @@ export default function NotificationsScreen() {
     retry: retryLoad,
   } = useSafeAsync(loadNotifications, []);
 
-  const notifications = useMemo(
-    () => loadedNotifications ?? [],
-    [loadedNotifications],
-  );
+  // Optimistic read-all: flips the list instantly on tap;
+  // the refetch after a successful update is authoritative
+  // and clears the override when fresh rows arrive.
+  const [readOverride, setReadOverride] =
+    useState(false);
+  const [isMarkingRead, setIsMarkingRead] =
+    useState(false);
+  const [markError, setMarkError] = useState("");
+
+  const firstLoad = useRef(true);
+
+  useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+
+    setReadOverride(false);
+  }, [loadedNotifications]);
+
+  const notifications = useMemo(() => {
+    const base = loadedNotifications ?? [];
+
+    return readOverride
+      ? base.map((notification) => ({
+          ...notification,
+          isRead: true,
+        }))
+      : base;
+  }, [loadedNotifications, readOverride]);
 
   const hasLoadedData = notifications.length > 0;
   const showList =
@@ -352,17 +395,23 @@ export default function NotificationsScreen() {
   // ============================================
 
   const handleMarkAsRead = async () => {
+    if (isMarkingRead) {
+      return;
+    }
+
+    setMarkError("");
+    setIsMarkingRead(true);
+    setReadOverride(true);
+
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        console.error(
+        throw new Error(
           "No authenticated user found.",
         );
-
-        return;
       }
 
       const { error } = await supabase
@@ -372,22 +421,29 @@ export default function NotificationsScreen() {
         .eq("read", false);
 
       if (error) {
-        console.error(
-          "Error marking notifications as read:",
-          error.message,
-        );
-
-        return;
+        throw new Error(error.message);
       }
 
       retryLoad();
     } catch (thrown) {
-      console.error(
-        "Error marking notifications as read:",
+      const message =
         thrown instanceof Error
           ? thrown.message
-          : thrown,
+          : "Couldn't mark notifications as read. Please try again.";
+
+      console.error(
+        "Error marking notifications as read:",
+        message,
       );
+
+      // Revert the optimistic flip so the list shows the
+      // true server state, and tell the user it failed.
+      setReadOverride(false);
+      setMarkError(
+        "Couldn't mark as read. Check your connection and try again.",
+      );
+    } finally {
+      setIsMarkingRead(false);
     }
   };
 
@@ -509,8 +565,18 @@ export default function NotificationsScreen() {
 
           {/* Mark as Read */}
           <Pressable
-            style={styles.markReadButton}
+            style={[
+              styles.markReadButton,
+              isMarkingRead &&
+                styles.markReadButtonDisabled,
+            ]}
             onPress={handleMarkAsRead}
+            disabled={isMarkingRead}
+            accessibilityRole="button"
+            accessibilityLabel="Mark all as read"
+            accessibilityState={{
+              disabled: isMarkingRead,
+            }}
           >
             <Ionicons
               name="checkmark-done-outline"
@@ -522,10 +588,22 @@ export default function NotificationsScreen() {
               variant="caption"
               style={styles.markReadText}
             >
-              Mark as Read
+              {isMarkingRead
+                ? "Marking..."
+                : "Mark as Read"}
             </AppText>
           </Pressable>
         </View>
+
+        {markError ? (
+          <AppText
+            variant="caption"
+            style={styles.markReadError}
+            accessibilityRole="alert"
+          >
+            {markError}
+          </AppText>
+        ) : null}
 
         {/* Loading / Error */}
         {isLoading && !hasLoadedData && (
@@ -854,6 +932,16 @@ const getStyles = (colors: AppColors) =>
     color: colors.onPrimary,
 
     fontWeight: "700",
+  },
+
+  markReadButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  markReadError: {
+    color: colors.errorDeep,
+    textAlign: "center",
+    marginTop: 8,
   },
 
   /* Sections */
