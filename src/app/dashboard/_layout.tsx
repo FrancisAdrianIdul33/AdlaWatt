@@ -27,14 +27,14 @@ import "@/services/notificationService";
 // ============================================================
 
 function ThemedDashboard() {
-  const { theme } = useTheme();
+  const { isDark } = useTheme();
 
   return (
     <SettingsProvider>
       {/* Native-only: expo-status-bar is a no-op on web. */}
       {Platform.OS !== "web" && (
         <StatusBar
-          style={theme === "dark" ? "light" : "dark"}
+          style={isDark ? "light" : "dark"}
         />
       )}
       <Slot />
