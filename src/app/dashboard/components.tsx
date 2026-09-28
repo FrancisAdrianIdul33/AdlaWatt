@@ -5,7 +5,6 @@ import React, {
 } from "react";
 
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -28,6 +27,9 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 import { supabase } from "@/lib/supabase";
 
 // ============================================
@@ -384,47 +386,27 @@ export default function ComponentsScreen() {
 
         {/* STATUS FILTER */}
 
-        <View style={styles.statusToggle}>
-          {(
-            [
-              "Active",
-              "Inactive",
-            ] as const
-          ).map((option) => (
-            <Pressable
-              key={option}
-              onPress={() =>
-                setStatusFilter(option)
-              }
-              accessibilityRole="button"
-              accessibilityLabel={`Show ${option.toLowerCase()} components`}
-              style={({ pressed }) => [
-                styles.statusButton,
-
-                statusFilter === option && {
-                  backgroundColor:
-                    option === "Inactive"
-                      ? colors.error
-                      : colors.primary,
-                },
-
-                pressed && styles.pressed,
-              ]}
-            >
-              <AppText
-                variant="caption"
-                style={[
-                  styles.statusText,
-
-                  statusFilter === option &&
-                    styles.activeStatusText,
-                ]}
-              >
-                {option}
-              </AppText>
-            </Pressable>
-          ))}
-        </View>
+        <SlidingToggle
+          value={statusFilter}
+          onChange={setStatusFilter}
+          style={styles.statusToggleColors}
+          options={[
+            {
+              value: "Active",
+              label: "Active",
+              activeColor: colors.primary,
+              accessibilityLabel:
+                "Show active components",
+            },
+            {
+              value: "Inactive",
+              label: "Inactive",
+              activeColor: colors.error,
+              accessibilityLabel:
+                "Show inactive components",
+            },
+          ]}
+        />
 
         {/* COMPONENT GRID */}
 
@@ -577,7 +559,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
     borderWidth: 3,
 
     borderColor:
-      colors.secondary,
+      colors.cardBorder,
 
     borderRadius: 16,
 
@@ -602,7 +584,7 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
 
   },
 
-  statusToggle: {
+  statusToggleColors: {
 
     width: "100%",
 
@@ -610,53 +592,15 @@ const getStyles = (colors: AppColors) => StyleSheet.create({
 
     alignSelf: "center",
 
-    height: 51,
-
-    flexDirection: "row",
-
     backgroundColor:
       colors.glass.white,
-
-    borderWidth: 2,
 
     borderColor:
       colors.border,
 
     borderRadius: Radius.md,
 
-    padding: 3,
-
     marginTop: 18,
-
-  },
-
-  statusButton: {
-
-    flex: 1,
-
-    height: 41,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    borderRadius: Radius.md,
-
-  },
-
-  statusText: {
-
-    color: colors.text,
-
-    fontSize: 13,
-
-    fontWeight: "700",
-
-  },
-
-  activeStatusText: {
-
-    color: colors.onPrimary,
 
   },
 

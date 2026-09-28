@@ -15,6 +15,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
+import { Touch } from "@/constants/sizing";
 
 interface TermsModalProps {
   visible: boolean;
@@ -32,7 +33,7 @@ export default function TermsModal({
     () => getStyles(colors),
     [colors],
   );
-  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [secondsRemaining, setSecondsRemaining] = useState(5);
   const [canAgree, setCanAgree] = useState(false);
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={colors.onPrimary}
+                color={colors.headerContent}
               />
             </Pressable>
           </View>
@@ -269,7 +270,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color={colors.onPrimary}
+                  color={colors.headerContent}
                 />
 
                 <AppText
@@ -369,20 +370,20 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.headerBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.primary,
+    borderBottomColor: colors.headerBackground,
   },
 
     title: {
       fontSize: Typography.heading,
       fontWeight: "700",
-      color: colors.onPrimary,
+      color: colors.headerContent,
     },
 
     closeButton: {
-      width: 40,
-      height: 40,
+      width: Touch.target,
+      height: Touch.target,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -420,8 +421,8 @@ const getStyles = (colors: AppColors) =>
     footer: {
       padding: Spacing.lg,
       borderTopWidth: 1,
-      borderTopColor: colors.primary,
-      backgroundColor: colors.primary,
+      borderTopColor: colors.headerBackground,
+      backgroundColor: colors.headerBackground,
     },
 
     timerContainer: {
@@ -434,12 +435,12 @@ const getStyles = (colors: AppColors) =>
     },
 
     timerText: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       textAlign: "center",
     },
 
     readyText: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       textAlign: "center",
       marginBottom: Spacing.sm,
     },

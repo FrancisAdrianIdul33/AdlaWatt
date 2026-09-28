@@ -29,6 +29,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
 
 import weatherJson from "@/data/weather.json";
 
@@ -638,7 +639,7 @@ const getStyles = (colors: AppColors) =>
       colors.glass.white,
     borderWidth: 3,
     borderColor:
-      colors.secondary,
+      colors.cardBorder,
     borderRadius:
       dashboardDimensions.cardRadius,
     padding: 18,
@@ -666,7 +667,7 @@ const getStyles = (colors: AppColors) =>
   quickNavButton: {
     width: "100%",
     maxWidth: 360,
-    height: 46,
+    minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

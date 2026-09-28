@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
+import { Spacing } from "@/constants/theme";
 import AppText from "../ui/AppText";
 
 interface AuthHeaderProps {
@@ -34,7 +35,7 @@ export default function AuthHeader({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    marginBottom: 36,
+    marginBottom: Spacing.xl,
   },
 
   title: {

@@ -490,7 +490,7 @@ export default function AnalyticsScreen() {
    ============================================================ */
 
 const analyticsDimensions = {
-  horizontalPadding: 14,
+  horizontalPadding: 16,
   sectionSpacing: 18,
 
   /*
@@ -538,7 +538,7 @@ const getStyles = (colors: AppColors) =>
       borderWidth:
         analyticsDimensions.headerBorderWidth,
       borderColor:
-        colors.secondary,
+        colors.cardBorder,
       borderRadius:
         analyticsDimensions.headerRadius,
       padding: 18,

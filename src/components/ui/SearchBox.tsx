@@ -2,6 +2,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
@@ -48,7 +49,7 @@ export default function AppSearchBox({
       <Ionicons
         name="search"
         size={20}
-        color={colors.primary}
+        color={colors.accentContent}
         style={styles.icon}
       />
     </View>
@@ -66,12 +67,13 @@ const getStyles = (colors: AppColors) =>
     backgroundColor: colors.surface,
     color: colors.textSecondary,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
-    paddingLeft: 16,
+    minHeight: Field.height,
+    paddingLeft: Field.padding,
     paddingRight: 48, // Space reserved for the icon
     paddingVertical: 14,
-    fontSize: 16,
+    fontSize: Field.textSize,
   },
 
   icon: {

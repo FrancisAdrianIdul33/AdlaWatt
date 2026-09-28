@@ -14,6 +14,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 
 interface ModalBoxProps<T extends string> {
   visible: boolean;
@@ -72,6 +73,9 @@ export default function ModalBox<T extends string>({
 
             <Pressable
               onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
             >
               <Ionicons
                 name="close-outline"
@@ -104,7 +108,7 @@ export default function ModalBox<T extends string>({
                   }
                   size={18}
                   color={
-                    colors.primary
+                    colors.accentContent
                   }
                 />
 
@@ -151,7 +155,9 @@ const getStyles = (colors: AppColors) =>
       width: "100%",
       maxWidth: 420,
       backgroundColor:
-        colors.surface,
+        colors.elevated,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: 18,
       padding: 17,
     },
@@ -171,6 +177,13 @@ const getStyles = (colors: AppColors) =>
       fontSize: 17,
     },
 
+    closeButton: {
+      width: Touch.target,
+      height: Touch.target,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
     modalOption: {
       width: "100%",
       minHeight: 48,
@@ -183,7 +196,7 @@ const getStyles = (colors: AppColors) =>
 
     selectedModalOption: {
       backgroundColor:
-        colors.primaryWash,
+        colors.selectedWash,
     },
 
     modalOptionText: {
@@ -193,6 +206,6 @@ const getStyles = (colors: AppColors) =>
     selectedModalOptionText: {
       fontWeight: "700",
       color:
-        colors.primary,
+        colors.accentContent,
     },
   });

@@ -153,7 +153,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="call-outline"
               size={24}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -172,7 +172,7 @@ export default function AboutUsScreen() {
             <Ionicons
               name="mail-outline"
               size={24}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -279,7 +279,7 @@ function DeveloperProfile({
    ========================================================= */
 
 const aboutDimensions = {
-  horizontalPadding: 14,
+  horizontalPadding: 16,
 
   sectionSpacing: 18,
 
@@ -332,7 +332,7 @@ const getStyles = (colors: AppColors) =>
     borderWidth:
       aboutDimensions.headerBorderWidth,
 
-    borderColor: colors.secondary,
+    borderColor: colors.cardBorder,
 
     borderRadius:
       aboutDimensions.headerRadius,
@@ -460,7 +460,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   roleText: {
-    fontSize: 10,
+    fontSize: 12,
 
     fontWeight: "700",
 

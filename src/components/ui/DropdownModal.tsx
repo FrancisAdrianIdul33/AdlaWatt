@@ -15,6 +15,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 
 // ============================================================
 // STANDARD DROPDOWN MODAL
@@ -71,6 +72,7 @@ export function DropdownModal({
 
             <Pressable
               onPress={onClose}
+              style={dropdownModalStyles.closeButton}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
@@ -126,7 +128,7 @@ export function RadioOptionRow({
             : "radio-button-off-outline"
         }
         size={18}
-        color={colors.primary}
+        color={colors.accentContent}
       />
 
       <AppText
@@ -225,7 +227,9 @@ const getDropdownModalStyles = (colors: AppColors) =>
     card: {
       width: "100%",
       maxWidth: 420,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.elevated,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: MODAL_RADIUS,
       padding: 17,
     },
@@ -244,6 +248,13 @@ const getDropdownModalStyles = (colors: AppColors) =>
       fontSize: 17,
     },
 
+    closeButton: {
+      width: Touch.target,
+      height: Touch.target,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
     option: {
       width: "100%",
       minHeight: 48,
@@ -256,7 +267,7 @@ const getDropdownModalStyles = (colors: AppColors) =>
     },
 
     optionSelected: {
-      backgroundColor: colors.primaryWash,
+      backgroundColor: colors.selectedWash,
     },
 
     optionText: {

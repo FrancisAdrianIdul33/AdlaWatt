@@ -32,6 +32,10 @@ import {
 import {
   Radius,
 } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 import { supabase } from "@/lib/supabase";
 import {
   type BatteryStateInput,
@@ -440,7 +444,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="flash-outline"
                 size={18}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -473,7 +477,7 @@ export default function AppliancesScreen() {
               <Ionicons
                 name="location-outline"
                 size={18}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -493,63 +497,31 @@ export default function AppliancesScreen() {
         </View>
 
         {/* Status Filter */}
-        <View style={styles.statusToggle}>
-          {TOGGLE_META_BASE.map(
+        <SlidingToggle
+          value={statusFilter}
+          onChange={setStatusFilter}
+          style={styles.statusToggleColors}
+          options={TOGGLE_META_BASE.map(
             ({
               filter,
               label,
               tone,
               accessibilityLabel,
-            }) => {
-              const active =
-                statusFilter === filter;
-              const color =
-                getToggleColor(
-                  colors,
-                  tone,
-                );
-
-              return (
-                <Pressable
-                  key={filter}
-                  onPress={() =>
-                    setStatusFilter(
-                      filter,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    accessibilityLabel
-                  }
-                  style={({ pressed }) => [
-                    styles.statusButton,
-                    active && {
-                      backgroundColor:
-                        color,
-                    },
-                    pressed &&
-                    styles.pressed,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusText,
-                      active &&
-                      (filter === "Caution"
-                        ? styles
-                            .activeStatusTextCaution
-                        : styles
-                            .activeStatusText),
-                    ]}
-                  >
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            },
+            }) => ({
+              value: filter,
+              label,
+              activeColor: getToggleColor(
+                colors,
+                tone,
+              ),
+              activeInk:
+                filter === "Caution"
+                  ? Colors.light.text
+                  : undefined,
+              accessibilityLabel,
+            }),
           )}
-        </View>
+        />
 
         {/* Appliances */}
         <View style={[applianceCardGrid, { marginTop: 20 }]}>
@@ -713,7 +685,7 @@ const getStyles = (colors: AppColors) =>
   card: {
     backgroundColor: colors.glass.white,
     borderWidth: dimensions.borderWidth,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: dimensions.radius,
     padding: 18,
     marginBottom: 16,
@@ -739,7 +711,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   addButton: {
-    height: 46,
+    minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -760,7 +732,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   filterButton: {
-    height: 46,
+    minHeight: Control.button,
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
@@ -793,40 +765,13 @@ const getStyles = (colors: AppColors) =>
     marginBottom: 10,
   },
 
-  statusToggle: {
+  statusToggleColors: {
     width: "100%",
     maxWidth: 360,
     alignSelf: "center",
-    height: 51,
-    flexDirection: "row",
     backgroundColor: colors.glass.white,
-    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: Radius.md,
-    padding: 3,
     marginTop: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    height: 41,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: Radius.md,
-  },
-
-  statusText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  activeStatusText: {
-    color: colors.onPrimary,
-  },
-
-  // Frozen: dark ink on the amber caution fill in both themes.
-  activeStatusTextCaution: {
-    color: Colors.light.text,
   },
 });

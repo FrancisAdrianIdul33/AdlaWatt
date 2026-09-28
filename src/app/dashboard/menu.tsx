@@ -30,17 +30,24 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
+import { Control, Touch } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 import {
   getCurrentUserProfile,
   updateAccount,
 } from "@/services/auth";
+import {
+  logAuth,
+  logProfile,
+  logSettings,
+} from "@/services/activityLogService";
 
 import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
+import type { ThemeOption } from "@/constants/colors";
 import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
@@ -117,8 +124,8 @@ export default function SettingsScreen() {
   // PREFERENCES
   // ============================================
 
-  const [darkMode, setDarkMode] =
-    useState(false);
+  const [themeDraft, setThemeDraft] =
+    useState<ThemeOption>("system");
 
   const [colorBlindMode, setColorBlindMode] =
     useState(false);
@@ -127,9 +134,7 @@ export default function SettingsScreen() {
     useState<FontSizeOption>("Medium");
 
   const [fontFamily, setFontFamily] =
-    useState<FontFamilyOption>(
-      "System Default",
-    );
+    useState<FontFamilyOption>("Inter");
 
   const [language, setLanguage] =
     useState("English");
@@ -163,10 +168,12 @@ export default function SettingsScreen() {
     setPreferences: commitTypography,
   } = useSettings();
 
-  // Dark mode is staged like typography: flipping only
-  // updates local state, Save commits the theme.
+  // Theme is staged like typography: choosing only
+  // updates local draft state, Save commits the theme.
+  // "system" (default) follows the OS color scheme.
   const {
     theme: savedTheme,
+    resolvedTheme: savedResolvedTheme,
     setTheme: commitTheme,
   } = useTheme();
 
@@ -195,7 +202,7 @@ export default function SettingsScreen() {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
-      setDarkMode(savedTheme === "dark");
+      setThemeDraft(savedTheme);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
@@ -205,13 +212,23 @@ export default function SettingsScreen() {
     savedTheme,
   ]);
 
+  const THEME_OPTIONS: readonly ThemeOption[] = [
+    "system",
+    "light",
+    "dark",
+  ];
+
+  const themeLabel = (
+    option: ThemeOption,
+  ): string =>
+    option === "system"
+      ? `System (${savedResolvedTheme === "dark" ? "Dark" : "Light"})`
+      : option === "dark"
+        ? "Dark"
+        : "Light";
+
   // Staged only: Save commits the theme together with
-  // typography. Flipping previews nothing by itself.
-  const handleDarkModeChange = (
-    value: boolean,
-  ) => {
-    setDarkMode(value);
-  };
+  // typography. Choosing previews nothing by itself.
 
   const handleClosePreferences = () => {
     if (isSavingPreferences) {
@@ -220,7 +237,7 @@ export default function SettingsScreen() {
 
     setFontSize(savedTypography.fontSize);
     setFontFamily(savedTypography.fontFamily);
-    setDarkMode(savedTheme === "dark");
+    setThemeDraft(savedTheme);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -241,8 +258,10 @@ export default function SettingsScreen() {
 
       // Theme last: the flip re-renders screens, so it
       // lands as the modal closes instead of mid-save.
-      await commitTheme(
-        darkMode ? "dark" : "light",
+      await commitTheme(themeDraft);
+
+      logSettings.preferencesSaved(
+        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode.`,
       );
 
       setFontFamilyOpen(false);
@@ -548,6 +567,18 @@ export default function SettingsScreen() {
         result.email ??
         editEmail.trim().toLowerCase();
 
+      if (updatedUsername !== username) {
+        logProfile.usernameUpdated(
+          updatedUsername,
+        );
+      }
+
+      if (result.emailChangePending) {
+        logProfile.emailPending();
+      } else if (updatedEmail !== email) {
+        logProfile.emailUpdated();
+      }
+
       setUsername(updatedUsername);
       setEmail(updatedEmail);
 
@@ -632,6 +663,10 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     const logout = async () => {
+      // Logged before sign-out: after sign-out there is no
+      // session left to satisfy RLS on insert.
+      logAuth.loggedOut();
+
       try {
         await supabase.auth.signOut();
       } catch (error) {
@@ -774,7 +809,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="person"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -801,7 +836,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="settings"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -828,7 +863,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="book-outline"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -855,7 +890,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="hardware-chip"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -882,7 +917,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="list"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -909,7 +944,7 @@ export default function SettingsScreen() {
             <Ionicons
               name="information-circle"
               size={60}
-              color={colors.primary}
+              color={colors.accentContent}
             />
 
             <AppText
@@ -1270,51 +1305,57 @@ export default function SettingsScreen() {
           onClose={handleClosePreferences}
         >
           <View style={styles.modalBody}>
-              {/* Dark Mode: whole row toggles so the target
-                  is the full row, not just the Switch. */}
-              <Pressable
-                onPress={() =>
-                  handleDarkModeChange(!darkMode)
-                }
-                accessibilityRole="switch"
-                accessibilityState={{
-                  checked: darkMode,
-                }}
-                accessibilityLabel="Dark Mode"
-                style={({ pressed }) => [
-                  styles.preferenceRow,
-                  pressed && styles.pressed,
-                ]}
+              {/* Themes: staged System / Light / Dark.
+                  Save commits; Cancel / X discards to saved. */}
+              <View
+                style={styles.preferenceBlock}
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Themes"
               >
-                <View
-                  style={styles.preferenceText}
+                <AppText
+                  variant="caption"
+                  style={styles.groupLabel}
                 >
-                  <AppText
-                    variant="body"
-                    style={
-                      styles.preferenceTitle
-                    }
-                  >
-                    Dark Mode
-                  </AppText>
+                  Themes
+                </AppText>
 
-                  <AppText
-                    variant="caption"
-                    style={
-                      styles.preferenceDescription
-                    }
-                  >
-                    Switch between light and dark
-                    appearance.
-                  </AppText>
+                <View style={styles.optionRow}>
+                  {THEME_OPTIONS.map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        setThemeDraft(option)
+                      }
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected:
+                          themeDraft === option,
+                      }}
+                      accessibilityLabel={`Theme ${themeLabel(option)}`}
+                      style={[
+                        styles.optionButton,
+                        themeDraft === option &&
+                          styles.selectedOption,
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.optionText,
+                          themeDraft ===
+                            option &&
+                            styles.selectedOptionText,
+                        ]}
+                      >
+                        {option === "system"
+                          ? "System"
+                          : option === "dark"
+                            ? "Dark"
+                            : "Light"}
+                      </AppText>
+                    </Pressable>
+                  ))}
                 </View>
-
-                {renderToggle(
-                  darkMode,
-                  handleDarkModeChange,
-                  true,
-                )}
-              </Pressable>
+              </View>
 
               <View style={styles.preferenceRow}>
                 <View
@@ -1906,7 +1947,7 @@ const getStyles = (colors: AppColors) =>
   headerCard: {
     backgroundColor: colors.glass.white,
     borderWidth: settingsDimensions.borderWidth,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: settingsDimensions.borderRadius,
     padding: 18,
     marginBottom: settingsDimensions.sectionSpacing,
@@ -1941,7 +1982,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 150,
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: Radius.md,
     padding: 12,
     alignItems: "center",
@@ -1951,7 +1992,7 @@ const getStyles = (colors: AppColors) =>
 
   menuBoxActive: {
     backgroundColor:
-      colors.primaryWash,
+      colors.selectedWash,
   },
 
   menuBoxText: {
@@ -1980,7 +2021,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   primaryButton: {
-    minHeight: 44,
+    minHeight: Control.button,
     backgroundColor: colors.primary,
     borderRadius: 12,
     alignItems: "center",
@@ -1996,7 +2037,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   secondaryButton: {
-    minHeight: 44,
+    minHeight: Control.button,
     backgroundColor: colors.glass.white,
     borderWidth: 3,
     borderColor: colors.secondary,
@@ -2044,7 +2085,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 48,
     backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     paddingHorizontal: 14,
     color: colors.text,
@@ -2063,15 +2104,15 @@ const getStyles = (colors: AppColors) =>
 
   passwordInput: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     paddingHorizontal: 14,
     color: colors.text,
     fontSize: 15,
   },
 
   eyeButton: {
-    width: 42,
-    height: 42,
+    width: Touch.target,
+    height: Touch.target,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2183,7 +2224,7 @@ const getStyles = (colors: AppColors) =>
 
   modalFooterButton: {
     flex: 1,
-    minHeight: 46,
+    minHeight: Control.button,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -2229,7 +2270,7 @@ const getStyles = (colors: AppColors) =>
   versionCard: {
     backgroundColor: colors.glass.white,
     borderWidth: settingsDimensions.borderWidth,
-    borderColor: colors.secondary,
+    borderColor: colors.cardBorder,
     borderRadius: settingsDimensions.borderRadius,
     padding: 18,
   },
@@ -2295,9 +2336,9 @@ const getStyles = (colors: AppColors) =>
   modalCard: {
     width: "100%",
     maxWidth: 430,
-    backgroundColor: colors.background,
-    borderWidth: 3,
-    borderColor: colors.primary,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 18,
     padding: 20,
     elevation: 10,

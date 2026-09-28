@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useAppColors";
 
 import { Routes } from "@/constants/routes";
+import { Bar, Touch } from "@/constants/sizing";
 
 import { supabase } from "@/lib/supabase";
 
@@ -101,8 +102,60 @@ export default function NavBar({
 
     checkUnreadNotifications();
 
+    // Live badge: any insert/update/delete on the user's
+    // notifications re-runs the check, so the dot clears
+    // right after mark-as-read and lights on new arrivals
+    // without waiting for a remount.
+    let channel:
+      | ReturnType<typeof supabase.channel>
+      | null = null;
+
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (!mounted || !user) {
+          return;
+        }
+
+        channel = supabase
+          .channel(
+            `navbar-notifications-${user.id}-${Date.now()}`,
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              if (mounted) {
+                checkUnreadNotifications();
+              }
+            },
+          )
+          .subscribe((status, error) => {
+            if (
+              mounted &&
+              (status === "CHANNEL_ERROR" ||
+                status === "TIMED_OUT")
+            ) {
+              console.error(
+                "Navbar notifications channel error:",
+                error,
+              );
+            }
+          });
+      })
+      .catch(() => {});
+
     return () => {
       mounted = false;
+
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 
@@ -234,11 +287,11 @@ export default function NavBar({
 }
 
 const navBarDimensions = {
-  height: 72,
+  height: Bar.appBar,
   horizontalPadding: 16,
-  iconButtonWidth: 42,
-  iconButtonHeight: 42,
-  notificationIconSize: 27,
+  iconButtonWidth: Touch.target,
+  iconButtonHeight: Touch.target,
+  notificationIconSize: Touch.icon,
   notificationDotSize: 8,
   accentHeight: 3,
 
@@ -272,7 +325,7 @@ const getNavBarStyles = (colors: AppColors) =>
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
   },
 
   iconButton: {
@@ -327,7 +380,7 @@ const getNavBarStyles = (colors: AppColors) =>
   },
 
   statusText: {
-    color: colors.text,
+    color: colors.bar.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,

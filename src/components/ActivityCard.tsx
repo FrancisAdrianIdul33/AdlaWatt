@@ -19,6 +19,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Touch } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
 
@@ -122,6 +123,10 @@ export default function ActivityCard() {
           onPress={() =>
             router.push(Routes.ACTIVITY_LOGS)
           }
+          style={styles.viewAllButton}
+          accessibilityRole="link"
+          accessibilityLabel="View all activity"
+          hitSlop={8}
         >
           <AppText
             variant="caption"
@@ -159,6 +164,14 @@ const getStyles = (colors: AppColors) =>
     marginBottom: 10,
   },
 
+  viewAllButton: {
+    minHeight: Touch.target,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -14,
+    marginRight: 2,
+  },
+
   viewAll: {
     color: colors.onPrimary,
     fontWeight: "700",
@@ -167,8 +180,6 @@ const getStyles = (colors: AppColors) =>
     paddingVertical: 6,
     borderRadius: 15,
     fontSize: 12,
-    marginTop: -14,
-    marginRight: 2,
   },
 
   list: {

@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 
@@ -11,14 +12,16 @@ import AppCheckbox from "@/components/ui/AppCheckbox";
 import AppInput from "@/components/ui/AppInput";
 import PasswordInput from "@/components/ui/PasswordInput";
 import TermsModal from "@/components/forms/TermsModal";
+import AuthFooter from "@/components/layout/AuthFooter";
 import AuthHeader from "@/components/layout/AuthHeader";
+import AuthLogo from "@/components/layout/AuthLogo";
+import AuthWarning from "@/components/layout/AuthWarning";
 import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";
-import AppLogo from "@/components/ui/AppLogo";
-import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
+import { useAppColors } from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
 import { Radius, Spacing } from "@/constants/theme";
+import { Touch } from "@/constants/sizing";
 import Copyright from "@/components/ui/Copyright";
 
 import { registerUser } from "@/services/auth";
@@ -40,6 +43,13 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] =
     useState(false);
+
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef =
+    useRef<TextInput>(null);
+
+  const colors = useAppColors();
 
   const showWarning = (message: string) => {
     setWarning(message);
@@ -180,10 +190,7 @@ export default function RegisterScreen() {
   return (
     <ScreenContainer>
       <View style={styles.container}>
-        <AppLogo
-          width={350}
-          height={180}
-        />
+        <AuthLogo />
 
         <AuthHeader
           title="Create Account"
@@ -201,6 +208,11 @@ export default function RegisterScreen() {
             placeholder="Enter your username"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="username"
+            returnKeyType="next"
+            onSubmitEditing={() =>
+              emailRef.current?.focus()
+            }
           />
 
           <AppInput
@@ -214,6 +226,12 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            returnKeyType="next"
+            onSubmitEditing={() =>
+              passwordRef.current?.focus()
+            }
+            inputRef={emailRef}
           />
 
           <PasswordInput
@@ -224,6 +242,12 @@ export default function RegisterScreen() {
               setWarning("");
             }}
             placeholder="Create a password"
+            autoComplete="password-new"
+            returnKeyType="next"
+            onSubmitEditing={() =>
+              confirmPasswordRef.current?.focus()
+            }
+            inputRef={passwordRef}
           />
 
           <PasswordInput
@@ -234,6 +258,10 @@ export default function RegisterScreen() {
               setWarning("");
             }}
             placeholder="Confirm your password"
+            autoComplete="password-new"
+            returnKeyType="done"
+            onSubmitEditing={handleRegister}
+            inputRef={confirmPasswordRef}
           />
 
           <View style={styles.termsRow}>
@@ -261,38 +289,12 @@ export default function RegisterScreen() {
               <Ionicons
                 name="document-text-outline"
                 size={22}
-                color={Colors.light.primary}
+                color={colors.linkText}
               />
             </Pressable>
           </View>
 
-          {/* Security / validation warning */}
-          {warning ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "flex-start",
-                marginBottom: Spacing.md,
-              }}
-            >
-              <Ionicons
-                name="warning-outline"
-                size={20}
-                color={Colors.light.errorDark}
-                style={{ marginRight: 8, marginTop: 1 }}
-              />
-
-              <AppText
-                variant="caption"
-                style={{
-                  flex: 1,
-                  color: Colors.light.errorDark,
-                }}
-              >
-                {warning}
-              </AppText>
-            </View>
-          ) : null}
+          <AuthWarning message={warning} />
 
           <AppButton
             title={
@@ -305,22 +307,11 @@ export default function RegisterScreen() {
           />
         </View>
 
-        <View style={styles.loginContainer}>
-          <AppText
-            variant="caption"
-            style={styles.loginText}
-          >
-            Already have an account?
-          </AppText>
-
-          <AppText
-            variant="body"
-            style={styles.loginLink}
-            onPress={handleLogin}
-          >
-            Sign In
-          </AppText>
-        </View>
+        <AuthFooter
+          prompt="Already have an account?"
+          actionLabel="Sign In"
+          onAction={handleLogin}
+        />
 
         <Copyright />
       </View>
@@ -355,25 +346,10 @@ const styles = StyleSheet.create({
   },
 
   termsIconButton: {
-    width: 42,
-    height: 42,
+    width: Touch.target,
+    height: Touch.target,
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  loginContainer: {
-    alignItems: "center",
-    marginTop: Spacing.lg,
-  },
-
-  loginText: {
-    textAlign: "center",
-  },
-
-  loginLink: {
-    color: Colors.light.primary,
-    fontWeight: "600",
-    marginTop: 6,
   },
 });

@@ -20,7 +20,8 @@ interface ScreenContainer2Props {
 // Dashboard container. Consumes the dashboard-level
 // SettingsProvider from app/dashboard/_layout (no nested
 // provider so Save in Menu propagates to all dashboard
-// screens via the shared instance).
+// screens via the shared instance). Content centers in a
+// wide column on tablets; phones use full width.
 
 export default function ScreenContainer2({
   children,
@@ -56,5 +57,7 @@ const getStyles = (colors: AppColors) =>
     content: {
       flex: 1,
       width: "100%",
+      maxWidth: 768,
+      alignSelf: "center",
     },
   });

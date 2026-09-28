@@ -8,6 +8,13 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 
+// Side-effect import: starts the auth-aware notification
+// watchers (monitoring + components) per
+// implementation plan/notification_catalog.md. The service
+// owns its lifecycle (starts on SIGNED_IN, stops on
+// SIGNED_OUT) and never throws into the UI.
+import "@/services/notificationService";
+
 // ============================================================
 // DASHBOARD LAYOUT
 //
@@ -20,14 +27,14 @@ import {
 // ============================================================
 
 function ThemedDashboard() {
-  const { theme } = useTheme();
+  const { isDark } = useTheme();
 
   return (
     <SettingsProvider>
       {/* Native-only: expo-status-bar is a no-op on web. */}
       {Platform.OS !== "web" && (
         <StatusBar
-          style={theme === "dark" ? "light" : "dark"}
+          style={isDark ? "light" : "dark"}
         />
       )}
       <Slot />

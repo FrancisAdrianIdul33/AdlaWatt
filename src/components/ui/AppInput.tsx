@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, type Ref } from "react";
 import {
   StyleSheet,
   TextInput,
@@ -11,17 +11,20 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import AppText from "@/components/ui/AppText";
+import { Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 interface AppInputProps extends TextInputProps {
   label?: string;
   error?: string;
+  inputRef?: Ref<TextInput>;
 }
 
 export default function AppInput({
   label,
   error,
   style,
+  inputRef,
   ...props
 }: AppInputProps) {
   const { scaledSize, family, weight } =
@@ -44,6 +47,7 @@ export default function AppInput({
 
       <TextInput
         {...props}
+        ref={inputRef}
         allowFontScaling={false}
         placeholderTextColor={colors.textSecondary}
         style={[
@@ -70,11 +74,12 @@ export default function AppInput({
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: Field.fieldGap,
   },
 
   label: {
-    marginBottom: 8,
+    marginBottom: Field.labelGap,
+    fontSize: 14,
     fontWeight: "600",
   },
 
@@ -87,10 +92,11 @@ input: {
 
   borderRadius: 12,
 
-  paddingHorizontal: 16,
+  minHeight: Field.height,
+  paddingHorizontal: Field.padding,
   paddingVertical: 14,
 
-  fontSize: 16,
+  fontSize: Field.textSize,
 },
 
   inputError: {

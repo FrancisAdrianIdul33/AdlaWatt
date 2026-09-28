@@ -11,22 +11,29 @@ import { useTheme } from "@/context/ThemeContext";
 // -> `colors.glass.Y`) so every screen re-renders on theme
 // change. Frozen records (areas, severity, weather) are
 // shared by reference across themes and need no branching.
+// "system" resolves via ThemeContext to light/dark, so auth
+// screens (no provider) stay light and dashboard follows the
+// OS by default with manual override.
 // ============================================================
 
 export function useAppColors() {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
+
+  const isDark = resolvedTheme === "dark";
 
   return useMemo(
     () => ({
-      ...(theme === "dark"
+      ...(isDark
         ? Colors.dark
         : Colors.light),
       glass:
-        theme === "dark"
+        isDark
           ? Colors.glassDark
           : Colors.glass,
+      isDark,
+      resolvedTheme,
     }),
-    [theme],
+    [isDark, resolvedTheme],
   );
 }
 

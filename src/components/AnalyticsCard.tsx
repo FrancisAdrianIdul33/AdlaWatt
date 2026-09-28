@@ -22,6 +22,7 @@ import {
   ReportType,
   formatReportDate,
 } from "@/services/analyticsService";
+import { Control, OptionRow } from "@/constants/sizing";
 
 /* ============================================================
    DATE PICKER
@@ -87,7 +88,7 @@ function DatePickerField({
         <Ionicons
           name="calendar-outline"
           size={16}
-          color={colors.primary}
+          color={colors.accentContent}
         />
       </Pressable>
 
@@ -163,7 +164,7 @@ export default function AnalyticsCards({
           <Ionicons
             name="document-text-outline"
             size={30}
-            color={colors.iconAccent}
+            color={colors.headerContent}
           />
 
           <AppText
@@ -236,7 +237,7 @@ export default function AnalyticsCards({
                   name="chevron-down-outline"
                   size={15}
                   color={
-                    colors.primary
+                    colors.accentContent
                   }
                 />
               </Pressable>
@@ -356,7 +357,7 @@ const getStyles = (colors: AppColors) =>
         colors.glass.white,
       borderWidth: 3,
       borderColor:
-        colors.primary,
+        colors.cardBorder,
       borderRadius: 15,
       flexDirection: "column",
       alignItems: "stretch",
@@ -368,7 +369,7 @@ const getStyles = (colors: AppColors) =>
     reportHeaderPanel: {
       width: "100%",
       backgroundColor:
-        colors.primary,
+        colors.headerBackground,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
@@ -378,7 +379,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     reportHeaderTitle: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -414,7 +415,7 @@ const getStyles = (colors: AppColors) =>
 
     reportSelect: {
       width: "100%",
-      minHeight: 42,
+      minHeight: OptionRow.minHeight,
       borderWidth: 2,
       borderColor:
         colors.primary,
@@ -433,9 +434,9 @@ const getStyles = (colors: AppColors) =>
 
     dateFieldButton: {
       width: "100%",
-      minHeight: 42,
+      minHeight: OptionRow.minHeight,
       backgroundColor:
-        colors.washFaint,
+        colors.selectedWash,
       borderWidth: 1,
       borderColor:
         colors.border,
@@ -461,7 +462,7 @@ const getStyles = (colors: AppColors) =>
 
     exportPrimaryButton: {
       flex: 1,
-      minHeight: 44,
+      minHeight: Control.button,
       backgroundColor:
         colors.primary,
       borderRadius: 12,

@@ -19,6 +19,7 @@ import {
 import {
   Radius,
 } from "@/constants/theme";
+import { Control, Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 // ============================================================
@@ -169,7 +170,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     input: {
-      height: 44,
+      minHeight: Field.minHeight,
       borderWidth: 2,
       borderColor: colors.border,
       borderRadius: Radius.md,
@@ -195,7 +196,7 @@ const getStyles = (colors: AppColors) =>
 
     customAction: {
       flex: 1,
-      height: 42,
+      minHeight: Control.button,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: colors.surface,
@@ -217,7 +218,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     addText: {
-      color: colors.primary,
+      color: colors.accentContent,
       fontWeight: "700",
     },
 

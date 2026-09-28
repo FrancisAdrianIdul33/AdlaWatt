@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import {
+  AccessibilityInfo,
   Animated,
   Easing,
   ScrollView,
@@ -262,6 +263,17 @@ export default function ChartCard({
 
   const sunHigh = colors.secondary;
 
+  // Reduced motion: snap gauges instead of animating so
+  // vestibular-sensitive users get instant state changes.
+  const [reduceMotion, setReduceMotion] =
+    useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduceMotion)
+      .catch(() => {});
+  }, []);
+
   // ==========================================================
   // SUN GAUGE ANIMATION
   //
@@ -369,8 +381,9 @@ export default function ChartCard({
         ringProgress,
         {
           toValue: ringTarget,
-          duration:
-            RING_ANIMATION_DURATION_MS,
+          duration: reduceMotion
+            ? 0
+            : RING_ANIMATION_DURATION_MS,
           easing:
             Easing.out(Easing.cubic),
           useNativeDriver: false,
@@ -388,6 +401,7 @@ export default function ChartCard({
     loading,
     ringTarget,
     ringProgress,
+    reduceMotion,
   ]);
 
   useEffect(() => {
@@ -427,7 +441,8 @@ export default function ChartCard({
   useEffect(() => {
     if (
       type !== "voltage" ||
-      !isCharging
+      !isCharging ||
+      reduceMotion
     ) {
       chargingPulse.stopAnimation();
 
@@ -486,6 +501,7 @@ export default function ChartCard({
     type,
     isCharging,
     chargingPulse,
+    reduceMotion,
   ]);
 
   useEffect(() => {
@@ -521,8 +537,9 @@ export default function ChartCard({
         sunIntensity,
         {
           toValue: solarTarget,
-          duration:
-            SOLAR_ANIMATION_DURATION_MS,
+          duration: reduceMotion
+            ? 0
+            : SOLAR_ANIMATION_DURATION_MS,
           useNativeDriver: false,
         },
       );
@@ -537,6 +554,7 @@ export default function ChartCard({
     type,
     solarTarget,
     sunIntensity,
+    reduceMotion,
   ]);
 
   // ==========================================================
@@ -720,7 +738,7 @@ export default function ChartCard({
             <Ionicons
               name="flash-outline"
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -894,7 +912,9 @@ export default function ChartCard({
               }
             >
 
-              {/* Battery Status */}
+              {/* Battery Status: icon + label so state never
+                  relies on color alone (Idle vs
+                  Charging/Discharging). */}
 
               <View
                 style={[
@@ -904,6 +924,19 @@ export default function ChartCard({
                     : null,
                 ]}
               >
+
+                <Ionicons
+                  name={
+                    batteryStatus === "Charging"
+                      ? "flash"
+                      : isIdle
+                        ? "pause"
+                        : "battery-half-outline"
+                  }
+                  size={12}
+                  color={colors.onPrimary}
+                  style={{ marginRight: 4 }}
+                />
 
                 <AppText
                   variant="caption"
@@ -916,7 +949,8 @@ export default function ChartCard({
 
               </View>
 
-              {/* DoD Status */}
+              {/* DoD Status: shield icon + Safe/Unsafe label
+                  pairs color with shape + text. */}
 
               <View
                 style={[
@@ -926,6 +960,17 @@ export default function ChartCard({
                     : styles.dodSafeBadge,
                 ]}
               >
+
+                <Ionicons
+                  name={
+                    isDodBadgeRed
+                      ? "shield-outline"
+                      : "shield-checkmark-outline"
+                  }
+                  size={12}
+                  color={colors.onPrimary}
+                  style={{ marginRight: 4 }}
+                />
 
                 <AppText
                   variant="caption"
@@ -1095,6 +1140,16 @@ export default function ChartCard({
                   ]}
                 >
 
+                  <Ionicons
+                    name={getTemperatureIcon(
+                      batteryTemperatureData.badge as TemperatureStatus,
+                    )}
+                    size={12}
+                    color={getTemperatureInk(
+                      batteryTemperatureData.badge as TemperatureStatus,
+                    )}
+                  />
+
                   <AppText
                     variant="caption"
                     style={[
@@ -1144,6 +1199,16 @@ export default function ChartCard({
                   interiorTemperatureBadge,
                 ]}
               >
+
+                <Ionicons
+                  name={getTemperatureIcon(
+                    interiorTemperatureStatus,
+                  )}
+                  size={12}
+                  color={getTemperatureInk(
+                    interiorTemperatureStatus,
+                  )}
+                />
 
                 <AppText
                   variant="caption"
@@ -1253,7 +1318,7 @@ export default function ChartCard({
             <Ionicons
               name="sunny-outline"
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -1388,6 +1453,23 @@ export default function ChartCard({
                   solarBadgeStyle,
                 ]}
               >
+
+                <Ionicons
+                  name={
+                    solarStatus === "High"
+                      ? "sunny"
+                      : solarStatus === "Moderate"
+                        ? "partly-sunny"
+                        : "cloud-outline"
+                  }
+                  size={12}
+                  color={
+                    solarStatus === "Moderate"
+                      ? Colors.light.text
+                      : colors.onPrimary
+                  }
+                  style={{ marginRight: 4 }}
+                />
 
                 <AppText
                   variant="caption"
@@ -1554,6 +1636,16 @@ export default function ChartCard({
                   ]}
                 >
 
+                  <Ionicons
+                    name={getTemperatureIcon(
+                      solarTemperatureData.badge as TemperatureStatus,
+                    )}
+                    size={12}
+                    color={getTemperatureInk(
+                      solarTemperatureData.badge as TemperatureStatus,
+                    )}
+                  />
+
                   <AppText
                     variant="caption"
                     style={[
@@ -1607,21 +1699,25 @@ export default function ChartCard({
       );
 
     // ========================================================
-    // EXACT-3 FIT
+    // EXACT-3 FIT (WITH ROUNDING SLACK)
     //
     // Cell width is computed from the live screen width so
     // exactly three boxes (Today + next two days) fill the
     // strip on every screen: strip = screen - 52 (screen and
     // row padding), minus two 8px gaps, divided by three.
+    // The old zero-slack formula filled the strip to the
+    // fractional pixel, so sub-pixel floor rounding shaved
+    // ~1px and clipped the third box. The extra -4 and the
+    // floor() below are the safety margin: do not remove.
     // Clamped so small phones stay usable and tablets stop
     // growing, leaving the rest to the horizontal scroll.
     // ========================================================
 
     const forecastCellWidth = Math.min(
-      108,
+      104,
       Math.max(
-        84,
-        (screenWidth - 52 - 16) / 3
+        80,
+        Math.floor((screenWidth - 72) / 3)
       )
     );
 
@@ -1655,7 +1751,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={30}
-              color={colors.iconAccent}
+              color={colors.headerContent}
             />
 
             <AppText
@@ -1886,7 +1982,7 @@ export default function ChartCard({
                           name="water-outline"
                           size={11}
                           color={
-                            colors.primary
+                            colors.accentContent
                           }
                         />
 
@@ -2124,7 +2220,7 @@ export default function ChartCard({
         <Ionicons
           name={data.icon}
           size={28}
-          color={colors.primary}
+          color={colors.accentContent}
         />
 
       </View>
@@ -2780,6 +2876,49 @@ function getTemperatureBadgeTextStyle(
 }
 
 // ============================================================
+// TEMPERATURE BADGE ICON + INK
+//
+// Frozen severity inks are reused for the icon so the badge
+// pairs color with shape + text without recoloring the scale.
+// ============================================================
+
+function getTemperatureIcon(
+  status: TemperatureStatus,
+): keyof typeof Ionicons.glyphMap {
+  switch (status) {
+    case "Nominal":
+      return "thermometer-outline";
+
+    case "Elevated":
+      return "thermometer-outline";
+
+    case "High":
+      return "warning-outline";
+
+    case "Critical":
+      return "alert-circle-outline";
+  }
+}
+
+function getTemperatureInk(
+  status: TemperatureStatus,
+): string {
+  switch (status) {
+    case "Nominal":
+      return Colors.light.severity.nominal.text;
+
+    case "Elevated":
+      return Colors.light.severity.elevated.text;
+
+    case "High":
+      return Colors.light.severity.high.text;
+
+    case "Critical":
+      return Colors.light.severity.critical.text;
+  }
+}
+
+// ============================================================
 // STYLES
 // ============================================================
 
@@ -2887,6 +3026,7 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 15,
     paddingVertical: 3,
     minWidth: 10,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 25,
@@ -2908,7 +3048,7 @@ const getStyles = (colors: AppColors) =>
       colors.textSecondary,
     marginTop: 3,
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 12,
   },
 
   // ==========================================================
@@ -2982,7 +3122,7 @@ const getStyles = (colors: AppColors) =>
       colors.glass.white,
     borderWidth: 3,
     borderColor:
-      colors.primary,
+      colors.cardBorder,
     borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -3017,7 +3157,7 @@ const getStyles = (colors: AppColors) =>
   groupHeaderPanel: {
     width: "100%",
     backgroundColor:
-      colors.primary,
+      colors.headerBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -3033,7 +3173,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   groupHeaderTitle: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3059,7 +3199,7 @@ const getStyles = (colors: AppColors) =>
   weatherHeaderPanel: {
     width: "100%",
     backgroundColor:
-      colors.primary,
+      colors.headerBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -3075,7 +3215,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherHeaderTitle: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3109,8 +3249,8 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastTag: {
-    color: colors.primary,
-    fontSize: 11,
+    color: colors.accentContent,
+    fontSize: 12,
     fontWeight: "700",
   },
 
@@ -3121,7 +3261,7 @@ const getStyles = (colors: AppColors) =>
     backgroundColor:
       colors.glass.white,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -3145,7 +3285,7 @@ const getStyles = (colors: AppColors) =>
     justifyContent: "center",
     backgroundColor:
       colors.glass.white,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.secondary,
     borderRadius: 12,
     paddingHorizontal: 8,
@@ -3193,7 +3333,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastPop: {
-    color: colors.primary,
+    color: colors.accentContent,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -3227,7 +3367,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   weatherForecastPillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
 
@@ -3263,19 +3403,19 @@ const getStyles = (colors: AppColors) =>
 
   weatherForecastFlagHotText: {
     color: colors.text,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
   },
 
   weatherForecastFlagCoolText: {
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
   },
 
   weatherForecastBest: {
     color: colors.text,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
   },
@@ -3312,13 +3452,13 @@ const getStyles = (colors: AppColors) =>
 
   weatherForecastLocation: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     flex: 1,
   },
 
   weatherForecastSummary: {
-    color: colors.primary,
-    fontSize: 11,
+    color: colors.accentContent,
+    fontSize: 12,
     fontWeight: "600",
   },
 
@@ -3344,7 +3484,7 @@ const getStyles = (colors: AppColors) =>
 
   safeValue: {
     color:
-      colors.primary,
+      colors.accentContent,
   },
 
   unsafeValue: {
@@ -3362,12 +3502,14 @@ const getStyles = (colors: AppColors) =>
     paddingVertical: 3,
     borderRadius: 10,
     minWidth: 42,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 4,
   },
 
   statusBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },
@@ -3409,6 +3551,7 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 9,
     paddingVertical: 3,
     minWidth: 58,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 25,

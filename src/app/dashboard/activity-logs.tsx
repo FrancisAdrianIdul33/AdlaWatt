@@ -3,10 +3,14 @@ import { Ionicons } from "@expo/vector-icons";
 import React, {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import {
+  ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,6 +25,8 @@ import AppText from "@/components/ui/AppText";
 import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
 import ActivityLogCard, { ACTIVITY_LOG_GAP } from "@/components/ActivityLogCard";
 import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import { useSafeAsync } from "@/hooks/useSafeAsync";
 
 import {
   useAppColors,
@@ -51,6 +57,15 @@ type ActivityLog = {
   timestamp: number;
 };
 
+// ============================================================
+// PAGE-TURN SCROLL
+// ============================================================
+
+// Same glide as the dashboard home quick-nav button
+// (Appliance Recommendation): fixed 1.5s cubic in-out
+// drive to the very top whenever Prev/Next turns the page.
+const PAGE_TURN_SCROLL_MS = 1500;
+
 export default function ActivityLogsScreen() {
   const colors = useAppColors();
 
@@ -58,9 +73,6 @@ export default function ActivityLogsScreen() {
     () => getStyles(colors),
     [colors],
   );
-
-  const [activityLogs, setActivityLogs] =
-    useState<ActivityLog[]>([]);
 
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("All");
@@ -86,20 +98,56 @@ export default function ActivityLogsScreen() {
 
   const activityLogsPerPage = 10;
 
+  // ==========================================================
+  // PAGE-TURN SCROLL TARGETS
+  //
+  // Mirrors the dashboard home quick-nav mechanism: an
+  // Animated.Value drives the ScrollView so page turns
+  // glide to the very top over PAGE_TURN_SCROLL_MS.
+  // ==========================================================
+
+  const scrollRef =
+    useRef<ScrollView>(null);
+
+  const scrollYRef =
+    useRef(0);
+
+  const scrollOffset =
+    useRef(new Animated.Value(0)).current;
+
+  // Drive the ScrollView with the animated value so the
+  // scroll transition runs for a fixed duration.
+  useEffect(() => {
+    const scrollListenerId =
+      scrollOffset.addListener(
+        ({ value }) => {
+          scrollRef.current?.scrollTo({
+            y: value,
+            animated: false,
+          });
+        },
+      );
+
+    return () => {
+      scrollOffset.removeListener(
+        scrollListenerId,
+      );
+    };
+  }, [scrollOffset]);
+
   // ============================================
   // LOAD CURRENT USER'S ACTIVITY LOGS
   // ============================================
 
-  useEffect(() => {
-    const loadActivityLogs = async () => {
+  const loadActivityLogs =
+    async (): Promise<ActivityLog[]> => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setActivityLogs([]);
         setTotalActivityLogs(0);
-        return;
+        return [];
       }
 
       const {
@@ -118,14 +166,9 @@ export default function ActivityLogsScreen() {
         });
 
       if (error) {
-        console.error(
-          "Error loading activity logs:",
-          error.message,
+        throw new Error(
+          "We couldn't load your activity logs. Check your connection and try again.",
         );
-
-        setActivityLogs([]);
-        setTotalActivityLogs(0);
-        return;
       }
 
       const logs: ActivityLog[] = (data ?? []).map(
@@ -166,15 +209,28 @@ export default function ActivityLogsScreen() {
         },
       );
 
-      setActivityLogs(logs);
-
       setTotalActivityLogs(
         count ?? logs.length,
       );
+
+      return logs;
     };
 
-    loadActivityLogs();
-  }, []);
+  const {
+    data: loadedLogs,
+    error: loadError,
+    loading: isLoading,
+    retry: retryLoad,
+  } = useSafeAsync(loadActivityLogs, []);
+
+  const activityLogs = useMemo(
+    () => loadedLogs ?? [],
+    [loadedLogs],
+  );
+
+  const hasLoadedData = activityLogs.length > 0;
+  const showList =
+    hasLoadedData || (!isLoading && !loadError);
 
   // ============================================
   // FILTER ACTIVITY LOGS
@@ -271,6 +327,42 @@ export default function ActivityLogsScreen() {
   };
 
   // ============================================
+  // PAGE TURN
+  //
+  // Glide to the very top on the CURRENT page first with
+  // the same 1.5s cubic in-out curve as the dashboard home
+  // quick-nav button, then swap the page content on
+  // arrival — so the user never sees the new page jump in
+  // at the bottom. Seeded from the live offset so the
+  // glide starts exactly where the user left off.
+  // ============================================
+
+  const goToPage = (
+    direction: "prev" | "next",
+  ) => {
+    scrollOffset.stopAnimation();
+
+    scrollOffset.setValue(
+      scrollYRef.current,
+    );
+
+    Animated.timing(scrollOffset, {
+      toValue: 0,
+      duration: PAGE_TURN_SCROLL_MS,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => {
+      // Runs on arrival (and on interruption by a newer
+      // tap, so rapid taps still step once per tap).
+      setCurrentPage((page) =>
+        direction === "prev"
+          ? Math.max(1, page - 1)
+          : Math.min(totalPages, page + 1),
+      );
+    });
+  };
+
+  // ============================================
   // ACTIVITY TYPE LABEL
   // ============================================
 
@@ -324,9 +416,15 @@ export default function ActivityLogsScreen() {
       <NavBar />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={(event) => {
+          scrollYRef.current =
+            event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         {/* Header */}
 
@@ -383,7 +481,7 @@ export default function ActivityLogsScreen() {
               <Ionicons
                 name="time-outline"
                 size={19}
-                color={colors.primary}
+                color={colors.accentContent}
               />
 
               <AppText
@@ -425,7 +523,7 @@ export default function ActivityLogsScreen() {
                     ? colors.error
                     : typeFilter === "warning"
                       ? colors.secondary
-                      : colors.primary
+                      : colors.accentContent
                 }
               />
 
@@ -445,24 +543,44 @@ export default function ActivityLogsScreen() {
           </View>
         </View>
 
+        {/* Loading / Error */}
+
+        {isLoading && !hasLoadedData && (
+          <View style={styles.statusBlock}>
+            <ActivityIndicator
+              size="large"
+              color={colors.accentContent}
+            />
+          </View>
+        )}
+
+        {loadError && !hasLoadedData && (
+          <ErrorState
+            message={loadError}
+            onRetry={retryLoad}
+          />
+        )}
+
         {/* Activity Cards */}
 
-        <View style={styles.activityList}>
-          {currentPageLogs.length === 0 ? (
-            <EmptyState
-              icon="document-text-outline"
-              title="No Activity Logs"
-              description="No activities match the selected filters."
-            />
-          ) : (
-            currentPageLogs.map((activity) => (
-              <ActivityLogCard
-                key={activity.id}
-                item={activity}
+        {showList && (
+          <View style={styles.activityList}>
+            {currentPageLogs.length === 0 ? (
+              <EmptyState
+                icon="document-text-outline"
+                title="No Activity Logs"
+                description="No activities match the selected filters."
               />
-            ))
-          )}
-        </View>
+            ) : (
+              currentPageLogs.map((activity) => (
+                <ActivityLogCard
+                  key={activity.id}
+                  item={activity}
+                />
+              ))
+            )}
+          </View>
+        )}
 
         {/* Pagination */}
 
@@ -474,14 +592,10 @@ export default function ActivityLogsScreen() {
           }
           totalPages={totalPages}
           onPrevious={() =>
-            setCurrentPage((page) =>
-              Math.max(1, page - 1),
-            )
+            goToPage("prev")
           }
           onNext={() =>
-            setCurrentPage((page) =>
-              Math.min(totalPages, page + 1),
-            )
+            goToPage("next")
           }
         />
 
@@ -533,13 +647,13 @@ export default function ActivityLogsScreen() {
             value: "all" as const,
             label: "All",
             icon: "list-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "info" as const,
             label: "Info",
             icon: "information-circle-outline" as const,
-            color: colors.primary,
+            color: colors.accentContent,
           },
           {
             value: "warning" as const,
@@ -616,7 +730,7 @@ const getStyles = (colors: AppColors) =>
       backgroundColor: colors.glass.white,
 
       borderWidth: 3,
-      borderColor: colors.primary,
+      borderColor: colors.cardBorder,
 
       borderRadius:
         dashboardDimensions.cardRadius,
@@ -719,5 +833,12 @@ const getStyles = (colors: AppColors) =>
       gap: ACTIVITY_LOG_GAP,
 
       zIndex: 1,
+    },
+
+    statusBlock: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 40,
     },
   });

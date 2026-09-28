@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  Pressable,
   StyleSheet,
   View,
 } from "react-native";
@@ -14,6 +13,9 @@ import {
   ChartFrequency,
   FREQUENCIES,
 } from "@/services/analyticsService";
+import {
+  SlidingToggle,
+} from "@/components/ui/SlidingToggle";
 
 /* ============================================================
    PROPS
@@ -64,7 +66,7 @@ export default function AnalyticsChartCard({
         <Ionicons
           name={icon}
           size={26}
-          color={colors.iconAccent}
+          color={colors.headerContent}
         />
 
         <AppText
@@ -93,55 +95,20 @@ export default function AnalyticsChartCard({
         </AppText>
 
         {/* Frequency */}
-        <View
-          style={
-            styles.frequencyToggle
-          }
-        >
-          {FREQUENCIES.map(
-            (option) => {
-              const active =
-                frequency ===
-                option;
-
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() =>
-                    onFrequencyChange(
-                      option,
-                    )
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    `${title} ${option} view`
-                  }
-                  accessibilityState={{
-                    selected: active,
-                  }}
-                  style={({ pressed }) => [
-                    styles.frequencyButton,
-                    active &&
-                      styles.frequencyButtonActive,
-                    pressed &&
-                      styles.pressed,
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.frequencyText,
-                      active &&
-                        styles.frequencyTextActive,
-                    ]}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              );
-            },
+        <SlidingToggle<ChartFrequency>
+          value={frequency}
+          onChange={onFrequencyChange}
+          style={styles.frequencyToggleColors}
+          options={FREQUENCIES.map(
+            (option) => ({
+              value: option,
+              label: option,
+              activeColor: colors.primary,
+              accessibilityLabel:
+                `${title} ${option} view`,
+            }),
           )}
-        </View>
+        />
 
         {/* Chart Area */}
         <View
@@ -168,7 +135,7 @@ const getStyles = (colors: AppColors) =>
         colors.glass.white,
       borderWidth: 3,
       borderColor:
-        colors.primary,
+        colors.cardBorder,
       borderRadius: 15,
       flexDirection: "column",
       alignItems: "stretch",
@@ -179,7 +146,7 @@ const getStyles = (colors: AppColors) =>
     headerPanel: {
       width: "100%",
       backgroundColor:
-        colors.primary,
+        colors.headerBackground,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
@@ -189,7 +156,7 @@ const getStyles = (colors: AppColors) =>
     },
 
     headerTitle: {
-      color: colors.onPrimary,
+      color: colors.headerContent,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -207,42 +174,17 @@ const getStyles = (colors: AppColors) =>
       marginBottom: 12,
     },
 
-    frequencyToggle: {
+    frequencyToggleColors: {
       width: "100%",
-      height: 46,
-      flexDirection: "row",
       backgroundColor:
         colors.scrimFaint,
-      borderWidth: 2,
       borderColor:
         colors.border,
       borderRadius: 12,
-      padding: 3,
       marginBottom: 14,
     },
 
-    frequencyButton: {
-      flex: 1,
-      height: 36,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 9,
-    },
 
-    frequencyButtonActive: {
-      backgroundColor:
-        colors.primary,
-    },
-
-    frequencyText: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: "700",
-    },
-
-    frequencyTextActive: {
-      color: colors.onPrimary,
-    },
 
     chartArea: {
       width: "100%",

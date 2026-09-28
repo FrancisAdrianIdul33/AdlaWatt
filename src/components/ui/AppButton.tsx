@@ -9,6 +9,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { Control } from "@/constants/sizing";
 import AppText from "./AppText";
 
 interface AppButtonProps {
@@ -53,18 +54,26 @@ const getStyles = (colors: AppColors) =>
   StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
-    marginTop: 15,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    minHeight: Control.button,
+    marginTop: Control.buttonGapAbove,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: Control.buttonPadding,
     justifyContent: "center",
     alignItems: "center",
   },
 
   disabled: {
-    opacity: 0.5,
+    backgroundColor: colors.border,
+    borderColor: colors.border,
+    opacity: 0.7,
   },
 
   pressed: {
-    opacity: 0.85,
+    backgroundColor: colors.primaryPressed,
+    borderColor: colors.primaryPressed,
+    opacity: 1,
   },
 });

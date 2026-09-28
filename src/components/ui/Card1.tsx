@@ -54,7 +54,7 @@ export default function Card1({
           <Ionicons
             name="sunny-outline"
             size={36}
-            color={colors.iconAccent}
+            color={colors.headerContent}
           />
           <AppText
             variant="heading"
@@ -187,7 +187,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 300,
     backgroundColor: colors.glass.white,
     borderWidth: 3,
-    borderColor: colors.primary,
+    borderColor: colors.cardBorder,
     borderRadius: 15,
     overflow: "hidden",
   },
@@ -195,7 +195,7 @@ const getStyles = (colors: AppColors) =>
   header: {
     width: "100%",
     minHeight: 30,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.headerBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -212,7 +212,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   headerTitle: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 20,
     fontWeight: "600",
     marginLeft: 10,
@@ -226,13 +226,13 @@ const getStyles = (colors: AppColors) =>
   },
 
   timerLabel: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 13,
     lineHeight: 16,
   },
 
   timerValue: {
-    color: colors.onPrimary,
+    color: colors.headerContent,
     fontSize: 19,
     fontWeight: "600",
     lineHeight: 23,
@@ -300,7 +300,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   statusBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },
