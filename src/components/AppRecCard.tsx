@@ -55,16 +55,17 @@ type DecoratedAppliance = Appliance & {
   color: string;
 };
 
-// Themed primary is passed in so the "OK to use" badge tracks
-// the active theme (teal in dark mode) instead of freezing
-// the light green. Warning/error are identical in both themes.
-const badgeMeta = (status: Status, primary: string) => {
+// Badge fills track the active theme (primary teal and a
+// softened error red in dark mode) so fills and ink keep
+// passing contrast both directions. The "care" amber keeps
+// frozen dark ink (readable on yellow in both themes).
+const badgeMeta = (status: Status, colors: AppColors) => {
   if (
     status === "care"
   ) {
 
     return {
-      color: Colors.light.warning,
+      color: colors.warning,
       icon: "warning-outline" as const,
       label: "Use with care",
     };
@@ -75,14 +76,14 @@ const badgeMeta = (status: Status, primary: string) => {
   ) {
 
     return {
-      color: Colors.light.error,
+      color: colors.error,
       icon: "alert-circle-outline" as const,
       label: "Not advisable",
     };
   }
 
   return {
-    color: primary,
+    color: colors.primary,
     icon: "checkmark-circle-outline" as const,
     label: "OK to use",
   };
@@ -118,9 +119,8 @@ const TOGGLE_META: {
   {
     mode: "advisable",
     label: "Advisable",
-    // Resolved to the themed primary at render time so the
-    // active segment tracks dark mode (warning/error are
-    // identical in both themes).
+    // Resolved to themed tokens at render time so the
+    // active segment tracks dark mode.
     color: "themed-primary",
     accessibilityLabel:
       "Show advisable appliances",
@@ -128,14 +128,14 @@ const TOGGLE_META: {
   {
     mode: "care",
     label: "Caution",
-    color: Colors.light.warning,
+    color: "themed-warning",
     accessibilityLabel:
       "Show appliances to use with care",
   },
   {
     mode: "notAdvisable",
     label: "Not Advisable",
-    color: Colors.light.error,
+    color: "themed-error",
     accessibilityLabel:
       "Show not advisable appliances",
   },
@@ -210,7 +210,7 @@ export default function AppRecCard({
             color:
               badgeMeta(
                 status,
-                colors.primary,
+                colors,
               ).color,
           };
         });
@@ -242,11 +242,11 @@ export default function AppRecCard({
           color:
             badgeMeta(
               status,
-              colors.primary,
+              colors,
             ).color,
         };
       });
-    }, [appliances, battery, colors.primary]);
+    }, [appliances, battery, colors]);
 
   // ============================================
   // FILTER APPLIANCES BY STATUS
@@ -509,7 +509,9 @@ export default function AppRecCard({
                 activeColor:
                   color === "themed-primary"
                     ? colors.primary
-                    : color,
+                    : color === "themed-warning"
+                      ? colors.warning
+                      : colors.error,
                 activeInk:
                   segmentMode === "care"
                     ? Colors.light.text
@@ -528,7 +530,7 @@ export default function AppRecCard({
                   const meta =
                     badgeMeta(
                       appliance.status,
-                      colors.primary,
+                      colors,
                     );
 
                   return (

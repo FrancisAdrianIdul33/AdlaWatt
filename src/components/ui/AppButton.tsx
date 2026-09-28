@@ -54,6 +54,8 @@ const getStyles = (colors: AppColors) =>
   StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.primary,
     minHeight: Control.button,
     marginTop: Control.buttonGapAbove,
     borderRadius: 12,
@@ -64,10 +66,14 @@ const getStyles = (colors: AppColors) =>
   },
 
   disabled: {
-    opacity: 0.5,
+    backgroundColor: colors.border,
+    borderColor: colors.border,
+    opacity: 0.7,
   },
 
   pressed: {
-    opacity: 0.85,
+    backgroundColor: colors.primaryPressed,
+    borderColor: colors.primaryPressed,
+    opacity: 1,
   },
 });

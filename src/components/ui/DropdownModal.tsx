@@ -227,7 +227,9 @@ const getDropdownModalStyles = (colors: AppColors) =>
     card: {
       width: "100%",
       maxWidth: 420,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.elevated,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: MODAL_RADIUS,
       padding: 17,
     },

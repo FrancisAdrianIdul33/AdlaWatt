@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import {
+  AccessibilityInfo,
   Animated,
   Easing,
   ScrollView,
@@ -262,6 +263,17 @@ export default function ChartCard({
 
   const sunHigh = colors.secondary;
 
+  // Reduced motion: snap gauges instead of animating so
+  // vestibular-sensitive users get instant state changes.
+  const [reduceMotion, setReduceMotion] =
+    useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduceMotion)
+      .catch(() => {});
+  }, []);
+
   // ==========================================================
   // SUN GAUGE ANIMATION
   //
@@ -369,8 +381,9 @@ export default function ChartCard({
         ringProgress,
         {
           toValue: ringTarget,
-          duration:
-            RING_ANIMATION_DURATION_MS,
+          duration: reduceMotion
+            ? 0
+            : RING_ANIMATION_DURATION_MS,
           easing:
             Easing.out(Easing.cubic),
           useNativeDriver: false,
@@ -388,6 +401,7 @@ export default function ChartCard({
     loading,
     ringTarget,
     ringProgress,
+    reduceMotion,
   ]);
 
   useEffect(() => {
@@ -427,7 +441,8 @@ export default function ChartCard({
   useEffect(() => {
     if (
       type !== "voltage" ||
-      !isCharging
+      !isCharging ||
+      reduceMotion
     ) {
       chargingPulse.stopAnimation();
 
@@ -486,6 +501,7 @@ export default function ChartCard({
     type,
     isCharging,
     chargingPulse,
+    reduceMotion,
   ]);
 
   useEffect(() => {
@@ -521,8 +537,9 @@ export default function ChartCard({
         sunIntensity,
         {
           toValue: solarTarget,
-          duration:
-            SOLAR_ANIMATION_DURATION_MS,
+          duration: reduceMotion
+            ? 0
+            : SOLAR_ANIMATION_DURATION_MS,
           useNativeDriver: false,
         },
       );
@@ -537,6 +554,7 @@ export default function ChartCard({
     type,
     solarTarget,
     sunIntensity,
+    reduceMotion,
   ]);
 
   // ==========================================================
@@ -894,7 +912,9 @@ export default function ChartCard({
               }
             >
 
-              {/* Battery Status */}
+              {/* Battery Status: icon + label so state never
+                  relies on color alone (Idle vs
+                  Charging/Discharging). */}
 
               <View
                 style={[
@@ -904,6 +924,19 @@ export default function ChartCard({
                     : null,
                 ]}
               >
+
+                <Ionicons
+                  name={
+                    batteryStatus === "Charging"
+                      ? "flash"
+                      : isIdle
+                        ? "pause"
+                        : "battery-half-outline"
+                  }
+                  size={12}
+                  color={colors.onPrimary}
+                  style={{ marginRight: 4 }}
+                />
 
                 <AppText
                   variant="caption"
@@ -916,7 +949,8 @@ export default function ChartCard({
 
               </View>
 
-              {/* DoD Status */}
+              {/* DoD Status: shield icon + Safe/Unsafe label
+                  pairs color with shape + text. */}
 
               <View
                 style={[
@@ -926,6 +960,17 @@ export default function ChartCard({
                     : styles.dodSafeBadge,
                 ]}
               >
+
+                <Ionicons
+                  name={
+                    isDodBadgeRed
+                      ? "shield-outline"
+                      : "shield-checkmark-outline"
+                  }
+                  size={12}
+                  color={colors.onPrimary}
+                  style={{ marginRight: 4 }}
+                />
 
                 <AppText
                   variant="caption"
@@ -1095,6 +1140,16 @@ export default function ChartCard({
                   ]}
                 >
 
+                  <Ionicons
+                    name={getTemperatureIcon(
+                      batteryTemperatureData.badge as TemperatureStatus,
+                    )}
+                    size={12}
+                    color={getTemperatureInk(
+                      batteryTemperatureData.badge as TemperatureStatus,
+                    )}
+                  />
+
                   <AppText
                     variant="caption"
                     style={[
@@ -1144,6 +1199,16 @@ export default function ChartCard({
                   interiorTemperatureBadge,
                 ]}
               >
+
+                <Ionicons
+                  name={getTemperatureIcon(
+                    interiorTemperatureStatus,
+                  )}
+                  size={12}
+                  color={getTemperatureInk(
+                    interiorTemperatureStatus,
+                  )}
+                />
 
                 <AppText
                   variant="caption"
@@ -1389,6 +1454,23 @@ export default function ChartCard({
                 ]}
               >
 
+                <Ionicons
+                  name={
+                    solarStatus === "High"
+                      ? "sunny"
+                      : solarStatus === "Moderate"
+                        ? "partly-sunny"
+                        : "cloud-outline"
+                  }
+                  size={12}
+                  color={
+                    solarStatus === "Moderate"
+                      ? Colors.light.text
+                      : colors.onPrimary
+                  }
+                  style={{ marginRight: 4 }}
+                />
+
                 <AppText
                   variant="caption"
                   style={[
@@ -1553,6 +1635,16 @@ export default function ChartCard({
                     solarTemperatureData.badgeStyle,
                   ]}
                 >
+
+                  <Ionicons
+                    name={getTemperatureIcon(
+                      solarTemperatureData.badge as TemperatureStatus,
+                    )}
+                    size={12}
+                    color={getTemperatureInk(
+                      solarTemperatureData.badge as TemperatureStatus,
+                    )}
+                  />
 
                   <AppText
                     variant="caption"
@@ -2784,6 +2876,49 @@ function getTemperatureBadgeTextStyle(
 }
 
 // ============================================================
+// TEMPERATURE BADGE ICON + INK
+//
+// Frozen severity inks are reused for the icon so the badge
+// pairs color with shape + text without recoloring the scale.
+// ============================================================
+
+function getTemperatureIcon(
+  status: TemperatureStatus,
+): keyof typeof Ionicons.glyphMap {
+  switch (status) {
+    case "Nominal":
+      return "thermometer-outline";
+
+    case "Elevated":
+      return "thermometer-outline";
+
+    case "High":
+      return "warning-outline";
+
+    case "Critical":
+      return "alert-circle-outline";
+  }
+}
+
+function getTemperatureInk(
+  status: TemperatureStatus,
+): string {
+  switch (status) {
+    case "Nominal":
+      return Colors.light.severity.nominal.text;
+
+    case "Elevated":
+      return Colors.light.severity.elevated.text;
+
+    case "High":
+      return Colors.light.severity.high.text;
+
+    case "Critical":
+      return Colors.light.severity.critical.text;
+  }
+}
+
+// ============================================================
 // STYLES
 // ============================================================
 
@@ -2891,6 +3026,7 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 15,
     paddingVertical: 3,
     minWidth: 10,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 25,
@@ -3366,8 +3502,10 @@ const getStyles = (colors: AppColors) =>
     paddingVertical: 3,
     borderRadius: 10,
     minWidth: 42,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 4,
   },
 
   statusBadgeText: {
@@ -3413,6 +3551,7 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 9,
     paddingVertical: 3,
     minWidth: 58,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 25,

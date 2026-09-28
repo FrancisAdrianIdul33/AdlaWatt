@@ -155,7 +155,9 @@ const getStyles = (colors: AppColors) =>
       width: "100%",
       maxWidth: 420,
       backgroundColor:
-        colors.surface,
+        colors.elevated,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: 18,
       padding: 17,
     },

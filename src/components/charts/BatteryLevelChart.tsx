@@ -14,6 +14,8 @@ import {
   useChartColors,
 } from "@/services/chartMath";
 import { useTypography } from "@/hooks/useTypography";
+import { useAppColors } from "@/hooks/useAppColors";
+import AppText from "@/components/ui/AppText";
 
 /* ============================================================
    CONSTANTS
@@ -37,7 +39,9 @@ export interface BatteryLevelPoint {
    Curved area chart (react-native-gifted-charts, SVG-based so it
    works on native and web with no extra engine loading). Y-axis is
    fixed 0-100 with a dashed red 20% safety floor. Axes always render,
-   even without enough history.
+   even without enough history. A text legend below the chart pairs
+   each line style with its meaning so the 20% floor never relies
+   on color alone. Area fill is softened in dark mode to avoid glow.
    ============================================================ */
 
 export default function BatteryLevelChart({
@@ -52,6 +56,7 @@ export default function BatteryLevelChart({
   const { family } = useTypography();
   // Series colors frozen; grid/axis neutrals follow theme.
   const chartColors = useChartColors();
+  const colors = useAppColors();
 
   const isEmpty = points.length < 2;
 
@@ -95,7 +100,7 @@ export default function BatteryLevelChart({
         endFillColor={
           chartColors.green
         }
-        startOpacity={0.32}
+        startOpacity={colors.isDark ? 0.22 : 0.32}
         endOpacity={0.02}
         maxValue={100}
         noOfSections={5}
@@ -139,11 +144,58 @@ export default function BatteryLevelChart({
           type: "dashed",
           dashWidth: 4,
           dashGap: 4,
+          labelText: "20% floor",
+          labelTextStyle: {
+            fontSize: 10,
+            fontFamily: family,
+            color: chartColors.axisLabel,
+          },
         }}
         showScrollIndicator={false}
         scrollToEnd
         scrollAnimation={false}
       />
+
+      {/* Legend: line style + text so meaning never depends
+          on color alone (solid green = battery %, dashed red
+          = 20% safety floor). */}
+      <View
+        style={styles.legend}
+        accessibilityRole="text"
+        accessibilityLabel="Legend: solid line battery percent, dashed line 20 percent safety floor"
+      >
+        <View style={styles.legendItem}>
+          <View
+            style={[
+              styles.legendSwatch,
+              { backgroundColor: chartColors.green },
+            ]}
+          />
+
+          <AppText
+            variant="caption"
+            style={styles.legendText}
+          >
+            Battery %
+          </AppText>
+        </View>
+
+        <View style={styles.legendItem}>
+          <View
+            style={[
+              styles.legendSwatchDashed,
+              { borderColor: chartColors.red },
+            ]}
+          />
+
+          <AppText
+            variant="caption"
+            style={styles.legendText}
+          >
+            20% safety floor
+          </AppText>
+        </View>
+      </View>
     </View>
   );
 }
@@ -156,5 +208,35 @@ const styles =
   StyleSheet.create({
     container: {
       width: "100%",
+    },
+
+    legend: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 14,
+      marginTop: 10,
+    },
+
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+
+    legendSwatch: {
+      width: 18,
+      height: 3,
+      borderRadius: 2,
+    },
+
+    legendSwatchDashed: {
+      width: 18,
+      height: 0,
+      borderTopWidth: 2,
+      borderStyle: "dashed",
+    },
+
+    legendText: {
+      fontSize: 12,
     },
   });

@@ -102,8 +102,60 @@ export default function NavBar({
 
     checkUnreadNotifications();
 
+    // Live badge: any insert/update/delete on the user's
+    // notifications re-runs the check, so the dot clears
+    // right after mark-as-read and lights on new arrivals
+    // without waiting for a remount.
+    let channel:
+      | ReturnType<typeof supabase.channel>
+      | null = null;
+
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (!mounted || !user) {
+          return;
+        }
+
+        channel = supabase
+          .channel(
+            `navbar-notifications-${user.id}-${Date.now()}`,
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              if (mounted) {
+                checkUnreadNotifications();
+              }
+            },
+          )
+          .subscribe((status, error) => {
+            if (
+              mounted &&
+              (status === "CHANNEL_ERROR" ||
+                status === "TIMED_OUT")
+            ) {
+              console.error(
+                "Navbar notifications channel error:",
+                error,
+              );
+            }
+          });
+      })
+      .catch(() => {});
+
     return () => {
       mounted = false;
+
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 
@@ -328,7 +380,7 @@ const getNavBarStyles = (colors: AppColors) =>
   },
 
   statusText: {
-    color: colors.text,
+    color: colors.bar.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,
