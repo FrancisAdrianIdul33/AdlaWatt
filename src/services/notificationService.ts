@@ -12,6 +12,7 @@ import {
   computeWattCap,
   parseWattageRange,
 } from "@/services/recommendation";
+import { sendAlertEmail } from "@/services/alertEmailService";
 
 // ============================================================
 // TYPES
@@ -441,7 +442,68 @@ const createNotification = async (
     });
   }
 
+  maybeSendAlertEmail(userId, rule);
+
   return true;
+};
+
+
+// ============================================================
+// ALERT EMAIL (fire-and-forget, AgentMail Edge Function)
+// ============================================================
+//
+// Sends alert notifications through the deployed
+// send-alert-email function after the in-app row is stored.
+// Never blocks or throws — failures only warn. Insert
+// cooldowns already rate-limit sends.
+// ============================================================
+
+const maybeSendAlertEmail = (
+  userId: string,
+  rule: NotificationRule,
+): void => {
+  if (rule.type !== "alert") {
+    return;
+  }
+
+  void getAuthenticatedUser()
+    .then((user) => {
+      if (
+        !user ||
+        user.id !== userId ||
+        !user.email
+      ) {
+        return;
+      }
+
+      return sendAlertEmail({
+        subject: `AdlaWatt Alert: ${rule.title}`,
+        title: rule.title,
+        description: rule.description,
+        type: "alert",
+        to: user.email,
+        timestamp: new Date().toLocaleString(),
+      }).then((result) => {
+        if (result.success) {
+          console.log(
+            `[alert-email] sent to ${result.recipient} for "${rule.title}"`,
+          );
+        } else {
+          console.warn(
+            `Alert email not sent for "${rule.title}":`,
+            result.error,
+          );
+        }
+      });
+    })
+    .catch((error) => {
+      console.warn(
+        "Alert email lookup failed:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    });
 };
 
 
@@ -580,6 +642,8 @@ const createNotificationWithCooldown =
         userId,
       });
     }
+
+    maybeSendAlertEmail(userId, rule);
 
     return true;
   };

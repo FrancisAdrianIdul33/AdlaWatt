@@ -57,6 +57,9 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
+// TEMP-TEST: delete with the test button once verified.
+import { sendAlertEmail } from "@/services/alertEmailService";
+
 export default function SettingsScreen() {
   // ============================================
   // DROPDOWN STATES
@@ -143,6 +146,10 @@ export default function SettingsScreen() {
     useState(true);
 
   const [emailNotifications, setEmailNotifications] =
+    useState(false);
+
+  // TEMP-TEST: delete with the test button once verified.
+  const [isSendingTestEmail, setIsSendingTestEmail] =
     useState(false);
 
   // ============================================
@@ -1567,6 +1574,72 @@ export default function SettingsScreen() {
                   setEmailNotifications,
                 )}
               </View>
+
+              {/* TEMP-TEST: delete this block once email verified. */}
+              <Pressable
+                onPress={async () => {
+                  if (isSendingTestEmail) {
+                    return;
+                  }
+
+                  setIsSendingTestEmail(true);
+
+                  try {
+                    const result =
+                      await sendAlertEmail({
+                        subject:
+                          "AdlaWatt Alert: Battery Empty (Test)",
+                        title: "Battery Empty",
+                        description:
+                          "Battery has reached 0% charge or 100% depth of discharge. The BMS may disconnect the system. (Test email — safe to delete.)",
+                        type: "alert",
+                        timestamp:
+                          new Date().toLocaleString(),
+                      });
+
+                    console.log(
+                      "[test-email] recipient:",
+                      result.recipient,
+                      "result:",
+                      result.success
+                        ? "success"
+                        : result.error,
+                    );
+
+                    Alert.alert(
+                      result.success
+                        ? "Test email sent"
+                        : "Test email failed",
+                      result.success
+                        ? `Sent to ${result.recipient}. Check that exact inbox (including Spam) for the branded Battery Empty alert from adlawatt@agentmail.to.`
+                        : (result.error ??
+                          "Unknown error."),
+                    );
+                  } finally {
+                    setIsSendingTestEmail(false);
+                  }
+                }}
+                disabled={isSendingTestEmail}
+                accessibilityRole="button"
+                accessibilityLabel="Send test alert email"
+                style={({ pressed }) => [
+                  styles.modalFooterButton,
+                  styles.modalCancelButton,
+                  pressed && styles.pressed,
+                  { marginTop: 12 },
+                ]}
+              >
+                <AppText
+                  variant="body"
+                  style={
+                    styles.modalCancelButtonText
+                  }
+                >
+                  {isSendingTestEmail
+                    ? "Sending test email..."
+                    : "Send Test Alert Email (temporary)"}
+                </AppText>
+              </Pressable>
           </View>
 
           <View style={styles.modalFooter}>
