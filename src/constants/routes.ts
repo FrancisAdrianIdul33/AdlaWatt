@@ -2,6 +2,7 @@ export const Routes = {
   // Authentication
   LOGIN: "/auth/login",
   REGISTER: "/auth/register",
+  AUTH_CALLBACK: "/auth/callback",
 
   // Dashboard
   DASHBOARD: "/dashboard",

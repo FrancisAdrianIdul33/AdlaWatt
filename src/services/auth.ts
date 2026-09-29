@@ -1,9 +1,65 @@
+import { Platform } from "react-native";
+
 import { supabase } from "@/lib/supabase";
 import {
   logActivity,
   logAuth,
   logProfile,
 } from "@/services/activityLogService";
+
+// ============================================================
+// EMAIL REDIRECT
+// ============================================================
+//
+// Native uses the app deep link (scheme in app.json).
+// Web uses the current origin + /auth/callback so no
+// hardcoded production URL is needed; allow-list both
+// `adlawatt://auth/callback` and the web callback URL
+// (plus localhost for dev) in Supabase URL Configuration.
+// ============================================================
+
+export const getEmailRedirectTo = (): string | undefined => {
+    if (Platform.OS === "web") {
+        if (
+            typeof window !== "undefined" &&
+            window.location?.origin
+        ) {
+            return `${window.location.origin}/auth/callback`;
+        }
+
+        return undefined;
+    }
+
+    return "adlawatt://auth/callback";
+};
+
+export async function resendConfirmation(email: string) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+        return {
+            success: false,
+            error: "Please enter your email address.",
+        };
+    }
+
+    const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: cleanEmail,
+        options: {
+            emailRedirectTo: getEmailRedirectTo(),
+        },
+    });
+
+    if (error) {
+        return {
+            success: false,
+            error: error.message,
+        };
+    }
+
+    return { success: true };
+}
 
 export async function registerUser(
     username: string,
@@ -92,6 +148,7 @@ export async function registerUser(
                         username: cleanUsername,
                         terms_agreed: termsAgreed,
                     },
+                    emailRedirectTo: getEmailRedirectTo(),
                 },
             });
 
@@ -116,9 +173,22 @@ export async function registerUser(
             authData.user.id,
         );
 
+        // Confirm-email ON: no session until the user clicks
+        // the email link. Confirm-off: session exists at once.
+        if (!authData.session) {
+            return {
+                success: true,
+                user: authData.user,
+                needsConfirmation: true,
+                email: cleanEmail,
+            };
+        }
+
         return {
             success: true,
             user: authData.user,
+            needsConfirmation: false,
+            email: cleanEmail,
         };
 
     } catch (error) {
@@ -259,6 +329,61 @@ export async function loginUser(
 
         if (error) {
             console.error("Login error:", error.message);
+
+            if (
+                error.message
+                    .toLowerCase()
+                    .includes("email not confirmed")
+            ) {
+                // Auto-send a fresh confirmation link so the
+                // user does not have to tap Resend manually.
+                // One send per login attempt; failures never
+                // override the unconfirmed outcome.
+                let confirmationResent:
+                    | "sent"
+                    | "rate-limited"
+                    | "failed" = "failed";
+
+                try {
+                    const { error: resendError } =
+                        await supabase.auth.resend({
+                            type: "signup",
+                            email,
+                            options: {
+                                emailRedirectTo:
+                                    getEmailRedirectTo(),
+                            },
+                        });
+
+                    if (!resendError) {
+                        confirmationResent = "sent";
+                    } else if (
+                        resendError.message
+                            .toLowerCase()
+                            .includes("security") ||
+                        resendError.message
+                            .toLowerCase()
+                            .includes("rate") ||
+                        resendError.message
+                            .toLowerCase()
+                            .includes("too many")
+                    ) {
+                        confirmationResent = "rate-limited";
+                    } else {
+                        confirmationResent = "failed";
+                    }
+                } catch {
+                    confirmationResent = "failed";
+                }
+
+                return {
+                    success: false,
+                    emailNotConfirmed: true,
+                    email,
+                    confirmationResent,
+                    error: "Please confirm your email address before signing in. Check your inbox for the confirmation link.",
+                };
+            }
 
             return {
                 success: false,

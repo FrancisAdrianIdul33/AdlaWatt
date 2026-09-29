@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -22,7 +22,7 @@ import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
 import Copyright from "@/components/ui/Copyright";
 
-import { registerUser } from "@/services/auth";
+import { registerUser, resendConfirmation } from "@/services/auth";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -41,6 +41,16 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] =
     useState(false);
+
+  const [confirmationPending, setConfirmationPending] =
+    useState(false);
+
+  const [confirmationEmail, setConfirmationEmail] =
+    useState("");
+
+  const [resending, setResending] = useState(false);
+
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -161,6 +171,13 @@ export default function RegisterScreen() {
         return;
       }
 
+      if (result.needsConfirmation) {
+        setWarning("");
+        setConfirmationEmail(result.email ?? email.trim().toLowerCase());
+        setConfirmationPending(true);
+        return;
+      }
+
       setWarning("");
 
       router.replace(Routes.LOGIN);
@@ -196,6 +213,40 @@ export default function RegisterScreen() {
 
   const openTerms = () => {
     setTermsModalVisible(true);
+  };
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setResendCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResend = async () => {
+    if (resending || resendCooldown > 0 || !confirmationEmail) {
+      return;
+    }
+
+    setResending(true);
+    setWarning("");
+
+    try {
+      const result = await resendConfirmation(confirmationEmail);
+
+      if (!result.success) {
+        showWarning(result.error ?? "Unable to resend confirmation email.");
+        return;
+      }
+
+      setResendCooldown(60);
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -337,16 +388,49 @@ export default function RegisterScreen() {
 
           <AuthWarning message={warning} />
 
-          <AppButton
-            title={
-              loading
-                ? "Creating Account..."
-                : "Create Account"
-            }
-            onPress={handleRegister}
-            disabled={loading}
-            style={styles.createButton}
-          />
+          {confirmationPending ? (
+            <View style={styles.confirmationBox}>
+              <AppText style={styles.confirmationTitle}>
+                Check your email
+              </AppText>
+
+              <AppText style={styles.confirmationText}>
+                We sent a confirmation link to{" "}
+                {confirmationEmail}. Click the link to
+                verify your account, then sign in.
+              </AppText>
+
+              <AppButton
+                title={
+                  resending
+                    ? "Resending..."
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : "Resend confirmation email"
+                }
+                onPress={handleResend}
+                disabled={resending || resendCooldown > 0}
+                style={styles.createButton}
+              />
+
+              <AppButton
+                title="Continue to Sign In"
+                onPress={handleLogin}
+                style={styles.createButton}
+              />
+            </View>
+          ) : (
+            <AppButton
+              title={
+                loading
+                  ? "Creating Account..."
+                  : "Create Account"
+              }
+              onPress={handleRegister}
+              disabled={loading}
+              style={styles.createButton}
+            />
+          )}
         </View>
 
         <AuthFooter
@@ -419,5 +503,20 @@ const styles = StyleSheet.create({
 
   createButton: {
     marginTop: Spacing.sm,
+  },
+
+  confirmationBox: {
+    width: "100%",
+  },
+
+  confirmationTitle: {
+    textAlign: "center",
+    fontWeight: "700",
+    marginBottom: Spacing.xs,
+  },
+
+  confirmationText: {
+    textAlign: "center",
+    marginBottom: Spacing.sm,
   },
 });
