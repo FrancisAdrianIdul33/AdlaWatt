@@ -11,6 +11,7 @@ import React, {
 import {
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -183,6 +184,13 @@ export default function NavBar({
 
   const colors = useAppColors();
 
+  // Viewport width so the bar background spans edge to
+  // edge like NavBarBottom, even though NavBar renders
+  // inside ScreenContainer2's maxWidth 768 column.
+  // Inner container is untouched.
+  const { width: screenWidth } =
+    useWindowDimensions();
+
   const navBarStyles = useMemo(
     () => getNavBarStyles(colors),
     [colors],
@@ -194,9 +202,13 @@ export default function NavBar({
 
   return (
     <View
-      style={
-        navBarStyles.wrapper
-      }
+      style={[
+        navBarStyles.wrapper,
+        {
+          width: screenWidth,
+          alignSelf: "center",
+        },
+      ]}
     >
       <View
         style={
@@ -380,7 +392,9 @@ const getNavBarStyles = (colors: AppColors) =>
   },
 
   statusText: {
-    color: colors.bar.text,
+    // Theme text (not bar.text): light #1C1B1F on cream
+    // capsule for legibility; dark stays #E3E3E3.
+    color: colors.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,

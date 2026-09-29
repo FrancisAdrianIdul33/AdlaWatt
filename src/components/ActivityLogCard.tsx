@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React, { useMemo } from "react";
+import React, {
+  useMemo,
+  useState,
+} from "react";
 
 import {
   StyleSheet,
@@ -20,6 +23,13 @@ import {
 // Single shared log card used by both the dashboard "Recent
 // Activity" block and the dedicated activity logs screen so
 // every log entry looks and arranges the same way.
+//
+// Layout mirrors NotificationCard: a stacked composition with
+// a solid type-color back layer peeking on the left and a
+// surface front card with a type-colored border. All four
+// activity severities keep their own color (info green,
+// warning yellow, error/critical red) for the back layer,
+// border, and icon.
 // ============================================================
 
 export type ActivityLogType =
@@ -78,10 +88,31 @@ function getActivityColor(
   }
 }
 
+function getActivityLabel(
+  type: ActivityLogType,
+): string {
+  switch (type) {
+    case "info":
+      return "Info";
+
+    case "warning":
+      return "Warning";
+
+    case "error":
+      return "Error";
+
+    case "critical":
+      return "Critical";
+
+    default:
+      return "Info";
+  }
+}
+
 export default function ActivityLogCard({
   item,
 }: {
-  item: ActivityLogItem;
+  item?: ActivityLogItem | null;
 }) {
   const colors = useAppColors();
 
@@ -90,38 +121,124 @@ export default function ActivityLogCard({
     [colors],
   );
 
-  const color = getActivityColor(item.type, colors);
+  const safeItem: ActivityLogItem =
+    item ?? {
+      id: "unknown",
+      type: "info",
+      title: "Activity",
+      details:
+        "No activity details available.",
+      date: "",
+      time: "",
+    };
+
+  const color = getActivityColor(
+    safeItem.type,
+    colors,
+  );
+
+  const typeLabel = getActivityLabel(
+    safeItem.type,
+  );
+
+  const hasTimestamp =
+    safeItem.date !== "" ||
+    safeItem.time !== "";
+
+  // Measured width of the date/time line so the footer
+  // divider matches it exactly instead of spanning the
+  // full content width.
+  const [stampWidth, setStampWidth] =
+    useState<number | null>(null);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.wrapper}>
-        <Ionicons
-          name={getActivityIcon(item.type)}
-          size={24}
-          color={color}
-        />
+    <View style={styles.stackContainer}>
+      {/* Back layer: solid type color peeked on the left. */}
+      <View
+        pointerEvents="none"
+        accessible={false}
+        style={[
+          styles.backLayer,
+          { backgroundColor: color },
+        ]}
+      />
 
-        <View style={styles.content}>
-          <AppText
-            variant="body"
-            style={styles.title}
-          >
-            {item.title}
-          </AppText>
+      <View
+        style={[
+          styles.activityCard,
+          { borderColor: color },
+        ]}
+      >
+        <View style={styles.wrapper}>
+          {/* Activity Icon: carries the type signal. */}
+          <Ionicons
+            name={getActivityIcon(
+              safeItem.type,
+            )}
+            size={24}
+            color={color}
+            accessibilityRole="text"
+            accessibilityLabel={`Type ${typeLabel}`}
+          />
 
-          <AppText
-            variant="caption"
-            style={styles.details}
-          >
-            {item.details}
-          </AppText>
+          {/* Activity Content: single full-width text
+              column — title, details, and footer. */}
+          <View style={styles.content}>
+            <AppText
+              variant="body"
+              style={styles.title}
+              numberOfLines={2}
+            >
+              {safeItem.title}
+            </AppText>
 
-          <AppText
-            variant="caption"
-            style={styles.timestamp}
-          >
-            {item.date} • {item.time}
-          </AppText>
+            <AppText
+              variant="caption"
+              style={styles.details}
+              numberOfLines={3}
+            >
+              {safeItem.details}
+            </AppText>
+
+            {hasTimestamp && (
+              <View style={styles.footer}>
+                <View
+                  style={[
+                    styles.divider,
+                    stampWidth
+                      ? { width: stampWidth }
+                      : null,
+                  ]}
+                  accessible={false}
+                />
+
+                <AppText
+                  variant="caption"
+                  style={styles.timestamp}
+                  numberOfLines={1}
+                  onLayout={(event) => {
+                    const measured = Math.round(
+                      event.nativeEvent.layout
+                        .width,
+                    );
+
+                    setStampWidth((current) =>
+                      current === measured
+                        ? current
+                        : measured,
+                    );
+                  }}
+                >
+                  {safeItem.date}
+                  {safeItem.date &&
+                  safeItem.time
+                    ? " • "
+                    : ""}
+                  {safeItem.time}
+                </AppText>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </View>
@@ -130,19 +247,35 @@ export default function ActivityLogCard({
 
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
-  card: {
+  stackContainer: {
     width: "100%",
-    backgroundColor: colors.glass.white,
+    position: "relative",
+    paddingLeft: 6,
+  },
+
+  backLayer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    right: 0,
+    borderRadius: 16,
+  },
+
+  activityCard: {
+    width: "100%",
+    backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: 16,
-    padding: 12,
+    padding: 14,
+    overflow: "hidden",
   },
 
   wrapper: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 10,
   },
 
@@ -161,9 +294,19 @@ const getStyles = (colors: AppColors) =>
     lineHeight: 18,
   },
 
+  divider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+
+  footer: {
+    alignItems: "flex-start",
+  },
+
   timestamp: {
     color: colors.textSecondary,
-    marginTop: 5,
     fontSize: 12,
   },
 });
