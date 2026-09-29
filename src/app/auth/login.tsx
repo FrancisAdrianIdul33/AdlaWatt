@@ -67,15 +67,7 @@ export default function LoginScreen() {
       if (result.success) {
         setConfirmationResent("sent");
         setResendCooldown(60);
-      } else if (
-        (result.error ?? "")
-          .toLowerCase()
-          .includes("security") ||
-        (result.error ?? "").toLowerCase().includes("rate") ||
-        (result.error ?? "")
-          .toLowerCase()
-          .includes("too many")
-      ) {
+      } else if (result.throttled) {
         setConfirmationResent("rate-limited");
         setResendCooldown(60);
       } else {

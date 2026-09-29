@@ -22,7 +22,11 @@ import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
 import Copyright from "@/components/ui/Copyright";
 
-import { registerUser, resendConfirmation } from "@/services/auth";
+import {
+  EMAIL_PATTERN,
+  registerUser,
+  resendConfirmation,
+} from "@/services/auth";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -99,7 +103,7 @@ export default function RegisterScreen() {
     }
 
     if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      !EMAIL_PATTERN.test(
         cleanEmail
       )
     ) {
@@ -109,12 +113,7 @@ export default function RegisterScreen() {
       return false;
     }
 
-    if (!password) {
-      showWarning("Please create a password.");
-      return false;
-    }
-
-    if (password.length < 8) {
+    if (!password || password.trim().length < 8) {
       showWarning(
         "Password must be at least 8 characters."
       );
@@ -180,7 +179,9 @@ export default function RegisterScreen() {
 
       setWarning("");
 
-      router.replace(Routes.LOGIN);
+      // Confirm-off projects hand back a live session, so
+      // skip login and go straight to the dashboard.
+      router.replace(Routes.DASHBOARD);
     } catch (error) {
       showWarning(
         error instanceof Error
@@ -240,6 +241,11 @@ export default function RegisterScreen() {
 
       if (!result.success) {
         showWarning(result.error ?? "Unable to resend confirmation email.");
+
+        if (result.throttled) {
+          setResendCooldown(60);
+        }
+
         return;
       }
 
@@ -247,6 +253,13 @@ export default function RegisterScreen() {
     } finally {
       setResending(false);
     }
+  };
+
+  const handleEditEmail = () => {
+    setConfirmationPending(false);
+    setConfirmationEmail("");
+    setWarning("");
+    emailRef.current?.focus();
   };
 
   return (
@@ -418,6 +431,24 @@ export default function RegisterScreen() {
                 onPress={handleLogin}
                 style={styles.createButton}
               />
+
+              <Pressable
+                onPress={handleEditEmail}
+                style={styles.editEmailButton}
+                accessibilityRole="button"
+                accessibilityLabel="Use a different email address"
+              >
+                <AppText
+                  style={[
+                    styles.editEmailText,
+                    {
+                      color: colors.linkText,
+                    },
+                  ]}
+                >
+                  Use a different email address
+                </AppText>
+              </Pressable>
             </View>
           ) : (
             <AppButton
@@ -518,5 +549,18 @@ const styles = StyleSheet.create({
   confirmationText: {
     textAlign: "center",
     marginBottom: Spacing.sm,
+  },
+
+  editEmailButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    marginTop: Spacing.xs,
+  },
+
+  editEmailText: {
+    fontWeight: "600",
+    textDecorationLine: "underline",
+    textAlign: "center",
   },
 });

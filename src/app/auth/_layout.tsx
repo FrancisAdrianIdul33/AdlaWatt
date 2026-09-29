@@ -1,5 +1,5 @@
-import { Slot } from "expo-router";
-import React, { useMemo } from "react";
+import { Slot, router } from "expo-router";
+import React, { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import { ThemeProvider } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   useAppColors,
   type AppColors,
@@ -40,6 +41,14 @@ export default function AuthLayout() {
 function ThemedAuth() {
   const fontsLoaded = useAppFonts();
   const colors = useAppColors();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  // Signed-in users have no business on login/register.
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.replace("/dashboard");
+    }
+  }, [isLoaded, isSignedIn]);
 
   const styles = useMemo(
     () => getStyles(colors),

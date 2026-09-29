@@ -28,11 +28,12 @@ type Status = "working" | "success" | "error";
 
 export default function AuthCallbackScreen() {
   const params = useLocalSearchParams<{
-    code?: string;
-    token_hash?: string;
-    type?: string;
-    error?: string;
-    error_description?: string;
+    code?: string | string[];
+    token_hash?: string | string[];
+    type?: string | string[];
+    error?: string | string[];
+    error_code?: string | string[];
+    error_description?: string | string[];
   }>();
 
   const colors = useAppColors();
@@ -40,27 +41,55 @@ export default function AuthCallbackScreen() {
   const [status, setStatus] = useState<Status>("working");
   const [message, setMessage] = useState("");
 
+  const firstParam = (
+    value: string | string[] | undefined,
+  ): string => {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      return value[0] ?? "";
+    }
+
+    return "";
+  };
+
+  const decodeParam = (value: string): string => {
+    try {
+      return decodeURIComponent(value.replace(/\+/g, " "));
+    } catch {
+      return value;
+    }
+  };
+
+  const code = firstParam(params.code);
+  const tokenHash = firstParam(params.token_hash);
+  const otpType = firstParam(params.type);
+  const linkError =
+    firstParam(params.error) || firstParam(params.error_code);
+  const linkErrorDescription = firstParam(
+    params.error_description,
+  );
+
   useEffect(() => {
     let cancelled = false;
 
     const confirm = async () => {
-      if (params.error) {
+      setStatus("working");
+      setMessage("");
+
+      if (linkError) {
         if (!cancelled) {
           setStatus("error");
           setMessage(
-            typeof params.error_description === "string" &&
-              params.error_description.length > 0
-              ? decodeURIComponent(
-                  params.error_description.replace(/\+/g, " "),
-                )
+            linkErrorDescription
+              ? decodeParam(linkErrorDescription)
               : "The confirmation link is invalid or has expired.",
           );
         }
         return;
       }
-
-      const code =
-        typeof params.code === "string" ? params.code : "";
 
       if (code) {
         const { error } =
@@ -69,39 +98,53 @@ export default function AuthCallbackScreen() {
         if (!cancelled) {
           if (error) {
             setStatus("error");
-            setMessage(error.message);
+            setMessage(
+              "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
+            );
           } else {
+            // The auth layout notices the new session and
+            // routes to the dashboard on its own.
             setStatus("success");
             setMessage(
-              "Your email is confirmed. You can now sign in.",
+              "Your email is confirmed. Taking you to your dashboard.",
             );
           }
         }
         return;
       }
 
-      const tokenHash =
-        typeof params.token_hash === "string"
-          ? params.token_hash
-          : "";
+      if (tokenHash && otpType) {
+        const allowedTypes = [
+          "signup",
+          "invite",
+          "magiclink",
+          "recovery",
+          "email_change",
+        ] as const;
 
-      const type =
-        typeof params.type === "string" ? params.type : "";
+        type OtpType = (typeof allowedTypes)[number];
 
-      if (tokenHash && type) {
+        const verifiedType: OtpType = (
+          allowedTypes as readonly string[]
+        ).includes(otpType)
+          ? (otpType as OtpType)
+          : "signup";
+
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: type as "signup",
+          type: verifiedType,
         });
 
         if (!cancelled) {
           if (error) {
             setStatus("error");
-            setMessage(error.message);
+            setMessage(
+              "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
+            );
           } else {
             setStatus("success");
             setMessage(
-              "Your email is confirmed. You can now sign in.",
+              "Your email is confirmed. Taking you to your dashboard.",
             );
           }
         }
@@ -121,8 +164,7 @@ export default function AuthCallbackScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [code, tokenHash, otpType, linkError, linkErrorDescription]);
 
   return (
     <ScreenContainer>
@@ -156,10 +198,16 @@ export default function AuthCallbackScreen() {
             <AppButton
               title={
                 status === "success"
-                  ? "Continue to Sign In"
+                  ? "Continue to Dashboard"
                   : "Back to Sign In"
               }
-              onPress={() => router.replace(Routes.LOGIN)}
+              onPress={() =>
+                router.replace(
+                  status === "success"
+                    ? Routes.DASHBOARD
+                    : Routes.LOGIN,
+                )
+              }
             />
           </View>
         )}

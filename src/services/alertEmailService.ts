@@ -52,23 +52,45 @@ export const buildAlertEmailHtml = ({
   const badgeLabel = isAlert ? "&#9650; ALERT" : "&#9679; NORMAL";
   const badgeText = isAlert ? "Alert" : "Normal";
 
+  // Hosted logo icon (Supabase Storage public URL). Falls back
+  // to a styled-text lockup when unset or when images are off.
+  const logoUrl =
+    process.env.EXPO_PUBLIC_AGENTMAIL_LOGO_URL?.trim() ?? "";
+
+  const logoImg = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" alt="AdlaWatt" width="56" style="display:block;border:0;width:56px;height:56px;" />`
+    : "";
+
+  const wordmark = `<div style="font-size:26px;font-weight:800;color:#FFFFFF;letter-spacing:0.5px;line-height:1.1;">Adla<span style="color:#FFBF00;">W</span>att</div>
+<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.7);margin-top:6px;">ENERGY MONITORING</div>`;
+
+  const headerLockup = logoUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle" style="padding-right:14px;">${logoImg}</td><td valign="middle">${wordmark}</td></tr></table>`
+    : wordmark;
+
+  const severityRule = isAlert ? "#D32F2F" : "#00805A";
+
+  const descriptionBlock = isAlert
+    ? `<div style="background-color:#FEE2E2;border-radius:8px;padding:12px 14px;font-size:15px;line-height:1.6;color:#1C1B1F;">${escapeHtml(description).replace(/\n/g, "<br />")}</div>`
+    : `<div style="font-size:15px;line-height:1.6;color:#1C1B1F;">${escapeHtml(description).replace(/\n/g, "<br />")}</div>`;
+
   const preheader = `${title} — ${description}`.slice(0, 120);
   const timeLine = timestamp ?? new Date().toLocaleString();
 
-  return `<!doctype html><html><body style="margin:0;padding:0;background-color:#F5F1E6;">
+  return `<!doctype html><html><body style="margin:0;padding:0;background-color:#F0EAD6;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F1E6;padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0EAD6;padding:24px 12px;">
 <tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border-radius:12px;overflow:hidden;">
+<tr><td style="background-color:${severityRule};font-size:4px;line-height:4px;">&nbsp;</td></tr>
 <tr><td style="background-color:#FFBF00;font-size:4px;line-height:4px;">&nbsp;</td></tr>
-<tr><td align="center" style="background-color:#00805A;padding:24px 20px 20px 20px;">
-<div style="font-size:28px;font-weight:800;color:#FFFFFF;letter-spacing:0.5px;">Adla<span style="color:#FFBF00;">W</span>att</div>
-<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.7);margin-top:8px;">ENERGY MONITORING</div>
+<tr><td style="background-color:#00805A;padding:20px 24px;">
+${headerLockup}
 </td></tr>
 <tr><td style="padding:24px 24px 8px 24px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background-color:${badgeBg};color:#FFFFFF;font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;">${badgeLabel}</td></tr></table>
-<div style="font-size:22px;font-weight:800;color:#1C1B1F;margin:14px 0 8px 0;">${escapeHtml(title)}</div>
-<div style="font-size:15px;line-height:1.6;color:#1C1B1F;">${escapeHtml(description).replace(/\n/g, "<br />")}</div>
+<div style="font-size:22px;font-weight:800;color:#1C1B1F;margin:14px 0 12px 0;">${escapeHtml(title)}</div>
+${descriptionBlock}
 </td></tr>
 <tr><td style="padding:8px 24px 0 24px;">
 <hr style="border:none;border-top:1px solid #D8D2C2;margin:12px 0;" />
