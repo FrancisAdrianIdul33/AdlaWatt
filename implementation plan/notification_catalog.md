@@ -30,9 +30,20 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 |---|---|---|
 | `NOTIFICATION_COOLDOWN_MS` | 10 min | `createNotification()` (memory + DB gate) |
 | `UPDATE_NOTIFICATION_COOLDOWN_MS` | 5 min | High-frequency field updates via `WithCooldown` |
-| `SOLAR_INPUT_MILESTONE_WATTS` | 50 W | Upward-crossing milestones, stateful, reset at 0 |
+| `SOLAR_INPUT_MILESTONE_WATTS` | 50 W | Upward-crossing milestones, stateful, reset at 0, follows down on decrease |
 | `CURRENT_LOAD_MILESTONE_WATTS` | 50 W | Same pattern for consumption |
 | `STALE_MONITORING_INTERVAL_MS` | 10 s | `last_seen` freshness + watcher period |
+| Runtime hourly bucket | 1 h | `Runtime Updated` fires on hour-bucket change of `time_remaining` |
+
+---
+
+## Final List Alignment (monitoring-table based)
+
+Normal: Battery Fully Charged, Battery Charging, Battery Discharging, Battery Idle, Solar Input Low / Moderate / High, Solar Charging Activity (50 W), Load Activity Detected (50 W), Runtime Updated (hourly), Battery Temperature Elevated / High, Solar Temperature Elevated / High, Device Online, Device Offline.
+
+Alert: Battery Normal-Use Cutoff Reached (≤ 20%), Battery Critically Low (< 20%, > 0), Battery Empty (= 0), Unsafe Depth of Discharge, Critical Battery Temperature, Critical Solar Temperature.
+
+---
 
 ---
 
@@ -42,10 +53,13 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 |---|---|---|
 | Battery Charging / Discharging / Idle | `normal` | `battery_status` transition |
 | Battery Fully Charged | `normal` | Level reaches 100% from below |
-| Battery Level / Status / Voltage / Runtime / Watt-Hours Updated | `normal` | Field changed (5-min cooldown) |
+| Battery Level / Status / Voltage / Watt-Hours Updated | `normal` | Field changed (5-min cooldown, kept for diagnostics) |
+| Runtime Updated | `normal` | Hour-bucket change of `time_remaining` (5-min cooldown) |
 | Depth of Discharge Safe (+ Returned to Safe) | `normal` | `dod_status` → Safe |
 | Unsafe Depth of Discharge | `alert` | `dod_status` → Unsafe |
-| Battery Level at Recommended Cutoff | `alert` | Level ≤ 20% (also evaluated on init) |
+| Battery Normal-Use Cutoff Reached | `alert` | Level ≤ 20% (also evaluated on init) |
+| Battery Critically Low | `alert` | Level < 20% and > 0% |
+| Battery Empty | `alert` | Level = 0 (transition-gated) |
 | Battery Discharging at Low Level | `alert` | ≤ 20% while Discharging |
 | Battery Discharging with Unsafe DoD | `alert` | Discharging + Unsafe DoD |
 | Battery Runtime Depleted | `alert` | `time_remaining` hits `0h 00m` |
@@ -58,10 +72,9 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 
 | Title | Type | Trigger |
 |---|---|---|
-| Solar Input Low / Moderate / High | `normal` | `solar_status` changed |
-| Solar Status Changed | `normal` | Same trigger (5-min cooldown) |
+| Solar Input Low / Moderate / High | `normal` | `solar_status` changed (split fixed titles, no generic duplicate) |
 | Solar Input Detected / No Solar Input | `normal` | 0 ↔ >0 crossings |
-| Solar Input Increased | `normal` | 50 W upward milestones (5-min cooldown) |
+| Solar Charging Activity | `normal` | 50 W upward milestones, follows down on decrease (5-min cooldown) |
 | Solar Input Unavailable | `alert` | Solar reads 0 while Charging |
 | Low Solar Input During Charging | `alert` | Charging + Low solar on entry |
 
@@ -70,9 +83,9 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 | Title | Type | Trigger |
 |---|---|---|
 | Battery Temperature Nominal / Elevated / High | `normal` | Status transitions |
-| Battery Temperature Critical | `alert` | Status → Critical |
+| Critical Battery Temperature | `alert` | Status → Critical |
 | Solar Temperature Nominal / Elevated / High | `normal` | Status transitions |
-| Solar Temperature Critical | `alert` | Status → Critical |
+| Critical Solar Temperature | `alert` | Status → Critical |
 | Battery / Solar Temperature Reading Zero | `alert` | Sensor reads 0 (disconnected) |
 
 - These cover sensor temperatures only. Forecast-weather alerts (storms, heavy rain from the OpenWeatherMap feed) do not exist — proposed below.
@@ -94,7 +107,7 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 | Title | Type | Trigger | Status |
 |---|---|---|---|
 | Current Load Detected / No Current Load | `normal` | 0 ↔ >0 crossings | Exists (generic, not per-component) |
-| Power Consumption Increased | `normal` | 50 W upward milestones | Exists (generic) |
+| Load Activity Detected | `normal` | 50 W upward milestones, follows down on decrease | Exists (generic) |
 | High Current Load | `alert` | Above safe threshold | **Disabled** (threshold `null`) |
 | Component Went Inactive (per component) | `alert` | `components.status` Active → Inactive, via the service's `components` watcher | Implemented (`checkComponentStatusTransition`) |
 | Critical Component Inactive | `alert` + `critical` mirror | Relay / INA228 / Voltage Sensor inactive | Implemented — severity by component role |
