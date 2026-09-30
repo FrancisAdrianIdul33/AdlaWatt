@@ -3235,6 +3235,23 @@ const startComponentsNotificationWatcher =
     userId: string,
   ): Promise<void> => {
 
+    // Reuse stable per-user channel (no Date.now) so login
+    // bursts and StrictMode remounts don't stack duplicates
+    // on the shared websocket (previously socket 1006).
+    const topic = `notification-components-${userId}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused && componentsChannel) {
+      return;
+    }
+
     if (componentsChannel) {
       await supabase.removeChannel(
         componentsChannel,
@@ -3247,7 +3264,7 @@ const startComponentsNotificationWatcher =
     componentsChannel =
       supabase
         .channel(
-          `notification-components-${userId}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",
@@ -3352,6 +3369,28 @@ export const startMonitoringNotificationWatcher =
       currentUserId ===
         user.id
     ) {
+
+      return monitoringChannel;
+    }
+
+    // Reuse a stable per-user channel if the socket already
+    // holds one (StrictMode remount / double SIGNED_IN).
+    const stableTopic = `notification-monitoring-${user.id}`;
+
+    const existingMonitoring = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${stableTopic}`,
+      );
+
+    if (
+      existingMonitoring &&
+      currentUserId === user.id
+    ) {
+      monitoringChannel =
+        existingMonitoring as unknown as typeof monitoringChannel;
 
       return monitoringChannel;
     }
@@ -3461,7 +3500,7 @@ export const startMonitoringNotificationWatcher =
     monitoringChannel =
       supabase
         .channel(
-          `notification-monitoring-${user.id}-${Date.now()}`,
+          stableTopic,
         )
         .on(
           "postgres_changes",

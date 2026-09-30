@@ -427,10 +427,26 @@ export const subscribeToMonitoring =
       return null;
     }
 
+    const topic = `monitoring-hook-${user.id}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused) {
+      return reused as unknown as ReturnType<
+        typeof supabase.channel
+      >;
+    }
+
     const channel =
       supabase
         .channel(
-          `monitoring-${user.id}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",
@@ -526,10 +542,26 @@ export const subscribeToDeviceStatus =
       return null;
     }
 
+    const topic = `device-status-${user.id}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused) {
+      return reused as unknown as ReturnType<
+        typeof supabase.channel
+      >;
+    }
+
     const channel =
       supabase
         .channel(
-          `device-status-${user.id}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",

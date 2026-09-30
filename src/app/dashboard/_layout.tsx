@@ -1,7 +1,7 @@
 import { Slot, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { SettingsProvider } from "@/context/SettingsContext";
 import {
@@ -27,7 +27,9 @@ import {
 
 function ThemedDashboard() {
   const { isDark } = useTheme();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, user } = useAuth();
+  const userId = user?.id ?? null;
+  const initializedUserId = useRef<string | null>(null);
 
   // Auth guard: unauthenticated deep-links land here
   // without passing through splash.
@@ -38,33 +40,49 @@ function ThemedDashboard() {
   }, [isLoaded, isSignedIn]);
 
   // Notification service lifecycle: start explicitly only
-  // when signed in. No import-time side effect, so the login
-  // screen / fresh install never probes getUser() with no
-  // session (previously "Auth session missing!").
+  // when signed in, staggered after first paint so Navbar +
+  // monitoring subscribes settle first (avoids 4-channel
+  // burst + StrictMode init/shutdown churn -> socket 1006).
+  // No cleanup-shutdown on re-run; shutdown only on user
+  // change or true unmount / sign-out.
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || !isSignedIn || !userId) {
+      if (isLoaded && !isSignedIn) {
+        initializedUserId.current = null;
+        shutdownNotificationService().catch(() => {});
+      }
+
       return;
     }
 
-    if (isSignedIn) {
+    if (initializedUserId.current === userId) {
+      return;
+    }
+
+    initializedUserId.current = userId;
+
+    const timer = setTimeout(() => {
       initializeNotificationService().catch((error) => {
         console.error(
           "Failed to initialize notification service:",
           error,
         );
+        initializedUserId.current = null;
       });
-    } else {
-      shutdownNotificationService().catch(() => {
-        // Shutdown is best-effort; never throws into UI.
-      });
-    }
+    }, 600);
 
     return () => {
-      // Best-effort cleanup on unmount (e.g. logout
-      // navigates away from dashboard).
-      shutdownNotificationService().catch(() => {});
+      clearTimeout(timer);
     };
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(
+    () => () => {
+      initializedUserId.current = null;
+      shutdownNotificationService().catch(() => {});
+    },
+    [],
+  );
 
   if (!isLoaded || !isSignedIn) {
     return null;
