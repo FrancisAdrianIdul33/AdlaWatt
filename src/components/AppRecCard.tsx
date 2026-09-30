@@ -32,7 +32,7 @@ import { Control } from "@/constants/sizing";
 import {
   SlidingToggle,
 } from "@/components/ui/SlidingToggle";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import {
   type BatteryStateInput,
@@ -290,9 +290,7 @@ export default function AppRecCard({
   // ============================================
 
   const loadAppliances = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setAppliances([]);

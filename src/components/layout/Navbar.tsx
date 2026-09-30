@@ -11,6 +11,7 @@ import React, {
 import {
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -22,7 +23,7 @@ import {
 import { Routes } from "@/constants/routes";
 import { Bar, Touch } from "@/constants/sizing";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import AppText from "@/components/ui/AppText";
 
@@ -59,9 +60,7 @@ export default function NavBar({
 
     const checkUnreadNotifications =
       async () => {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const user = await getAuthenticatedUserSafe();
 
         if (!mounted) {
           return;
@@ -106,56 +105,161 @@ export default function NavBar({
     // notifications re-runs the check, so the dot clears
     // right after mark-as-read and lights on new arrivals
     // without waiting for a remount.
+    //
+    // Stable channel per user (no Date.now) so StrictMode
+    // remounts reuse instead of leaking duplicates on the
+    // shared websocket (previously socket 1006 on login).
+    // Transient CHANNEL_ERROR/TIMED_OUT (e.g. 1006 on
+    // localhost) warns + retries with backoff, max 3.
     let channel:
       | ReturnType<typeof supabase.channel>
       | null = null;
 
-    supabase.auth
-      .getUser()
-      .then(({ data: { user } }) => {
+    let retryCount = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null =
+      null;
+
+    const subscribeNavbar = (
+      userId: string,
+    ): void => {
+      if (!mounted) {
+        return;
+      }
+
+      // Reuse an already-subscribed channel for this user.
+      const existing = supabase
+        .getChannels()
+        .find(
+          (c) =>
+            (c as unknown as { topic?: string }).topic ===
+            `realtime:navbar-notifications-${userId}`,
+        );
+
+      if (existing) {
+        channel =
+          existing as unknown as typeof channel;
+        return;
+      }
+
+      const nextChannel = supabase
+        .channel(`navbar-notifications-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            if (mounted) {
+              checkUnreadNotifications();
+            }
+          },
+        )
+        .subscribe((status, error) => {
+          if (!mounted) {
+            return;
+          }
+
+          if (
+            status === "CHANNEL_ERROR" ||
+            status === "TIMED_OUT"
+          ) {
+            console.warn(
+              "Navbar notifications channel issue, retrying:",
+              status,
+              error instanceof Error
+                ? error.message
+                : error,
+            );
+
+            if (retryCount < 3) {
+              const delay =
+                [1000, 2000, 5000][retryCount] ?? 5000;
+              retryCount += 1;
+
+              retryTimer = setTimeout(() => {
+                if (!mounted) {
+                  return;
+                }
+
+                supabase
+                  .removeChannel(nextChannel)
+                  .catch(() => {});
+
+                if (channel === nextChannel) {
+                  channel = null;
+                }
+
+                subscribeNavbar(userId);
+              }, delay);
+            }
+
+            return;
+          }
+
+          if (status === "SUBSCRIBED") {
+            retryCount = 0;
+          }
+        });
+
+      channel = nextChannel;
+    };
+
+    getAuthenticatedUserSafe()
+      .then((user) => {
         if (!mounted || !user) {
           return;
         }
 
-        channel = supabase
-          .channel(
-            `navbar-notifications-${user.id}-${Date.now()}`,
-          )
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "notifications",
-              filter: `user_id=eq.${user.id}`,
-            },
-            () => {
-              if (mounted) {
-                checkUnreadNotifications();
-              }
-            },
-          )
-          .subscribe((status, error) => {
-            if (
-              mounted &&
-              (status === "CHANNEL_ERROR" ||
-                status === "TIMED_OUT")
-            ) {
-              console.error(
-                "Navbar notifications channel error:",
-                error,
-              );
-            }
-          });
+        subscribeNavbar(user.id);
       })
       .catch(() => {});
 
     return () => {
       mounted = false;
 
-      if (channel) {
-        supabase.removeChannel(channel);
+      if (retryTimer) {
+        clearTimeout(retryTimer);
       }
+
+      // Covers channels assigned after cleanup started:
+      // remove by stable topic as well as by instance.
+      const stale = channel;
+
+      getAuthenticatedUserSafe()
+        .then((user) => {
+          if (stale) {
+            supabase.removeChannel(stale).catch(() => {});
+          }
+
+          if (user) {
+            const leaked = supabase
+              .getChannels()
+              .find(
+                (c) =>
+                  (c as unknown as { topic?: string })
+                    .topic ===
+                  `realtime:navbar-notifications-${user.id}`,
+              );
+
+            if (leaked && leaked !== stale) {
+              supabase
+                .removeChannel(
+                  leaked as unknown as NonNullable<
+                    typeof channel
+                  >,
+                )
+                .catch(() => {});
+            }
+          }
+        })
+        .catch(() => {
+          if (stale) {
+            supabase.removeChannel(stale).catch(() => {});
+          }
+        });
     };
   }, []);
 
@@ -183,6 +287,13 @@ export default function NavBar({
 
   const colors = useAppColors();
 
+  // Viewport width so the bar background spans edge to
+  // edge like NavBarBottom, even though NavBar renders
+  // inside ScreenContainer2's maxWidth 768 column.
+  // Inner container is untouched.
+  const { width: screenWidth } =
+    useWindowDimensions();
+
   const navBarStyles = useMemo(
     () => getNavBarStyles(colors),
     [colors],
@@ -194,9 +305,13 @@ export default function NavBar({
 
   return (
     <View
-      style={
-        navBarStyles.wrapper
-      }
+      style={[
+        navBarStyles.wrapper,
+        {
+          width: screenWidth,
+          alignSelf: "center",
+        },
+      ]}
     >
       <View
         style={
@@ -380,7 +495,9 @@ const getNavBarStyles = (colors: AppColors) =>
   },
 
   statusText: {
-    color: colors.bar.text,
+    // Theme text (not bar.text): light #1C1B1F on cream
+    // capsule for legibility; dark stays #E3E3E3.
+    color: colors.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,

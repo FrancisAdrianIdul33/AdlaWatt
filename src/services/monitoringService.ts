@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 // ============================================================
 // TYPES
@@ -303,20 +306,7 @@ const normalizeMonitoringData = (
 export const getMonitoringData =
   async (): Promise<MonitoringData | null> => {
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-
-      console.error(
-        "Error getting user:",
-        userError.message,
-      );
-
-      return null;
-    }
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
 
@@ -383,20 +373,7 @@ export const getMonitoringData =
 export const getDeviceStatus =
   async (): Promise<DeviceStatus> => {
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-
-      console.error(
-        "Error getting user:",
-        userError.message,
-      );
-
-      return "Offline";
-    }
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
 
@@ -443,30 +420,33 @@ export const subscribeToMonitoring =
     ) => void,
   ) => {
 
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-
-      console.error(
-        "Error getting user:",
-        error.message,
-      );
-
-      return null;
-    }
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
 
       return null;
     }
 
+    const topic = `monitoring-hook-${user.id}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused) {
+      return reused as unknown as ReturnType<
+        typeof supabase.channel
+      >;
+    }
+
     const channel =
       supabase
         .channel(
-          `monitoring-${user.id}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",
@@ -528,14 +508,10 @@ export const subscribeToMonitoring =
               );
             }
 
-            if (
-              status === "CLOSED"
-            ) {
-
-              console.warn(
-                "Monitoring Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel (e.g. bell
+            // navigates away from dashboard index) is expected
+            // teardown — stay silent. Unexpected service-side
+            // closes still surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
 
@@ -553,22 +529,7 @@ export const subscribeToDeviceStatus =
     ) => void,
   ) => {
 
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-
-      console.error(
-        "Error getting user:",
-        error.message,
-      );
-
-      onChange("Offline");
-
-      return null;
-    }
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
 
@@ -577,10 +538,26 @@ export const subscribeToDeviceStatus =
       return null;
     }
 
+    const topic = `device-status-${user.id}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused) {
+      return reused as unknown as ReturnType<
+        typeof supabase.channel
+      >;
+    }
+
     const channel =
       supabase
         .channel(
-          `device-status-${user.id}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",
@@ -621,14 +598,8 @@ export const subscribeToDeviceStatus =
               );
             }
 
-            if (
-              status === "CLOSED"
-            ) {
-
-              console.warn(
-                "Device status Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel on screen
+            // unmount is expected teardown — stay silent.
           },
         );
 

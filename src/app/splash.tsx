@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/colors";
 import { useAppFonts } from "@/hooks/useAppFonts";
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import {
@@ -11,20 +12,21 @@ import {
 
 export default function SplashScreen() {
   const fontsLoaded = useAppFonts();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (!fontsLoaded) {
+    if (!fontsLoaded || !authLoaded) {
       return;
     }
 
     const timer = setTimeout(() => {
-      // TODO:
-      // Replace with AuthContext later
-      router.replace("/auth/login");
-    }, 5000);
+      router.replace(
+        isSignedIn ? "/dashboard" : "/auth/login",
+      );
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [fontsLoaded]);
+  }, [fontsLoaded, authLoaded, isSignedIn]);
 
   return (
     <View style={styles.container}>

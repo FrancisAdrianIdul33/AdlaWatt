@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 // ============================================================
 // ACTIVITY LOG SERVICE
@@ -36,9 +39,7 @@ export interface LogActivityInput {
 
 async function resolveUserId(): Promise<string | null> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     return user?.id ?? null;
   } catch {
@@ -100,10 +101,10 @@ export const logAuth = {
     });
   },
 
-  loggedIn(identifier: string): void {
+  loggedIn(): void {
     logActivity({
       title: "Logged In",
-      description: `${identifier} signed in.`,
+      description: "Signed in.",
       type: "info",
     });
   },

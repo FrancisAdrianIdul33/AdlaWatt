@@ -1,33 +1,92 @@
-import { Slot } from "expo-router";
+import { Slot, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
+import { useEffect, useRef } from "react";
 
 import { SettingsProvider } from "@/context/SettingsContext";
 import {
   ThemeProvider,
   useTheme,
 } from "@/context/ThemeContext";
-
-// Side-effect import: starts the auth-aware notification
-// watchers (monitoring + components) per
-// implementation plan/notification_catalog.md. The service
-// owns its lifecycle (starts on SIGNED_IN, stops on
-// SIGNED_OUT) and never throws into the UI.
-import "@/services/notificationService";
+import { useAuth } from "@/context/AuthContext";
+import {
+  initializeNotificationService,
+  shutdownNotificationService,
+} from "@/services/notificationService";
 
 // ============================================================
 // DASHBOARD LAYOUT
 //
 // Single shared typography + theme instances for the whole
-// dashboard. Save in Menu propagates typography to all
+// dashboard, behind an auth guard (unauthenticated deep-links
+// bounce to login). Save in Menu propagates typography to all
 // dashboard screens; the Dark Mode toggle applies instantly.
-// Auth screens are intentionally excluded (no providers
-// there — they fall back to defaults and always render
-// light). StatusBar follows the active theme.
+// Auth screens live in their own layout with the saved theme.
+// StatusBar follows the active theme.
 // ============================================================
 
 function ThemedDashboard() {
   const { isDark } = useTheme();
+  const { isLoaded, isSignedIn, user } = useAuth();
+  const userId = user?.id ?? null;
+  const initializedUserId = useRef<string | null>(null);
+
+  // Auth guard: unauthenticated deep-links land here
+  // without passing through splash.
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.replace("/auth/login");
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // Notification service lifecycle: start explicitly only
+  // when signed in, staggered after first paint so Navbar +
+  // monitoring subscribes settle first (avoids 4-channel
+  // burst + StrictMode init/shutdown churn -> socket 1006).
+  // No cleanup-shutdown on re-run; shutdown only on user
+  // change or true unmount / sign-out.
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !userId) {
+      if (isLoaded && !isSignedIn) {
+        initializedUserId.current = null;
+        shutdownNotificationService().catch(() => {});
+      }
+
+      return;
+    }
+
+    if (initializedUserId.current === userId) {
+      return;
+    }
+
+    initializedUserId.current = userId;
+
+    const timer = setTimeout(() => {
+      initializeNotificationService().catch((error) => {
+        console.error(
+          "Failed to initialize notification service:",
+          error,
+        );
+        initializedUserId.current = null;
+      });
+    }, 600);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isLoaded, isSignedIn, userId]);
+
+  useEffect(
+    () => () => {
+      initializedUserId.current = null;
+      shutdownNotificationService().catch(() => {});
+    },
+    [],
+  );
+
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   return (
     <SettingsProvider>

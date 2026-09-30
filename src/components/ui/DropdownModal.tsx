@@ -58,7 +58,16 @@ export function DropdownModal({
       >
         <Pressable
           style={dropdownModalStyles.card}
-          onPress={() => {}}
+          // Swallow card taps so the overlay close doesn't fire.
+          // stopPropagation keeps web from delivering the same
+          // touch to both responders (orphan touchend noise).
+          onPress={(event) => {
+            (
+              event as unknown as {
+                stopPropagation?: () => void;
+              }
+            )?.stopPropagation?.();
+          }}
         >
           <View
             style={dropdownModalStyles.header}

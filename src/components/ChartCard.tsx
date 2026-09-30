@@ -2997,9 +2997,9 @@ const getStyles = (colors: AppColors) =>
   // theme and goes light in dark mode, unreadable on yellow.
   solarCenterText: {
     color: Colors.light.text,
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: "800",
-    lineHeight: 30,
+    lineHeight: 26,
   },
 
   // Frozen: dark ink on the moderate (amber) solar badge.

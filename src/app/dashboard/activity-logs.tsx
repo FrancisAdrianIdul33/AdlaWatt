@@ -32,7 +32,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 type TimeFilter =
   | "All"
@@ -141,9 +141,7 @@ export default function ActivityLogsScreen() {
 
   const loadActivityLogs =
     async (): Promise<ActivityLog[]> => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserSafe();
 
       if (!user) {
         setTotalActivityLogs(0);

@@ -21,7 +21,7 @@ import {
 } from "@/hooks/useAppColors";
 import { Touch } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 export default function ActivityCard() {
   const colors = useAppColors();
@@ -36,9 +36,7 @@ export default function ActivityCard() {
 
   useEffect(() => {
     const loadRecentActivities = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserSafe();
 
       if (!user) {
         setActivities([]);

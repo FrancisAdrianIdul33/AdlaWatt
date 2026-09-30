@@ -1,17 +1,17 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 import type {
   MonitoringData
 } from "@/services/monitoringService";
 import {
-  logActivity,
-  type ActivityLogType,
-} from "@/services/activityLogService";
-import {
   classifyBatteryState,
   computeWattCap,
   parseWattageRange,
 } from "@/services/recommendation";
+import { sendAlertEmail } from "@/services/alertEmailService";
 
 // ============================================================
 // TYPES
@@ -35,13 +35,6 @@ export interface NotificationRule {
   title: string;
   description: string;
   type: NotificationType;
-  /**
-   * Mirror severity for the activity log. Set only on rules
-   * significant enough for activity history; routine
-   * transitions omit it. Cooldowns apply to the mirror via
-   * the notification insert gate below.
-   */
-  logAs?: ActivityLogType;
 }
 
 // ============================================================
@@ -139,6 +132,8 @@ const notificationCooldowns =
 const milestoneState = {
   solarInputMilestone: 0,
   currentLoadMilestone: 0,
+  runtimeHourBucket: null as number | null,
+  runtimeLastValue: null as string | null,
 };
 
 
@@ -148,26 +143,10 @@ const milestoneState = {
 
 const getAuthenticatedUser =
   async () => {
-
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-      console.error(
-        "Error getting authenticated user:",
-        error.message,
-      );
-
-      return null;
-    }
-
-    if (!user) {
-      return null;
-    }
-
-    return user;
+    // Safe helper: returns null silently when logged out,
+    // on fresh install, or before session restore — avoids
+    // "Auth session missing!" console.error noise on login.
+    return getAuthenticatedUserSafe();
   };
 
 
@@ -430,16 +409,68 @@ const createNotification = async (
     `Notification created: ${rule.title}`,
   );
 
-  if (rule.logAs !== undefined) {
-    logActivity({
-      title: rule.title,
-      description: rule.description,
-      type: rule.logAs,
-      userId,
-    });
-  }
+  maybeSendAlertEmail(userId, rule);
 
   return true;
+};
+
+
+// ============================================================
+// ALERT EMAIL (fire-and-forget, AgentMail Edge Function)
+// ============================================================
+//
+// Sends alert notifications through the deployed
+// send-alert-email function after the in-app row is stored.
+// Never blocks or throws — failures only warn. Insert
+// cooldowns already rate-limit sends.
+// ============================================================
+
+const maybeSendAlertEmail = (
+  userId: string,
+  rule: NotificationRule,
+): void => {
+  if (rule.type !== "alert") {
+    return;
+  }
+
+  void getAuthenticatedUser()
+    .then((user) => {
+      if (
+        !user ||
+        user.id !== userId ||
+        !user.email
+      ) {
+        return;
+      }
+
+      return sendAlertEmail({
+        subject: `AdlaWatt Alert: ${rule.title}`,
+        title: rule.title,
+        description: rule.description,
+        type: "alert",
+        to: user.email,
+        timestamp: new Date().toLocaleString(),
+      }).then((result) => {
+        if (result.success) {
+          console.log(
+            `[alert-email] sent to ${result.recipient} for "${rule.title}"`,
+          );
+        } else {
+          console.warn(
+            `Alert email not sent for "${rule.title}":`,
+            result.error,
+          );
+        }
+      });
+    })
+    .catch((error) => {
+      console.warn(
+        "Alert email lookup failed:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    });
 };
 
 
@@ -570,14 +601,7 @@ const createNotificationWithCooldown =
       `Notification created: ${rule.title}`,
     );
 
-    if (rule.logAs !== undefined) {
-      logActivity({
-        title: rule.title,
-        description: rule.description,
-        type: rule.logAs,
-        userId,
-      });
-    }
+    maybeSendAlertEmail(userId, rule);
 
     return true;
   };
@@ -609,9 +633,8 @@ const checkDeviceOnline = async (
       {
         title: "Device Online",
         description:
-          "The monitoring device status is Online.",
+          "AdlaWatt is connected and actively sending monitoring data.",
         type: "normal",
-        logAs: "info",
       },
     );
   }
@@ -647,9 +670,8 @@ const checkDeviceOffline = async (
       {
         title: "Device Offline",
         description:
-          "The monitoring device status is Offline.",
+          "AdlaWatt is currently disconnected from the monitoring system.",
         type: "normal",
-        logAs: "critical",
       },
     );
   }
@@ -678,7 +700,7 @@ const checkBatteryCharging = async (
       {
         title: "Battery Charging",
         description:
-          "The battery status is Charging.",
+          "The battery is currently charging.",
         type: "normal",
       },
     );
@@ -708,7 +730,7 @@ const checkBatteryDischarging = async (
       {
         title: "Battery Discharging",
         description:
-          "The battery status is Discharging.",
+          "The battery is currently supplying power to connected devices.",
         type: "normal",
       },
     );
@@ -738,7 +760,7 @@ const checkBatteryIdle = async (
       {
         title: "Battery Idle",
         description:
-          "The battery status is Idle.",
+          "The battery is currently neither charging nor discharging.",
         type: "normal",
       },
     );
@@ -776,9 +798,8 @@ const checkBatteryFullyCharged =
           title:
             "Battery Fully Charged",
           description:
-            "The battery level is 100%.",
+            "Battery level has reached 100% and is fully charged.",
           type: "normal",
-          logAs: "info",
         },
       );
     }
@@ -868,7 +889,7 @@ const checkBatteryTemperatureStatus =
           title:
             "Battery Temperature Elevated",
           description:
-            "The battery temperature status is Elevated.",
+            "Battery temperature is above its normal range but is not critical.",
           type: "normal",
         },
       );
@@ -887,7 +908,7 @@ const checkBatteryTemperatureStatus =
           title:
             "Battery Temperature High",
           description:
-            "The battery temperature status is High. This is a normal status according to your notification rules.",
+            "Battery temperature is high but has not reached the critical level.",
           type: "normal",
         },
       );
@@ -904,11 +925,10 @@ const checkBatteryTemperatureStatus =
         userId,
         {
           title:
-            "Battery Temperature Critical",
+            "Critical Battery Temperature",
           description:
-            "The battery temperature status is Critical.",
+            "Battery temperature has reached a critical level. Check the system immediately.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -962,7 +982,7 @@ const checkSolarTemperatureStatus =
           title:
             "Solar Temperature Elevated",
           description:
-            "The solar temperature status is Elevated.",
+            "Solar panel temperature is above its normal range but is not critical.",
           type: "normal",
         },
       );
@@ -981,7 +1001,7 @@ const checkSolarTemperatureStatus =
           title:
             "Solar Temperature High",
           description:
-            "The solar temperature status is High. This is a normal status according to your notification rules.",
+            "Solar panel temperature is high but has not reached the critical level.",
           type: "normal",
         },
       );
@@ -998,11 +1018,10 @@ const checkSolarTemperatureStatus =
         userId,
         {
           title:
-            "Solar Temperature Critical",
+            "Critical Solar Temperature",
           description:
-            "The solar temperature status is Critical.",
+            "Solar panel temperature has reached a critical level. Monitor the system and check it when safe.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1010,7 +1029,7 @@ const checkSolarTemperatureStatus =
 
 
 // ------------------------------------------------------------
-// SOLAR STATUS
+// SOLAR STATUS (Low / Moderate / High)
 // ------------------------------------------------------------
 
 const checkSolarStatus = async (
@@ -1028,35 +1047,53 @@ const checkSolarStatus = async (
     previous.solar_status
   ) {
 
-    const description =
+    if (
       current.solar_status ===
         "Low"
-        ? "The solar status is Low."
-        : current.solar_status ===
-            "Moderate"
-          ? "The solar status is Moderate."
-          : "The solar status is High.";
+    ) {
+
+      await createNotification(
+        userId,
+        {
+          title:
+            "Solar Input Low",
+          description:
+            "Solar input is currently at a low level.",
+          type: "normal",
+        },
+      );
+
+      return;
+    }
+
+    if (
+      current.solar_status ===
+        "Moderate"
+    ) {
+
+      await createNotification(
+        userId,
+        {
+          title:
+            "Solar Input Moderate",
+          description:
+            "Solar input is at a moderate level.",
+          type: "normal",
+        },
+      );
+
+      return;
+    }
 
     await createNotification(
       userId,
       {
         title:
-          `Solar Input ${current.solar_status}`,
-        description,
-        type: "normal",
-      },
-    );
-
-    await createNotificationWithCooldown(
-      userId,
-      {
-        title:
-          "Solar Status Changed",
+          "Solar Input High",
         description:
-          `The solar_status changed to ${current.solar_status}.`,
+          "Solar input is high and the system is receiving strong solar energy.",
         type: "normal",
       },
-      UPDATE_NOTIFICATION_COOLDOWN_MS,
     );
   }
 };
@@ -1114,17 +1151,17 @@ const checkSolarInputState =
 
 
 // ------------------------------------------------------------
-// SOLAR INPUT MILESTONES
+// SOLAR CHARGING ACTIVITY (50 W milestones)
 // ------------------------------------------------------------
 //
 // Example:
 //
-// 0 W → 50 W
-// 50 W → 100 W
-// 100 W → 150 W
+// 0 W → 50 W → Notification
+// 50 W → 100 W → Notification
 //
-// A notification is created when a higher 50 W milestone
-// is reached.
+// If the solar input decreases, the baseline follows the
+// new lower level without notifying, so the next upward
+// 50 W crossing notifies from there.
 // ------------------------------------------------------------
 
 const checkSolarInputMilestone =
@@ -1151,6 +1188,17 @@ const checkSolarInputMilestone =
     }
 
     if (
+      currentMilestone <
+      milestoneState.solarInputMilestone
+    ) {
+
+      milestoneState.solarInputMilestone =
+        currentMilestone;
+
+      return;
+    }
+
+    if (
       currentMilestone >
       milestoneState.solarInputMilestone
     ) {
@@ -1162,9 +1210,9 @@ const checkSolarInputMilestone =
         userId,
         {
           title:
-            "Solar Input Increased",
+            "Solar Charging Activity",
           description:
-            `The solar input increased to ${current.solar_input} W and reached the ${currentMilestone} W milestone.`,
+            `Solar energy input has reached another 50 W interval. Current solar input: ${current.solar_input} W.`,
           type: "normal",
         },
         UPDATE_NOTIFICATION_COOLDOWN_MS,
@@ -1225,7 +1273,12 @@ const checkCurrentLoadState =
 
 
 // ------------------------------------------------------------
-// CURRENT LOAD MILESTONES
+// LOAD ACTIVITY (50 W milestones)
+// ------------------------------------------------------------
+//
+// Every additional 50 W of power consumption notifies.
+// If the load decreases, the baseline follows the new
+// lower level without notifying.
 // ------------------------------------------------------------
 
 const checkCurrentLoadMilestone =
@@ -1252,6 +1305,17 @@ const checkCurrentLoadMilestone =
     }
 
     if (
+      currentMilestone <
+      milestoneState.currentLoadMilestone
+    ) {
+
+      milestoneState.currentLoadMilestone =
+        currentMilestone;
+
+      return;
+    }
+
+    if (
       currentMilestone >
       milestoneState.currentLoadMilestone
     ) {
@@ -1263,9 +1327,9 @@ const checkCurrentLoadMilestone =
         userId,
         {
           title:
-            "Power Consumption Increased",
+            "Load Activity Detected",
           description:
-            `The current load increased to ${current.current_load} W and reached the ${currentMilestone} W milestone.`,
+            `Power consumption has reached another 50 W interval. Current load: ${current.current_load} W.`,
           type: "normal",
         },
         UPDATE_NOTIFICATION_COOLDOWN_MS,
@@ -1307,7 +1371,16 @@ const checkBatteryVoltageUpdated =
 
 
 // ------------------------------------------------------------
-// BATTERY RUNTIME UPDATED
+// RUNTIME UPDATED (every 1 hour)
+// ------------------------------------------------------------
+//
+// Example:
+//
+// 8h 45m → Notification (baseline)
+// After 1 hour → 7h 45m → Notification
+//
+// Uses the latest time_remaining value. Invalid values
+// are ignored here and handled by Invalid Time Remaining.
 // ------------------------------------------------------------
 
 const checkBatteryRuntimeUpdated =
@@ -1317,24 +1390,95 @@ const checkBatteryRuntimeUpdated =
     previous: MonitoringData | null,
   ) => {
 
+    const parseHourBucket = (
+      value: string,
+    ): number | null => {
+
+      if (
+        typeof value !==
+          "string"
+      ) {
+        return null;
+      }
+
+      const match =
+        value
+          .trim()
+          .match(
+            /^(\d+)h\s+\d{2}m$/,
+          );
+
+      if (!match) {
+        return null;
+      }
+
+      return parseInt(
+        match[1],
+        10,
+      );
+    };
+
+    const hourBucket =
+      parseHourBucket(
+        current.time_remaining,
+      );
+
     if (
-      previous !== null &&
-      current.time_remaining !==
-        previous.time_remaining
+      hourBucket === null
     ) {
+      return;
+    }
+
+    if (
+      previous === null ||
+      milestoneState.runtimeHourBucket ===
+        null
+    ) {
+
+      milestoneState.runtimeHourBucket =
+        hourBucket;
+
+      milestoneState.runtimeLastValue =
+        current.time_remaining;
+
+      return;
+    }
+
+    if (
+      current.time_remaining ===
+        milestoneState.runtimeLastValue
+    ) {
+      return;
+    }
+
+    if (
+      hourBucket !==
+      milestoneState.runtimeHourBucket
+    ) {
+
+      milestoneState.runtimeHourBucket =
+        hourBucket;
+
+      milestoneState.runtimeLastValue =
+        current.time_remaining;
 
       await createNotificationWithCooldown(
         userId,
         {
           title:
-            "Battery Runtime Updated",
+            "Runtime Updated",
           description:
-            `The time_remaining value has been updated to ${current.time_remaining}.`,
+            `Estimated remaining runtime is ${current.time_remaining}.`,
           type: "normal",
         },
         UPDATE_NOTIFICATION_COOLDOWN_MS,
       );
+
+      return;
     }
+
+    milestoneState.runtimeLastValue =
+      current.time_remaining;
   };
 
 
@@ -1420,9 +1564,8 @@ const checkDepthOfDischarge =
           title:
             "Unsafe Depth of Discharge",
           description:
-            "The dod_status value is Unsafe.",
+            "Battery depth of discharge has reached an unsafe level. Recharge the battery immediately.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1490,7 +1633,6 @@ const checkAppliancesBecameAdvisable = async (
       description:
         "The battery recovered to a safe level. Selected appliances are advisable again.",
       type: "normal",
-      logAs: "info",
     },
   );
 };
@@ -1558,7 +1700,6 @@ const checkHighLoadWhileBatteryLow = async (
       description:
         `Selected appliances draw about ${combinedMidWatts}W against a ${safeCap}W safe cap at ${level}% battery.`,
       type: "alert",
-      logAs: "critical",
     },
   );
 };
@@ -1724,11 +1865,82 @@ const checkBatteryRecommendedCutoff =
         userId,
         {
           title:
-            "Battery Level at Recommended Cutoff",
+            "Battery Normal-Use Cutoff Reached",
           description:
-            "The battery level is 20% or lower, meaning approximately 80% DoD has been reached. This is the recommended normal-use cutoff and the battery should be recharged.",
+            "Battery has reached 20% charge or 80% depth of discharge. Reduce power use and recharge soon.",
           type: "alert",
-          logAs: "critical",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY CRITICALLY LOW
+// ------------------------------------------------------------
+//
+// Below 20% (strictly less than the 20% cutoff) so the
+// cutoff fires once at exactly 20% and this fires when it
+// drops further. Cooldown prevents storms while low.
+// ------------------------------------------------------------
+
+const checkBatteryCriticallyLow =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+
+    if (
+      current.battery_level <
+        20 &&
+      current.battery_level >
+        0
+    ) {
+
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Critically Low",
+          description:
+            "Battery charge is below 20%. Recharge the battery immediately.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY EMPTY
+// ------------------------------------------------------------
+
+const checkBatteryEmpty =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+
+    if (
+      current.battery_level ===
+        0 &&
+      (
+        previous === null ||
+        previous.battery_level !==
+          0
+      )
+    ) {
+
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Empty",
+          description:
+            "Battery has reached 0% charge or 100% depth of discharge. The BMS may disconnect the system.",
+          type: "alert",
         },
       );
     }
@@ -1768,7 +1980,6 @@ const checkBatteryDischargingAtLowLevel =
           description:
             "The battery level is at or below 20% while the battery status is Discharging.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1808,7 +2019,6 @@ const checkBatteryDischargingWithUnsafeDoD =
           description:
             "The battery status is Discharging while dod_status is Unsafe.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1844,7 +2054,6 @@ const checkBatteryRuntimeDepleted =
           description:
             "The time_remaining value is 0h 00m.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -1879,7 +2088,6 @@ const checkBatteryVoltageZero =
           description:
             "The voltage value is 0. This may indicate a disconnected sensor, unavailable reading, or battery measurement problem.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -1915,7 +2123,6 @@ const checkBatteryTemperatureZero =
           description:
             "The battery_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -1951,7 +2158,6 @@ const checkSolarTemperatureZero =
           description:
             "The solar_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -1997,7 +2203,6 @@ const checkBatteryChargingNotDetected =
           description:
             "The battery level is below 100%, but the battery status is not Charging when charging is expected.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2041,7 +2246,6 @@ const checkSolarInputUnavailable =
           description:
             "The solar_input value is 0 while solar charging is expected.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2081,7 +2285,6 @@ const checkLowSolarInputDuringCharging =
           description:
             "The battery status is Charging, but the solar status is Low.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2128,7 +2331,6 @@ const checkHighCurrentLoad =
           description:
             "The current_load value is above your configured safe load threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2174,7 +2376,6 @@ const checkBatteryVoltageTooLow =
           description:
             "The voltage value is below your configured safe battery-voltage threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2220,7 +2421,6 @@ const checkBatteryVoltageTooHigh =
           description:
             "The voltage value is above your configured safe battery-voltage threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2281,7 +2481,6 @@ const checkInvalidTimeRemaining =
           description:
             "The time_remaining field is empty or contains an invalid value.",
           type: "alert",
-          logAs: "warning",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -2475,6 +2674,18 @@ const processMonitoringNotifications =
         previous,
       );
 
+      await checkBatteryCriticallyLow(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryEmpty(
+        userId,
+        current,
+        previous,
+      );
+
       await checkBatteryDischargingAtLowLevel(
         userId,
         current,
@@ -2660,7 +2871,6 @@ const checkMonitoringRecordMissing =
           description:
             "No monitoring record is available for the user.",
           type: "alert",
-          logAs: "error",
       },
       NOTIFICATION_COOLDOWN_MS,
     );
@@ -2705,7 +2915,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen value is null.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -2736,7 +2945,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen timestamp is invalid or older than the allowed monitoring interval.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -2765,7 +2973,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen timestamp is older than the allowed monitoring interval.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -2894,17 +3101,8 @@ export const unsubscribeFromNotificationMonitoring =
 // Components change independently of monitoring rows, so
 // they get their own watcher on the components table.
 // Titles stay fixed (live names go in description) so
-// cooldown keys and activity mirrors stay stable.
-//
-// Critical-component set: power-path hardware whose failure
-// threatens the system (matches the hardware list).
+// cooldown keys stay stable.
 // ============================================================
-
-const CRITICAL_COMPONENTS: readonly string[] = [
-  "Relay",
-  "INA228",
-  "Voltage Sensor",
-];
 
 interface ComponentStatusPayload {
   component_name?: string;
@@ -2927,11 +3125,6 @@ const checkComponentStatusTransition = async (
     currentStatus === "Inactive"
   ) {
 
-    const critical =
-      CRITICAL_COMPONENTS.includes(
-        componentName,
-      );
-
     await createNotification(
       userId,
       {
@@ -2939,9 +3132,6 @@ const checkComponentStatusTransition = async (
         description:
           `${componentName} changed from Active to Inactive.`,
         type: "alert",
-        logAs: critical
-          ? "critical"
-          : "warning",
       },
     );
 
@@ -2960,7 +3150,6 @@ const checkComponentStatusTransition = async (
         description:
           `${componentName} changed from Inactive to Active.`,
         type: "normal",
-        logAs: "info",
       },
     );
   }
@@ -2970,6 +3159,23 @@ const startComponentsNotificationWatcher =
   async (
     userId: string,
   ): Promise<void> => {
+
+    // Reuse stable per-user channel (no Date.now) so login
+    // bursts and StrictMode remounts don't stack duplicates
+    // on the shared websocket (previously socket 1006).
+    const topic = `notification-components-${userId}`;
+
+    const reused = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${topic}`,
+      );
+
+    if (reused && componentsChannel) {
+      return;
+    }
 
     if (componentsChannel) {
       await supabase.removeChannel(
@@ -2983,7 +3189,7 @@ const startComponentsNotificationWatcher =
     componentsChannel =
       supabase
         .channel(
-          `notification-components-${userId}-${Date.now()}`,
+          topic,
         )
         .on(
           "postgres_changes",
@@ -3088,6 +3294,28 @@ export const startMonitoringNotificationWatcher =
       currentUserId ===
         user.id
     ) {
+
+      return monitoringChannel;
+    }
+
+    // Reuse a stable per-user channel if the socket already
+    // holds one (StrictMode remount / double SIGNED_IN).
+    const stableTopic = `notification-monitoring-${user.id}`;
+
+    const existingMonitoring = supabase
+      .getChannels()
+      .find(
+        (c) =>
+          (c as unknown as { topic?: string }).topic ===
+          `realtime:${stableTopic}`,
+      );
+
+    if (
+      existingMonitoring &&
+      currentUserId === user.id
+    ) {
+      monitoringChannel =
+        existingMonitoring as unknown as typeof monitoringChannel;
 
       return monitoringChannel;
     }
@@ -3197,7 +3425,7 @@ export const startMonitoringNotificationWatcher =
     monitoringChannel =
       supabase
         .channel(
-          `notification-monitoring-${user.id}-${Date.now()}`,
+          stableTopic,
         )
         .on(
           "postgres_changes",
@@ -3770,21 +3998,14 @@ export const deleteNotification =
 
 
 // ============================================================
-// AUTO-INITIALIZATION
+// EXPLICIT INITIALIZATION
 // ============================================================
 //
-// Importing this service initializes the authentication-aware
-// monitoring watcher.
+// No auto-init on import: the dashboard layout starts the
+// service explicitly once AuthContext reports isSignedIn.
+// This avoids getUser() probes on the login screen, fresh
+// installs, or before session restore completes (previously
+// logged "Auth session missing!" on every cold start).
 //
 // The service remains independent from ChartCard.tsx.
 // ============================================================
-
-initializeNotificationService().catch(
-  (error) => {
-
-    console.error(
-      "Failed to initialize notification service:",
-      error,
-    );
-  },
-);

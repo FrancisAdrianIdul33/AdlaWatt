@@ -1,9 +1,147 @@
-import { supabase } from "@/lib/supabase";
+import { Platform } from "react-native";
+
+import {
+  getAuthenticatedUserSafe,
+  isAuthSessionMissingError,
+  supabase,
+} from "@/lib/supabase";
 import {
   logActivity,
   logAuth,
   logProfile,
 } from "@/services/activityLogService";
+import { Routes } from "@/constants/routes";
+
+// ============================================================
+// SHARED AUTH HELPERS
+// ============================================================
+//
+// Single source of truth for auth validation + error mapping
+// so client screens mirror these rules for instant UX while
+// the service remains safe to call directly.
+//
+// Security notes:
+// - Signup/login failures that could reveal account existence
+//   ("already registered", username lookup misses) map to
+//   generic messages. Username login inherently allows
+//   probing via the lookup RPC; errors and timing are kept
+//   uniform to minimize the oracle.
+// - Resends are throttled per email (service-side) so rapid
+//   taps or direct service calls cannot flood inboxes or burn
+//   Supabase rate limits.
+// ============================================================
+
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const RESEND_COOLDOWN_MS = 60 * 1000;
+
+const resendTimestamps = new Map<string, number>();
+
+const isRateLimitMessage = (message: string): boolean => {
+    const lower = message.toLowerCase();
+
+    return (
+        lower.includes("rate") ||
+        lower.includes("too many") ||
+        lower.includes("security") ||
+        lower.includes("exceeded") ||
+        lower.includes("throttle")
+    );
+};
+
+const isNetworkMessage = (message: string): boolean => {
+    const lower = message.toLowerCase();
+
+    return (
+        lower.includes("fetch") ||
+        lower.includes("network") ||
+        lower.includes("offline") ||
+        lower.includes("timeout") ||
+        lower.includes("unreachable")
+    );
+};
+
+const isAlreadyRegisteredMessage = (message: string): boolean => {
+    const lower = message.toLowerCase();
+
+    return (
+        lower.includes("already") ||
+        lower.includes("registered") ||
+        lower.includes("exists") ||
+        lower.includes("taken") ||
+        lower.includes("duplicate")
+    );
+};
+
+// ============================================================
+// EMAIL REDIRECT
+// ============================================================
+//
+// Dev-only manual-login flow: we intentionally omit
+// emailRedirectTo so Supabase confirms on its hosted page.
+// This avoids baking http://localhost:8081 into the email,
+// which is unreachable when opened on another device.
+//
+// getEmailRedirectTo is kept for the future auto-login flow
+// (adlawatt://auth/callback + /auth/callback) but is currently
+// unused.
+// ============================================================
+
+export const getEmailRedirectTo = (): string | undefined => {
+    if (Platform.OS === "web") {
+        if (
+            typeof window !== "undefined" &&
+            window.location?.origin
+        ) {
+            return `${window.location.origin}${Routes.AUTH_CALLBACK}`;
+        }
+
+        return undefined;
+    }
+
+    return `adlawatt:/${Routes.AUTH_CALLBACK}`;
+};
+
+export async function resendConfirmation(email: string) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+        return {
+            success: false,
+            error: "Please enter your email address.",
+        };
+    }
+
+    const now = Date.now();
+    const lastSent = resendTimestamps.get(cleanEmail) ?? 0;
+
+    if (now - lastSent < RESEND_COOLDOWN_MS) {
+        return {
+            success: false,
+            throttled: true,
+            error: "A confirmation email was sent recently. Please wait before requesting another.",
+        };
+    }
+
+    resendTimestamps.set(cleanEmail, now);
+
+    const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: cleanEmail,
+        // No emailRedirectTo: let Supabase confirm on its hosted
+        // page so the link works from any device.
+    });
+
+    if (error) {
+        return {
+            success: false,
+            throttled: isRateLimitMessage(error.message),
+            error: error.message,
+        };
+    }
+
+    return { success: true, throttled: false };
+}
 
 export async function registerUser(
     username: string,
@@ -51,8 +189,16 @@ export async function registerUser(
                 error: "Please enter your email address.",
             };
         }
+
+        if (!EMAIL_PATTERN.test(cleanEmail)) {
+            return {
+                success: false,
+                error: "Please enter a valid email address.",
+            };
+        }
+
         // Password validation
-        if (password.length < 8) {
+        if (!password || password.trim().length < 8) {
             return {
                 success: false,
                 error: "Password must be at least 8 characters.",
@@ -92,11 +238,28 @@ export async function registerUser(
                         username: cleanUsername,
                         terms_agreed: termsAgreed,
                     },
+                    // No emailRedirectTo: Supabase-hosted confirmation
+                    // works from any device (no localhost dependency).
                 },
             });
 
         if (authError) {
             console.error("Registration error:", authError.message);
+
+            // Never reveal whether the email is taken.
+            if (isAlreadyRegisteredMessage(authError.message)) {
+                return {
+                    success: false,
+                    error: "Unable to create your account with these details. Try signing in instead.",
+                };
+            }
+
+            if (isRateLimitMessage(authError.message)) {
+                return {
+                    success: false,
+                    error: "Too many attempts. Please wait a moment and try again.",
+                };
+            }
 
             return {
                 success: false,
@@ -116,9 +279,22 @@ export async function registerUser(
             authData.user.id,
         );
 
+        // Confirm-email ON: no session until the user clicks
+        // the email link. Confirm-off: session exists at once.
+        if (!authData.session) {
+            return {
+                success: true,
+                user: authData.user,
+                needsConfirmation: true,
+                email: cleanEmail,
+            };
+        }
+
         return {
             success: true,
             user: authData.user,
+            needsConfirmation: false,
+            email: cleanEmail,
         };
 
     } catch (error) {
@@ -135,22 +311,7 @@ export async function registerUser(
 
 export async function getCurrentUserProfile() {
     try {
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError) {
-            console.error(
-                "Get current user error:",
-                authError.message,
-            );
-
-            return {
-                success: false,
-                error: authError.message,
-            };
-        }
+        const user = await getAuthenticatedUserSafe();
 
         if (!user) {
             return {
@@ -188,6 +349,13 @@ export async function getCurrentUserProfile() {
             createdAt: profile?.created_at ?? null,
         };
     } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+            return {
+                success: false,
+                error: "No authenticated user found.",
+            };
+        }
+
         console.error(
             "Get current user profile error:",
             error,
@@ -218,7 +386,9 @@ export async function loginUser(
 
         let email = identifier;
 
-        // Username login
+        // Username login. Both miss and lookup-failure paths
+        // return the identical message so the RPC cannot be
+        // used to probe which usernames exist.
         if (!identifier.includes("@")) {
             const { data: profileEmail, error: profileError } =
                 await supabase.rpc(
@@ -236,13 +406,15 @@ export async function loginUser(
 
                 return {
                     success: false,
-                    error: "Unable to find your account.",
+                    kind: "invalid" as const,
+                    error: "The username or password is incorrect.",
                 };
             }
 
             if (!profileEmail) {
                 return {
                     success: false,
+                    kind: "invalid" as const,
                     error: "The username or password is incorrect.",
                 };
             }
@@ -260,8 +432,65 @@ export async function loginUser(
         if (error) {
             console.error("Login error:", error.message);
 
+            if (
+                error.message
+                    .toLowerCase()
+                    .includes("email not confirmed")
+            ) {
+                // Auto-send a fresh confirmation link so the
+                // user does not have to tap Resend manually.
+                // resendConfirmation enforces the per-email
+                // cooldown; failures never override the
+                // unconfirmed outcome.
+                let confirmationResent:
+                    | "sent"
+                    | "rate-limited"
+                    | "failed" = "failed";
+
+                try {
+                    const resendResult =
+                        await resendConfirmation(email);
+
+                    if (resendResult.success) {
+                        confirmationResent = "sent";
+                    } else if (resendResult.throttled) {
+                        confirmationResent = "rate-limited";
+                    } else {
+                        confirmationResent = "failed";
+                    }
+                } catch {
+                    confirmationResent = "failed";
+                }
+
+                return {
+                    success: false,
+                    kind: "unconfirmed" as const,
+                    emailNotConfirmed: true,
+                    email,
+                    confirmationResent,
+                    error: "Please confirm your email address before signing in. Check your inbox for the confirmation link.",
+                };
+            }
+
+            if (isRateLimitMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "rate-limited" as const,
+                    error: "Too many sign-in attempts. Please wait a moment and try again.",
+                };
+            }
+
+            if (isNetworkMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "network" as const,
+                    error: "No connection. Check your internet and try again.",
+                };
+            }
+
             return {
                 success: false,
+                kind: "invalid" as const,
                 error: "The username or password is incorrect.",
             };
         }
@@ -269,13 +498,14 @@ export async function loginUser(
         if (!data.user || !data.session) {
             return {
                 success: false,
+                kind: "invalid" as const,
                 error: "Unable to create a login session.",
             };
         }
 
-        logAuth.loggedIn(
-            data.user.email ?? identifier,
-        );
+        // Credential-safe: row is already scoped by user_id;
+        // never write emails/usernames into the description.
+        logAuth.loggedIn();
 
         return {
             success: true,
@@ -287,6 +517,7 @@ export async function loginUser(
 
         return {
             success: false,
+            kind: "unknown" as const,
             error:
                 "Unable to sign in right now. Please try again.",
         };
@@ -360,6 +591,13 @@ export async function updateAccount(
         // VALIDATE PASSWORD
         // =========================
 
+        if (!cleanCurrentPassword) {
+            return {
+                success: false,
+                error: "Please enter your current password.",
+            };
+        }
+
         if (newPassword && newPassword.length < 8) {
             return {
                 success: false,
@@ -378,12 +616,9 @@ export async function updateAccount(
         // GET CURRENT USER
         // =========================
 
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
+        const user = await getAuthenticatedUserSafe();
 
-        if (userError || !user) {
+        if (!user) {
             return {
                 success: false,
                 error: "No authenticated user found.",
