@@ -227,97 +227,150 @@ export default function ComponentsScreen() {
       if (cancelled) return;
 
       // ========================================
-      // COMPONENTS REALTIME
+      // COMPONENTS REALTIME (stable topic, warn + retry)
       // ========================================
 
-      const newComponentsChannel =
-        supabase.channel(
-          `components-${user.id}-${Date.now()}`,
-        );
+      const subscribeWithRetry = (
+        topic: string,
+        build: (
+          channel: ReturnType<typeof supabase.channel>,
+        ) => ReturnType<typeof supabase.channel>,
+        onReplace: (
+          next: ReturnType<typeof supabase.channel>,
+        ) => void,
+      ): ReturnType<typeof supabase.channel> => {
+        const reused = supabase
+          .getChannels()
+          .find(
+            (c) =>
+              (c as unknown as { topic?: string }).topic ===
+              `realtime:${topic}`,
+          ) as
+          | ReturnType<typeof supabase.channel>
+          | undefined;
 
-      newComponentsChannel
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "components",
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            if (!cancelled) {
-              loadComponents(user.id);
+        if (reused) {
+          return reused;
+        }
+
+        let attempts = 0;
+
+        const base = supabase.channel(topic);
+        const channel = build(base);
+
+        channel.subscribe((status, error) => {
+          console.log(
+            `${topic} Realtime status:`,
+            status,
+            error,
+          );
+
+          if (
+            !cancelled &&
+            (status === "CHANNEL_ERROR" ||
+              status === "TIMED_OUT")
+          ) {
+            console.warn(
+              `${topic} Realtime channel issue, retrying:`,
+              status,
+              error instanceof Error
+                ? error.message
+                : error,
+            );
+
+            if (attempts < 3) {
+              const delay =
+                [1000, 2000, 5000][attempts] ?? 5000;
+              attempts += 1;
+
+              setTimeout(() => {
+                if (cancelled) {
+                  return;
+                }
+
+                supabase
+                  .removeChannel(channel)
+                  .catch(() => {})
+                  .finally(() => {
+                    if (cancelled) {
+                      return;
+                    }
+
+                    const fresh = subscribeWithRetry(
+                      topic,
+                      build,
+                      onReplace,
+                    );
+                    onReplace(fresh);
+                  });
+              }, delay);
             }
-          },
-        )
-        .subscribe((status, error) => {
-          console.log(
-            "Components Realtime status:",
-            status,
-            error,
-          );
+          }
 
-          if (
-            status === "CHANNEL_ERROR"
-          ) {
-            console.error(
-              "Components Realtime channel error:",
-              error,
-            );
+          if (status === "SUBSCRIBED") {
+            attempts = 0;
           }
         });
 
-      componentsChannel =
-        newComponentsChannel;
+        return channel;
+      };
+
+      const newComponentsChannel = subscribeWithRetry(
+        `components-${user.id}`,
+        (ch) =>
+          ch.on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "components",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              if (!cancelled) {
+                loadComponents(user.id);
+              }
+            },
+          ),
+        (next) => {
+          componentsChannel = next;
+        },
+      );
+
+      componentsChannel = newComponentsChannel;
 
       // ========================================
-      // MONITORING REALTIME
+      // MONITORING REALTIME (stable topic, warn + retry)
       // ========================================
 
-      const newMonitoringChannel =
-        supabase.channel(
-          `monitoring-${user.id}-${Date.now()}`,
-        );
+      const newMonitoringChannel = subscribeWithRetry(
+        `monitoring-${user.id}`,
+        (ch) =>
+          ch.on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "monitoring",
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              if (cancelled) return;
 
-      newMonitoringChannel
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "monitoring",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            if (cancelled) return;
+              const updatedStatus =
+                payload.new.device_status;
 
-            const updatedStatus =
-              payload.new.device_status;
+              setDeviceStatus(
+                updatedStatus as DeviceStatus,
+              );
+            },
+          ),
+        (next) => {
+          monitoringChannel = next;
+        },
+      );
 
-            setDeviceStatus(
-              updatedStatus as DeviceStatus,
-            );
-          },
-        )
-        .subscribe((status, error) => {
-          console.log(
-            "Monitoring Realtime status:",
-            status,
-            error,
-          );
-
-          if (
-            status === "CHANNEL_ERROR"
-          ) {
-            console.error(
-              "Monitoring Realtime channel error:",
-              error,
-            );
-          }
-        });
-
-      monitoringChannel =
-        newMonitoringChannel;
+      monitoringChannel = newMonitoringChannel;
     };
 
     setup();
