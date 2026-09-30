@@ -1,6 +1,10 @@
 import { Platform } from "react-native";
 
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  isAuthSessionMissingError,
+  supabase,
+} from "@/lib/supabase";
 import {
   logActivity,
   logAuth,
@@ -73,11 +77,14 @@ const isAlreadyRegisteredMessage = (message: string): boolean => {
 // EMAIL REDIRECT
 // ============================================================
 //
-// Native uses the app deep link (scheme in app.json).
-// Web uses the current origin + /auth/callback so no
-// hardcoded production URL is needed; allow-list both
-// `adlawatt://auth/callback` and the web callback URL
-// (plus localhost for dev) in Supabase URL Configuration.
+// Dev-only manual-login flow: we intentionally omit
+// emailRedirectTo so Supabase confirms on its hosted page.
+// This avoids baking http://localhost:8081 into the email,
+// which is unreachable when opened on another device.
+//
+// getEmailRedirectTo is kept for the future auto-login flow
+// (adlawatt://auth/callback + /auth/callback) but is currently
+// unused.
 // ============================================================
 
 export const getEmailRedirectTo = (): string | undefined => {
@@ -121,9 +128,8 @@ export async function resendConfirmation(email: string) {
     const { error } = await supabase.auth.resend({
         type: "signup",
         email: cleanEmail,
-        options: {
-            emailRedirectTo: getEmailRedirectTo(),
-        },
+        // No emailRedirectTo: let Supabase confirm on its hosted
+        // page so the link works from any device.
     });
 
     if (error) {
@@ -232,7 +238,8 @@ export async function registerUser(
                         username: cleanUsername,
                         terms_agreed: termsAgreed,
                     },
-                    emailRedirectTo: getEmailRedirectTo(),
+                    // No emailRedirectTo: Supabase-hosted confirmation
+                    // works from any device (no localhost dependency).
                 },
             });
 
@@ -304,22 +311,7 @@ export async function registerUser(
 
 export async function getCurrentUserProfile() {
     try {
-        const {
-            data: { user },
-            error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError) {
-            console.error(
-                "Get current user error:",
-                authError.message,
-            );
-
-            return {
-                success: false,
-                error: authError.message,
-            };
-        }
+        const user = await getAuthenticatedUserSafe();
 
         if (!user) {
             return {
@@ -357,6 +349,13 @@ export async function getCurrentUserProfile() {
             createdAt: profile?.created_at ?? null,
         };
     } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+            return {
+                success: false,
+                error: "No authenticated user found.",
+            };
+        }
+
         console.error(
             "Get current user profile error:",
             error,
@@ -617,12 +616,9 @@ export async function updateAccount(
         // GET CURRENT USER
         // =========================
 
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
+        const user = await getAuthenticatedUserSafe();
 
-        if (userError || !user) {
+        if (!user) {
             return {
                 success: false,
                 error: "No authenticated user found.",

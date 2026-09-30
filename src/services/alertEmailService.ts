@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 // ============================================================
 // ALERT EMAIL SERVICE (AgentMail via Edge Function)
@@ -133,9 +136,7 @@ const getSessionEmail = async (): Promise<string | null> => {
     return session.user.email;
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthenticatedUserSafe();
 
   return user?.email ?? null;
 };

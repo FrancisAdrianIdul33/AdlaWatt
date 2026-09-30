@@ -3,7 +3,10 @@ import {
   Platform,
 } from "react-native";
 
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 import { CAUTION_SOC } from "@/services/recommendation";
 
@@ -1506,18 +1509,9 @@ export async function loadAnalyticsData(
   applianceUsageHistory: ApplianceUsageHistoryRow[];
 }> {
   try {
-    const {
-      data: {
-        user,
-      },
-      error: userError,
-    } =
-      await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
-    if (
-      userError ||
-      !user
-    ) {
+    if (!user) {
       return {
         monitoringHistory: [],
         applianceUsageHistory: [],
