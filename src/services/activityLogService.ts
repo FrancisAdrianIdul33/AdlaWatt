@@ -101,10 +101,10 @@ export const logAuth = {
     });
   },
 
-  loggedIn(identifier: string): void {
+  loggedIn(): void {
     logActivity({
       title: "Logged In",
-      description: `${identifier} signed in.`,
+      description: "Signed in.",
       type: "info",
     });
   },

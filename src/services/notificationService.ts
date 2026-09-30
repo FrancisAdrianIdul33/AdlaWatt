@@ -7,10 +7,6 @@ import type {
   MonitoringData
 } from "@/services/monitoringService";
 import {
-  logActivity,
-  type ActivityLogType,
-} from "@/services/activityLogService";
-import {
   classifyBatteryState,
   computeWattCap,
   parseWattageRange,
@@ -39,13 +35,6 @@ export interface NotificationRule {
   title: string;
   description: string;
   type: NotificationType;
-  /**
-   * Mirror severity for the activity log. Set only on rules
-   * significant enough for activity history; routine
-   * transitions omit it. Cooldowns apply to the mirror via
-   * the notification insert gate below.
-   */
-  logAs?: ActivityLogType;
 }
 
 // ============================================================
@@ -420,15 +409,6 @@ const createNotification = async (
     `Notification created: ${rule.title}`,
   );
 
-  if (rule.logAs !== undefined) {
-    logActivity({
-      title: rule.title,
-      description: rule.description,
-      type: rule.logAs,
-      userId,
-    });
-  }
-
   maybeSendAlertEmail(userId, rule);
 
   return true;
@@ -621,15 +601,6 @@ const createNotificationWithCooldown =
       `Notification created: ${rule.title}`,
     );
 
-    if (rule.logAs !== undefined) {
-      logActivity({
-        title: rule.title,
-        description: rule.description,
-        type: rule.logAs,
-        userId,
-      });
-    }
-
     maybeSendAlertEmail(userId, rule);
 
     return true;
@@ -664,7 +635,6 @@ const checkDeviceOnline = async (
         description:
           "AdlaWatt is connected and actively sending monitoring data.",
         type: "normal",
-        logAs: "info",
       },
     );
   }
@@ -702,7 +672,6 @@ const checkDeviceOffline = async (
         description:
           "AdlaWatt is currently disconnected from the monitoring system.",
         type: "normal",
-        logAs: "critical",
       },
     );
   }
@@ -831,7 +800,6 @@ const checkBatteryFullyCharged =
           description:
             "Battery level has reached 100% and is fully charged.",
           type: "normal",
-          logAs: "info",
         },
       );
     }
@@ -961,7 +929,6 @@ const checkBatteryTemperatureStatus =
           description:
             "Battery temperature has reached a critical level. Check the system immediately.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1055,7 +1022,6 @@ const checkSolarTemperatureStatus =
           description:
             "Solar panel temperature has reached a critical level. Monitor the system and check it when safe.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1600,7 +1566,6 @@ const checkDepthOfDischarge =
           description:
             "Battery depth of discharge has reached an unsafe level. Recharge the battery immediately.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1668,7 +1633,6 @@ const checkAppliancesBecameAdvisable = async (
       description:
         "The battery recovered to a safe level. Selected appliances are advisable again.",
       type: "normal",
-      logAs: "info",
     },
   );
 };
@@ -1736,7 +1700,6 @@ const checkHighLoadWhileBatteryLow = async (
       description:
         `Selected appliances draw about ${combinedMidWatts}W against a ${safeCap}W safe cap at ${level}% battery.`,
       type: "alert",
-      logAs: "critical",
     },
   );
 };
@@ -1906,7 +1869,6 @@ const checkBatteryRecommendedCutoff =
           description:
             "Battery has reached 20% charge or 80% depth of discharge. Reduce power use and recharge soon.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1944,7 +1906,6 @@ const checkBatteryCriticallyLow =
           description:
             "Battery charge is below 20%. Recharge the battery immediately.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -1980,7 +1941,6 @@ const checkBatteryEmpty =
           description:
             "Battery has reached 0% charge or 100% depth of discharge. The BMS may disconnect the system.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2020,7 +1980,6 @@ const checkBatteryDischargingAtLowLevel =
           description:
             "The battery level is at or below 20% while the battery status is Discharging.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2060,7 +2019,6 @@ const checkBatteryDischargingWithUnsafeDoD =
           description:
             "The battery status is Discharging while dod_status is Unsafe.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2096,7 +2054,6 @@ const checkBatteryRuntimeDepleted =
           description:
             "The time_remaining value is 0h 00m.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2131,7 +2088,6 @@ const checkBatteryVoltageZero =
           description:
             "The voltage value is 0. This may indicate a disconnected sensor, unavailable reading, or battery measurement problem.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -2167,7 +2123,6 @@ const checkBatteryTemperatureZero =
           description:
             "The battery_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -2203,7 +2158,6 @@ const checkSolarTemperatureZero =
           description:
             "The solar_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
           type: "alert",
-          logAs: "error",
         },
       );
     }
@@ -2249,7 +2203,6 @@ const checkBatteryChargingNotDetected =
           description:
             "The battery level is below 100%, but the battery status is not Charging when charging is expected.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2293,7 +2246,6 @@ const checkSolarInputUnavailable =
           description:
             "The solar_input value is 0 while solar charging is expected.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2333,7 +2285,6 @@ const checkLowSolarInputDuringCharging =
           description:
             "The battery status is Charging, but the solar status is Low.",
           type: "alert",
-          logAs: "warning",
         },
       );
     }
@@ -2380,7 +2331,6 @@ const checkHighCurrentLoad =
           description:
             "The current_load value is above your configured safe load threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2426,7 +2376,6 @@ const checkBatteryVoltageTooLow =
           description:
             "The voltage value is below your configured safe battery-voltage threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2472,7 +2421,6 @@ const checkBatteryVoltageTooHigh =
           description:
             "The voltage value is above your configured safe battery-voltage threshold.",
           type: "alert",
-          logAs: "critical",
         },
       );
     }
@@ -2533,7 +2481,6 @@ const checkInvalidTimeRemaining =
           description:
             "The time_remaining field is empty or contains an invalid value.",
           type: "alert",
-          logAs: "warning",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -2924,7 +2871,6 @@ const checkMonitoringRecordMissing =
           description:
             "No monitoring record is available for the user.",
           type: "alert",
-          logAs: "error",
       },
       NOTIFICATION_COOLDOWN_MS,
     );
@@ -2969,7 +2915,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen value is null.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -3000,7 +2945,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen timestamp is invalid or older than the allowed monitoring interval.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -3029,7 +2973,6 @@ const checkLastSeenStatus =
           description:
             "The last_seen timestamp is older than the allowed monitoring interval.",
           type: "alert",
-          logAs: "error",
         },
         NOTIFICATION_COOLDOWN_MS,
       );
@@ -3158,17 +3101,8 @@ export const unsubscribeFromNotificationMonitoring =
 // Components change independently of monitoring rows, so
 // they get their own watcher on the components table.
 // Titles stay fixed (live names go in description) so
-// cooldown keys and activity mirrors stay stable.
-//
-// Critical-component set: power-path hardware whose failure
-// threatens the system (matches the hardware list).
+// cooldown keys stay stable.
 // ============================================================
-
-const CRITICAL_COMPONENTS: readonly string[] = [
-  "Relay",
-  "INA228",
-  "Voltage Sensor",
-];
 
 interface ComponentStatusPayload {
   component_name?: string;
@@ -3191,11 +3125,6 @@ const checkComponentStatusTransition = async (
     currentStatus === "Inactive"
   ) {
 
-    const critical =
-      CRITICAL_COMPONENTS.includes(
-        componentName,
-      );
-
     await createNotification(
       userId,
       {
@@ -3203,9 +3132,6 @@ const checkComponentStatusTransition = async (
         description:
           `${componentName} changed from Active to Inactive.`,
         type: "alert",
-        logAs: critical
-          ? "critical"
-          : "warning",
       },
     );
 
@@ -3224,7 +3150,6 @@ const checkComponentStatusTransition = async (
         description:
           `${componentName} changed from Inactive to Active.`,
         type: "normal",
-        logAs: "info",
       },
     );
   }

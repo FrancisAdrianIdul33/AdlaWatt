@@ -503,9 +503,9 @@ export async function loginUser(
             };
         }
 
-        logAuth.loggedIn(
-            data.user.email ?? identifier,
-        );
+        // Credential-safe: row is already scoped by user_id;
+        // never write emails/usernames into the description.
+        logAuth.loggedIn();
 
         return {
             success: true,
