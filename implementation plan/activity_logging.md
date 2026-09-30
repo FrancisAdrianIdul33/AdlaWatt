@@ -55,11 +55,14 @@ Rules:
 
 | Event | Type | Call site |
 |---|---|---|
-| Account Created | `info` | `registerUser()` success |
-| Logged In | `info` | `loginUser()` success |
+| Account Created | `info` | `registerUser()` success (username handle only) |
+| Logged In | `info` | `loginUser()` success (generic `"Signed in."` — never emails or usernames) |
 | Logged Out | `info` | `handleLogout()` success |
 | Login Failed | `warning` | `loginUser()` wrong password / unknown user |
 | Logout Failed | `warning` | `handleLogout()` catch |
+
+- Credential rule: descriptions never carry emails, passwords, or tokens.
+  Rows are already scoped by `user_id`, so identity is implicit.
 
 ### Profile (`updateAccount()`)
 
@@ -85,7 +88,7 @@ Rules:
 
 - Staging actions (`toggleAppliance()`, search, modal open/close) log nothing; only the commit.
 
-### Solar / Battery (`notificationService.ts` rule-firing points)
+### Solar / Battery (explicit calls only — never notification mirrors)
 
 | Event | Type |
 |---|---|
@@ -95,18 +98,22 @@ Rules:
 | Battery Low (≤20%), Unsafe DoD, Runtime Depleted | `warning` → `critical` |
 | Charging Not Detected, Solar Unavailable, Invalid Data | `warning` |
 
-- Log at the existing `check*()` firing points so the 10-minute notification and 5-minute update cooldowns apply to logs automatically.
+- Notifications never mirror into this table. If a hardware condition needs
+  history here, add an explicit call with a distinct title at the firing
+  point — never the same title as the notification.
 
-### ESP32 / Sensors (`notificationService.ts`, `monitoringService.ts`)
+### ESP32 / Sensors (explicit calls only — never notification mirrors)
 
 | Event | Type |
 |---|---|
 | System Online / Recovered | `info` |
 | System Offline | `critical` |
-| Monitoring Data Stale / Missing | `error` |
 | Sensor Disconnected (zero reads) | `error` |
 | Channel Error / Timeout | `error` |
 | Device Row Deleted | `warning` |
+
+- Connection-health diagnostics (stale/missing monitoring data, null
+  last_seen) are notifications-only and are intentionally not logged here.
 
 ### Settings (`menu.tsx`)
 
@@ -129,7 +136,8 @@ View-only filters, searches, per-keystroke staging, notification mark-read/delet
 ```
 logActivity({ title, description, type })  ->  void (never throws)
 logAuth.accountCreated(username)          ->  void
-logAuth.loggedIn(identifier)              ->  void
+logAuth.loggedIn()                        ->  void (generic "Signed in.")
+logAuth.loggedOut()                       ->  void
 logAppliance.added(name, watts)           ->  void
 logPower.low(percent) / .full()           ->  void
 logDevice.offline() / .online()           ->  void
@@ -167,7 +175,7 @@ Shared rules:
 - Do not `await` `logActivity()` in button handlers; a slow insert must never freeze login or saving.
 - Do not throw from the service; a failed insert is a `console.warn`, never a user-facing error.
 - Do not log view-only actions; filters, searches, and staging toggles are not activity.
-- Do not log raw monitoring changes; log at rule-firing points so cooldowns prevent table floods.
+- Do not log raw monitoring changes and never mirror notification rules; the two lists must stay different.
 - Do not send severities outside `info | warning | error | critical`; the reader coerces unknowns and the data loses meaning.
 - Do not trust client identity; always resolve `user_id` server-side via `getUser()`, never from params.
 - Do not log secrets; descriptions carry names and wattages, never passwords, tokens, or emails beyond the account identifier already stored.
@@ -179,6 +187,6 @@ Shared rules:
 1. `src/services/activityLogService.ts` — writer source (catalog, submission, wrappers).
 2. `src/app/dashboard/activity-logs.tsx` — reader contract (`act_id, title, description, type, created_at` scoped by `user_id`).
 3. `src/components/ActivityLogCard.tsx` — display types and four-state rendering.
-4. `src/services/notificationService.ts` — rule-firing points and cooldowns the writer mirrors.
+4. `src/services/notificationService.ts` — fully separate; never writes here.
 5. `src/services/auth.ts` — auth call sites (`registerUser`, `loginUser`, `updateAccount`).
 6. `src/components/forms/ApplianceModal.tsx` — appliance mutation call sites.

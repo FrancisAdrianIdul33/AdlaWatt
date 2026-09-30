@@ -18,9 +18,9 @@ It produces one `notifications` row:
 | `type`        | `normal` (informative) or `alert` (needs attention) |
 | `read`        | Always `false` on insert                            |
 
-Delivery is cooldown-gated two ways: an in-memory `Map<user:type:title>` plus a DB last-`created_at` check (`NOTIFICATION_COOLDOWN_MS` 10 min default; `UPDATE_NOTIFICATION_COOLDOWN_MS` 5 min for high-frequency fields passed explicitly to `createNotificationWithCooldown`). Significant rules additionally mirror to `activity_logs` via `logAs` (see `activity_logging.md`); routine transitions never touch that table.
+Delivery is cooldown-gated two ways: an in-memory `Map<user:type:title>` plus a DB last-`created_at` check (`NOTIFICATION_COOLDOWN_MS` 10 min default; `UPDATE_NOTIFICATION_COOLDOWN_MS` 5 min for high-frequency fields passed explicitly to `createNotificationWithCooldown`). Notifications never write to `activity_logs` — the lists stay fully separate (see `activity_logging.md`); routine transitions never touch that table.
 
-Scope boundary with activity logs: **notifications record what the hardware did; activity logs record what the user (or the safety system on the user's behalf) did.** A low battery fires a notification; the user unplugging an appliance over it writes an activity entry. Overlap exists only where the system acts with user-visible safety consequences (offline, overload, cutoff) — those mirror with severity.
+Scope boundary with activity logs: **notifications record what the hardware did; activity logs record what the user did (auth, appliances, settings).** A low battery fires a notification; the user unplugging an appliance over it writes an activity entry. No notification rule mirrors — even safety consequences stay notifications-only unless re-added as explicit distinct-title activity calls.
 
 ---
 
@@ -129,8 +129,8 @@ Not yet implemented: *Forecast Suggests Conserving* — needs stored location pl
 ## Submission API
 
 ```
-createNotification(userId, { title, description, type, logAs? })
-createNotificationWithCooldown(userId, { title, description, type, logAs? }, cooldownMs)
+createNotification(userId, { title, description, type })
+createNotificationWithCooldown(userId, { title, description, type }, cooldownMs)
 ```
 
 Helper behavior:
@@ -138,7 +138,6 @@ Helper behavior:
 ```
 cooldownGate(userId, type, title)  = memory Map check + DB last-created check
 insertNotification(...)            = insert with read: false; returns boolean
-mirrorToActivityLog(rule, userId)  = logActivity({ title, description, type: logAs }) when logAs set
 ```
 
 ---
@@ -152,17 +151,18 @@ The rules feed one surface:
 
 Shared rules:
 
-- Titles are fixed strings — never interpolate live values into `title` (cooldown keys and activity mirrors depend on title stability).
+- Titles are fixed strings — never interpolate live values into `title` (cooldown keys depend on title stability).
 - Live values belong in `description` (`"Load at 840W exceeds safe limit."`, not `"Overload 840W"`).
 - `normal` rules inform; `alert` rules demand a glance. Do not promote routine transitions to `alert` to chase attention.
-- Every new rule gets a `logAs` decision at creation time: significant safety/user-consequence rules mirror; routine transitions omit it.
+- Never write to `activity_logs` from notification rules — the two lists must stay different. Safety events needing history must use explicit distinct-title activity calls, never same-title mirrors.
 
 ---
 
 ## Errors to Avoid
 
 - Do not create rules without cooldown protection; sensor jitter becomes a notification storm.
-- Do not put live values in `title`; it breaks cooldown keys and fragments activity history.
+- Do not create rules that write to `activity_logs`; the lists must stay fully separate.
+- Do not put live values in `title`; it breaks cooldown keys and fragments history.
 - Do not mark routine transitions (`Charging`, `Level Updated`, milestones) with `logAs`; the activity table gets signal, not telemetry.
 - Do not evaluate rules on raw snapshots; always compare current vs previous or the rule refires every poll.
 - Do not leave `SAFE_*` thresholds `null` silently; disabled rules (`High Current Load`, voltage bounds) must be enabled with real values or deleted.
