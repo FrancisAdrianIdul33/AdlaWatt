@@ -508,14 +508,10 @@ export const subscribeToMonitoring =
               );
             }
 
-            if (
-              status === "CLOSED"
-            ) {
-
-              console.warn(
-                "Monitoring Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel (e.g. bell
+            // navigates away from dashboard index) is expected
+            // teardown — stay silent. Unexpected service-side
+            // closes still surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
 
@@ -602,14 +598,8 @@ export const subscribeToDeviceStatus =
               );
             }
 
-            if (
-              status === "CLOSED"
-            ) {
-
-              console.warn(
-                "Device status Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel on screen
+            // unmount is expected teardown — stay silent.
           },
         );
 
