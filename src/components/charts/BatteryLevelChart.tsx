@@ -2,6 +2,7 @@ import {
   useMemo,
 } from "react";
 import {
+  Platform,
   StyleSheet,
   View,
 } from "react-native";
@@ -83,6 +84,16 @@ export default function BatteryLevelChart({
         styles.container
       }
     >
+      {/* Read-only chart: hideDataPoints + no press handlers.
+          On web, block the chart's internal pan responder from
+          claiming touches (orphan touchend -> "Cannot record
+          touch end without a touch start"). Parent ScrollView
+          still scrolls; native touch stays enabled. */}
+      <View
+        pointerEvents={
+          Platform.OS === "web" ? "none" : "auto"
+        }
+      >
       <LineChart
         data={data}
         height={CHART_HEIGHT}
@@ -155,6 +166,7 @@ export default function BatteryLevelChart({
         scrollToEnd
         scrollAnimation={false}
       />
+      </View>
 
       {/* Legend: line style + text so meaning never depends
           on color alone (solid green = battery %, dashed red

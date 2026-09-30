@@ -55,7 +55,16 @@ export default function ModalBox<T extends string>({
           style={
             styles.modalCard
           }
-          onPress={() => {}}
+          // Swallow card taps so the overlay close doesn't fire.
+          // stopPropagation keeps web from delivering the same
+          // touch to both responders (orphan touchend noise).
+          onPress={(event) => {
+            (
+              event as unknown as {
+                stopPropagation?: () => void;
+              }
+            )?.stopPropagation?.();
+          }}
         >
           <View
             style={
