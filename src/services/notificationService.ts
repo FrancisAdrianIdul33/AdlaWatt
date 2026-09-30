@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getAuthenticatedUserSafe,
+  supabase,
+} from "@/lib/supabase";
 
 import type {
   MonitoringData
@@ -151,26 +154,10 @@ const milestoneState = {
 
 const getAuthenticatedUser =
   async () => {
-
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-      console.error(
-        "Error getting authenticated user:",
-        error.message,
-      );
-
-      return null;
-    }
-
-    if (!user) {
-      return null;
-    }
-
-    return user;
+    // Safe helper: returns null silently when logged out,
+    // on fresh install, or before session restore — avoids
+    // "Auth session missing!" console.error noise on login.
+    return getAuthenticatedUserSafe();
   };
 
 
@@ -4047,21 +4034,14 @@ export const deleteNotification =
 
 
 // ============================================================
-// AUTO-INITIALIZATION
+// EXPLICIT INITIALIZATION
 // ============================================================
 //
-// Importing this service initializes the authentication-aware
-// monitoring watcher.
+// No auto-init on import: the dashboard layout starts the
+// service explicitly once AuthContext reports isSignedIn.
+// This avoids getUser() probes on the login screen, fresh
+// installs, or before session restore completes (previously
+// logged "Auth session missing!" on every cold start).
 //
 // The service remains independent from ChartCard.tsx.
 // ============================================================
-
-initializeNotificationService().catch(
-  (error) => {
-
-    console.error(
-      "Failed to initialize notification service:",
-      error,
-    );
-  },
-);

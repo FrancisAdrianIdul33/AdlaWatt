@@ -9,13 +9,10 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-
-// Side-effect import: starts the auth-aware notification
-// watchers (monitoring + components) per
-// implementation plan/notification_catalog.md. The service
-// owns its lifecycle (starts on SIGNED_IN, stops on
-// SIGNED_OUT) and never throws into the UI.
-import "@/services/notificationService";
+import {
+  initializeNotificationService,
+  shutdownNotificationService,
+} from "@/services/notificationService";
 
 // ============================================================
 // DASHBOARD LAYOUT
@@ -38,6 +35,35 @@ function ThemedDashboard() {
     if (isLoaded && !isSignedIn) {
       router.replace("/auth/login");
     }
+  }, [isLoaded, isSignedIn]);
+
+  // Notification service lifecycle: start explicitly only
+  // when signed in. No import-time side effect, so the login
+  // screen / fresh install never probes getUser() with no
+  // session (previously "Auth session missing!").
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (isSignedIn) {
+      initializeNotificationService().catch((error) => {
+        console.error(
+          "Failed to initialize notification service:",
+          error,
+        );
+      });
+    } else {
+      shutdownNotificationService().catch(() => {
+        // Shutdown is best-effort; never throws into UI.
+      });
+    }
+
+    return () => {
+      // Best-effort cleanup on unmount (e.g. logout
+      // navigates away from dashboard).
+      shutdownNotificationService().catch(() => {});
+    };
   }, [isLoaded, isSignedIn]);
 
   if (!isLoaded || !isSignedIn) {
