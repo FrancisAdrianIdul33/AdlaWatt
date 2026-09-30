@@ -37,7 +37,7 @@ import {
 import { Control, Field, Touch } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 type Appliance = {
   id: string;
@@ -164,9 +164,7 @@ export default function ApplianceModal({
   // ============================================================
 
   const loadAppliances = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setAppliances([]);
@@ -247,9 +245,7 @@ export default function ApplianceModal({
   // ============================================================
 
   const handleReset = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setCustomError("You must be signed in.");
@@ -291,9 +287,7 @@ export default function ApplianceModal({
   // ============================================================
 
   const handleSave = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       console.error("No authenticated user.");
@@ -422,12 +416,9 @@ export default function ApplianceModal({
       return;
     }
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
-    if (userError || !user) {
+    if (!user) {
       setCustomError(
         "You must be signed in to add an appliance.",
       );
@@ -569,9 +560,7 @@ export default function ApplianceModal({
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setCustomError(
@@ -680,9 +669,7 @@ export default function ApplianceModal({
   const handleCustomDelete = async (
     id: string,
   ) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setCustomError(

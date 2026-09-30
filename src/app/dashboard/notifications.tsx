@@ -44,7 +44,7 @@ import {
 } from "@/hooks/useAppColors";
 import { OptionRow } from "@/constants/sizing";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 type TimeFilter =
   | "All"
@@ -138,9 +138,7 @@ export default function NotificationsScreen() {
 
   const loadNotifications =
     async (): Promise<NotificationData[]> => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserSafe();
 
       if (!user) {
         return [];
@@ -488,9 +486,7 @@ export default function NotificationsScreen() {
     setReadOverride(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserSafe();
 
       if (!user) {
         throw new Error(

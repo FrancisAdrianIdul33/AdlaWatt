@@ -30,7 +30,7 @@ import { Radius } from "@/constants/theme";
 import {
   SlidingToggle,
 } from "@/components/ui/SlidingToggle";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 // ============================================
 // COMPONENT IMAGE MAPPING
@@ -205,20 +205,9 @@ export default function ComponentsScreen() {
     // ==========================================
 
     const setup = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUserSafe();
 
       if (cancelled) return;
-
-      if (userError) {
-        console.error(
-          "Error getting user:",
-          userError.message,
-        );
-        return;
-      }
 
       if (!user) {
         setComponents([]);

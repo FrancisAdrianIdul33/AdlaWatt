@@ -23,7 +23,7 @@ import {
 import { Routes } from "@/constants/routes";
 import { Bar, Touch } from "@/constants/sizing";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import AppText from "@/components/ui/AppText";
 
@@ -60,9 +60,7 @@ export default function NavBar({
 
     const checkUnreadNotifications =
       async () => {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const user = await getAuthenticatedUserSafe();
 
         if (!mounted) {
           return;
@@ -111,9 +109,7 @@ export default function NavBar({
       | ReturnType<typeof supabase.channel>
       | null = null;
 
-    supabase.auth
-      .getUser()
-      .then(({ data: { user } }) => {
+    getAuthenticatedUserSafe().then((user) => {
         if (!mounted || !user) {
           return;
         }
