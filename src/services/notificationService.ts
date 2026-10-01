@@ -149,6 +149,37 @@ const getAuthenticatedUser =
     return getAuthenticatedUserSafe();
   };
 
+// Logout guard: stale timers / Realtime callbacks capture a
+// userId string that outlives the session. After signOut the
+// JWT is gone, so any notifications insert would 401 / violate
+// RLS (user_id = auth.uid()). Skip those writes silently.
+// Local getSession only — no network, safe during teardown.
+const isStaleLogoutWrite =
+  async (
+    userId: string,
+  ): Promise<boolean> => {
+    if (
+      !currentUserId ||
+      currentUserId !== userId
+    ) {
+      return true;
+    }
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+
+    return false;
+  };
+
 
 // ============================================================
 // FETCH CURRENT MONITORING DATA
@@ -298,6 +329,16 @@ const createNotification = async (
   rule: NotificationRule,
 ): Promise<boolean> => {
 
+  if (
+    await isStaleLogoutWrite(userId)
+  ) {
+    console.debug(
+      `[notifications] skipped "${rule.title}" (signed out).`,
+    );
+
+    return false;
+  }
+
   const now = Date.now();
 
   const cooldownKey =
@@ -348,6 +389,24 @@ const createNotification = async (
     .maybeSingle();
 
   if (existingError) {
+    // Logout race (401 / RLS after signOut) is expected —
+    // downgrade to debug when the session is gone.
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.debug(
+          "Skipped notification cooldown check (signed out).",
+        );
+
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
     console.error(
       "Error checking previous notification:",
       existingError.message,
@@ -392,6 +451,22 @@ const createNotification = async (
     });
 
   if (insertError) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.debug(
+          `[notifications] skipped "${rule.title}" insert (signed out).`,
+        );
+
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
     console.error(
       `Error creating notification "${rule.title}":`,
       insertError.message,
@@ -515,6 +590,16 @@ const createNotificationWithCooldown =
     rule: NotificationRule,
     cooldownMs: number,
   ): Promise<boolean> => {
+
+    if (
+      await isStaleLogoutWrite(userId)
+    ) {
+      console.debug(
+        `[notifications] skipped "${rule.title}" (signed out).`,
+      );
+
+      return false;
+    }
 
     const now = Date.now();
 
@@ -3262,9 +3347,7 @@ const startComponentsNotificationWatcher =
               status ===
                 "CHANNEL_ERROR" ||
               status ===
-                "TIMED_OUT" ||
-              status ===
-                "CLOSED"
+                "TIMED_OUT"
             ) {
 
               console.warn(
@@ -3272,6 +3355,11 @@ const startComponentsNotificationWatcher =
                 status,
               );
             }
+
+            // CLOSED after explicit removeChannel (e.g. logout
+            // or screen unmount) is expected teardown — stay
+            // silent. Unexpected service-side closes still
+            // surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
   };
@@ -3517,15 +3605,10 @@ export const startMonitoringNotificationWatcher =
               );
             }
 
-            if (
-              status ===
-              "CLOSED"
-            ) {
-
-              console.warn(
-                "Notification service Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel (e.g. logout
+            // or screen unmount) is expected teardown — stay
+            // silent. Unexpected service-side closes still
+            // surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
 
