@@ -89,6 +89,78 @@ const getAreaColor = (
 ) =>
   areaColors[area] ?? fallback;
 
+/*
+ * GIVEN CATALOG (code copy of SQL §7 inserts)
+ *
+ * Phase 1 transfer: predefined appliances live here so the
+ * table can later drop its given-row inserts. Display stays
+ * "min-maxW" to keep parseWattageRange + validators working.
+ * Keys are namespaced catalog: — never collides with
+ * String(app_id) customs. DB still seeds givens until the
+ * insert-less SQL lands (deduped by name at render).
+ */
+
+type CatalogItem = {
+  key: string;
+  name: string;
+  wattMin: number;
+  wattMax: number;
+  display: string;
+  uiArea: string;
+};
+
+const catalogDisplay = (
+  min: number,
+  max: number,
+): string => `${min}-${max}W`;
+
+const GIVEN_CATALOG: CatalogItem[] = [
+  // Living Area
+  { key: "catalog:living:stand-fan", name: "Stand Fan / Desk Fan", wattMin: 35, wattMax: 75, display: catalogDisplay(35, 75), uiArea: "Living Area" },
+  { key: "catalog:living:led-tv", name: '32" to 43" LED Smart TV', wattMin: 30, wattMax: 80, display: catalogDisplay(30, 80), uiArea: "Living Area" },
+  { key: "catalog:living:router", name: "Wi-Fi Router / Fiber Modem", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Living Area" },
+  { key: "catalog:living:tv-box", name: "Digital TV Box", wattMin: 5, wattMax: 15, display: catalogDisplay(5, 15), uiArea: "Living Area" },
+  { key: "catalog:living:speaker", name: "Portable Bluetooth Speaker / Mini Soundbar", wattMin: 10, wattMax: 50, display: catalogDisplay(10, 50), uiArea: "Living Area" },
+  { key: "catalog:living:bulb", name: "LED Bulb / Ceiling Light", wattMin: 7, wattMax: 15, display: catalogDisplay(7, 15), uiArea: "Living Area" },
+  // Bedroom
+  { key: "catalog:bedroom:wall-fan", name: "Wall Fan / Clip Fan", wattMin: 25, wattMax: 50, display: catalogDisplay(25, 50), uiArea: "Bedroom" },
+  { key: "catalog:bedroom:phone-charger", name: "Smartphone Fast Charger", wattMin: 10, wattMax: 33, display: catalogDisplay(10, 33), uiArea: "Bedroom" },
+  { key: "catalog:bedroom:tablet-charger", name: "Tablet Charger", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Bedroom" },
+  { key: "catalog:bedroom:emergency-light", name: "Rechargeable Emergency Light / Flashlight", wattMin: 5, wattMax: 15, display: catalogDisplay(5, 15), uiArea: "Bedroom" },
+  { key: "catalog:bedroom:swatter", name: "Electric Mosquito Swatter / Insect Trap", wattMin: 2, wattMax: 5, display: catalogDisplay(2, 5), uiArea: "Bedroom" },
+  { key: "catalog:bedroom:night-light", name: "LED Night Light", wattMin: 3, wattMax: 9, display: catalogDisplay(3, 9), uiArea: "Bedroom" },
+  // Kitchen Area
+  { key: "catalog:kitchen:refrigerator", name: "Single Door / Small Inverter Refrigerator", wattMin: 60, wattMax: 120, display: catalogDisplay(60, 120), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:rice-cooker", name: "Small Rice Cooker", wattMin: 300, wattMax: 500, display: catalogDisplay(300, 500), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:dispenser", name: "Tabletop Water Dispenser", wattMin: 50, wattMax: 80, display: catalogDisplay(50, 80), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:blender", name: "Basic Kitchen Blender", wattMin: 200, wattMax: 350, display: catalogDisplay(200, 350), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:multi-cooker", name: "Mini Electric Multi-Cooker / Pot", wattMin: 300, wattMax: 500, display: catalogDisplay(300, 500), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:exhaust-fan", name: "Exhaust Fan", wattMin: 20, wattMax: 45, display: catalogDisplay(20, 45), uiArea: "Kitchen Area" },
+  { key: "catalog:kitchen:bulb", name: "LED Light Bulb", wattMin: 9, wattMax: 18, display: catalogDisplay(9, 18), uiArea: "Kitchen Area" },
+  // Work/Study Area
+  { key: "catalog:work:laptop-adapter", name: "Laptop Power Adapter", wattMin: 45, wattMax: 65, display: catalogDisplay(45, 65), uiArea: "Work/Study Area" },
+  { key: "catalog:work:usb-fan", name: "Mini USB / Desk Fan", wattMin: 5, wattMax: 20, display: catalogDisplay(5, 20), uiArea: "Work/Study Area" },
+  { key: "catalog:work:desk-lamp", name: "LED Study Desk Lamp", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Work/Study Area" },
+  { key: "catalog:work:printer", name: "Basic Inkjet Printer", wattMin: 10, wattMax: 30, display: catalogDisplay(10, 30), uiArea: "Work/Study Area" },
+  // Bathroom Area
+  { key: "catalog:bath:washing-machine", name: "Twin-Tub / Single-Tub Washing Machine", wattMin: 150, wattMax: 350, display: catalogDisplay(150, 350), uiArea: "Bathroom Area" },
+  { key: "catalog:bath:clipper", name: "Rechargeable Hair Clipper / Trimmer", wattMin: 5, wattMax: 10, display: catalogDisplay(5, 10), uiArea: "Bathroom Area" },
+  { key: "catalog:bath:bulb", name: "Bathroom LED Bulb", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Bathroom Area" },
+  { key: "catalog:bath:exhaust-fan", name: "Small Exhaust Fan", wattMin: 15, wattMax: 30, display: catalogDisplay(15, 30), uiArea: "Bathroom Area" },
+  // Porch
+  { key: "catalog:porch:bulb", name: "Outdoor Porch LED Bulb", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Porch" },
+  { key: "catalog:porch:cctv", name: "Home CCTV Camera System", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Porch" },
+];
+
+const catalogToAppliance = (
+  item: CatalogItem,
+): Appliance => ({
+  id: item.key,
+  name: item.name,
+  watts: item.display,
+  area: item.uiArea,
+});
+
 export default function ApplianceModal({
   visible,
   onClose,
@@ -326,7 +398,7 @@ export default function ApplianceModal({
       }
     }
 
-    const selectedItems = appliances.filter(
+    const selectedItems = displayAppliances.filter(
       (item) => selected.includes(item.id),
     );
 
@@ -766,8 +838,64 @@ export default function ApplianceModal({
     .trim()
     .toLowerCase();
 
+  // ============================================================
+  // DISPLAY LIST (catalog-first)
+  // ============================================================
+  //
+  // Givens render from GIVEN_CATALOG (canonical min-maxW +
+  // uiArea). When the old DB still seeds given rows, resolve
+  // each catalog entry to its DB id by name so toggle /
+  // selection / Save keep working. Customs always come from
+  // DB. After the insert-less SQL lands, catalog entries fall
+  // back to their catalog: keys (phase 2 wires insert-on-save).
+  // ============================================================
+
+  const displayAppliances: Appliance[] = (() => {
+    const dbByName = new Map(
+      appliances.map((item) => [
+        item.name.trim().toLowerCase(),
+        item,
+      ]),
+    );
+
+    const catalogResolved = GIVEN_CATALOG.map(
+      (catalogItem) => {
+        const dbMatch = dbByName.get(
+          catalogItem.name.trim().toLowerCase(),
+        );
+
+        if (dbMatch) {
+          return {
+            id: dbMatch.id,
+            name: catalogItem.name,
+            watts: catalogItem.display,
+            area: catalogItem.uiArea,
+          } as Appliance;
+        }
+
+        return catalogToAppliance(catalogItem);
+      },
+    );
+
+    const catalogNames = new Set(
+      GIVEN_CATALOG.map((catalogItem) =>
+        catalogItem.name.trim().toLowerCase(),
+      ),
+    );
+
+    const dbCustoms = appliances.filter(
+      (item) =>
+        item.area === "Custom Appliances" &&
+        !catalogNames.has(
+          item.name.trim().toLowerCase(),
+        ),
+    );
+
+    return [...catalogResolved, ...dbCustoms];
+  })();
+
   const filteredAppliances =
-    appliances.filter(
+    displayAppliances.filter(
       (appliance) =>
         !normalizedSearch ||
         appliance.name
@@ -788,7 +916,7 @@ export default function ApplianceModal({
   const handleSelectAll = () => {
     const target = normalizedSearch
       ? filteredAppliances
-      : appliances;
+      : displayAppliances;
 
     if (target.length === 0) {
       return;
