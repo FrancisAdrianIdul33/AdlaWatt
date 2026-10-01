@@ -775,6 +775,33 @@ export default function ApplianceModal({
           .includes(normalizedSearch),
     );
 
+  // ============================================================
+  // SELECT ALL (UNION-VISIBLE)
+  // ============================================================
+  //
+  // No filter: selects every catalog + custom box. Filtering:
+  // adds only visible boxes, unioned with existing picks so
+  // pre-search selections are never dropped. Local-only like
+  // toggleAppliance — persisted on Save.
+  // ============================================================
+
+  const handleSelectAll = () => {
+    const target = normalizedSearch
+      ? filteredAppliances
+      : appliances;
+
+    if (target.length === 0) {
+      return;
+    }
+
+    setSelected((current) => [
+      ...new Set([
+        ...current,
+        ...target.map(({ id }) => id),
+      ]),
+    ]);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -847,15 +874,35 @@ export default function ApplianceModal({
               </View>
             </View>
 
-            {/* Search */}
-            <SearchBox
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search appliances..."
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Search appliances"
-            />
+            {/* Search + Archives */}
+            <View style={styles.searchRow}>
+              <View style={styles.searchBoxFlex}>
+                <SearchBox
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  placeholder="Search appliances..."
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  accessibilityLabel="Search appliances"
+                />
+              </View>
+
+              <Pressable
+                onPress={() => {}}
+                style={({ pressed }) => [
+                  styles.archiveButton,
+                  pressed && styles.pressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Archives"
+              >
+                <Ionicons
+                  name="archive-outline"
+                  size={20}
+                  color={colors.onPrimary}
+                />
+              </Pressable>
+            </View>
 
             {/* Custom Appliance */}
             <View style={styles.customSection}>
@@ -1160,25 +1207,65 @@ export default function ApplianceModal({
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.selectedInfo}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={17}
-                color={colors.headerContent}
-              />
-
-              <AppText
-                variant="caption"
-                style={styles.selectedText}
+              <View
+                style={styles.selectedGroup}
               >
-                {selected.length} appliance
-                {selected.length !== 1
-                  ? "s"
-                  : ""}{" "}
-                selected
-              </AppText>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={17}
+                  color={colors.headerContent}
+                />
+
+                <AppText
+                  variant="caption"
+                  style={styles.selectedText}
+                >
+                  {selected.length} appliance
+                  {selected.length !== 1
+                    ? "s"
+                    : ""}{" "}
+                  selected
+                </AppText>
+              </View>
+
+              <View
+                style={styles.selectedGroup}
+                accessibilityRole="text"
+                accessibilityLabel="0 appliances archived"
+              >
+                <Ionicons
+                  name="archive-outline"
+                  size={17}
+                  color={colors.headerContent}
+                />
+
+                <AppText
+                  variant="caption"
+                  style={styles.selectedText}
+                >
+                  0 appliances archived
+                </AppText>
+              </View>
             </View>
 
             <View style={styles.footerButtons}>
+              <Pressable
+                onPress={handleSelectAll}
+                style={({ pressed }) => [
+                  styles.resetButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Select all appliances"
+              >
+                <AppText
+                  variant="caption"
+                  style={styles.resetText}
+                >
+                  Select All
+                </AppText>
+              </Pressable>
+
               <Pressable
                 onPress={handleReset}
                 style={({ pressed }) => [
@@ -1382,6 +1469,28 @@ const getStyles = (colors: AppColors) =>
 
   grid: applianceCardGrid,
 
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+
+  searchBoxFlex: {
+    flex: 1,
+  },
+
+  archiveButton: {
+    width: Field.height,
+    height: Field.height,
+    minWidth: Touch.target,
+    minHeight: Touch.target,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radius.md,
+    backgroundColor: colors.primary,
+    marginBottom: 18,
+  },
+
   noResults: {
     alignItems: "center",
     justifyContent: "center",
@@ -1406,8 +1515,15 @@ const getStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 16,
     marginBottom: 8,
+  },
+
+  selectedGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
 
   selectedText: {
