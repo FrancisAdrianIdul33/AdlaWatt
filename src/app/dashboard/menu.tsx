@@ -142,8 +142,14 @@ export default function SettingsScreen() {
   const [vibration, setVibration] =
     useState(true);
 
+  // Global per-user alert-email switch (server column,
+  // default ON). Drafted like typography: flips instantly,
+  // commits on Save, discards on Cancel.
   const [emailNotifications, setEmailNotifications] =
-    useState(false);
+    useState(true);
+
+  const [savedEmailNotifications, setSavedEmailNotifications] =
+    useState(true);
 
   // ============================================
   // PREFERENCE DROPDOWNS
@@ -203,6 +209,7 @@ export default function SettingsScreen() {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
       setThemeDraft(savedTheme);
+      setEmailNotifications(savedEmailNotifications);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
@@ -210,6 +217,7 @@ export default function SettingsScreen() {
     preferencesExpanded,
     savedTypography,
     savedTheme,
+    savedEmailNotifications,
   ]);
 
   const THEME_OPTIONS: readonly ThemeOption[] = [
@@ -238,6 +246,7 @@ export default function SettingsScreen() {
     setFontSize(savedTypography.fontSize);
     setFontFamily(savedTypography.fontFamily);
     setThemeDraft(savedTheme);
+    setEmailNotifications(savedEmailNotifications);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -256,12 +265,36 @@ export default function SettingsScreen() {
         fontFamily,
       });
 
+      // Email switch: global per-user column; revert the
+      // draft on failure so the UI never lies about it.
+      const emailProfile = await getCurrentUserProfile();
+
+      if (emailProfile.success && emailProfile.userId) {
+        const { error: emailError } = await supabase
+          .from("users")
+          .update({
+            email_notifications: emailNotifications,
+          })
+          .eq("id", emailProfile.userId);
+
+        if (emailError) {
+          console.error(
+            "Email preference save error:",
+            emailError.message,
+          );
+          setEmailNotifications(savedEmailNotifications);
+          return;
+        }
+
+        setSavedEmailNotifications(emailNotifications);
+      }
+
       // Theme last: the flip re-renders screens, so it
       // lands as the modal closes instead of mid-save.
       await commitTheme(themeDraft);
 
       logSettings.preferencesSaved(
-        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode.`,
+        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode, email ${emailNotifications ? "on" : "off"}.`,
       );
 
       setFontFamilyOpen(false);
@@ -295,8 +328,13 @@ export default function SettingsScreen() {
       const loadedEmail =
         result.email ?? "";
 
+      const loadedEmailNotifications =
+        result.emailNotifications ?? true;
+
       setUsername(loadedUsername);
       setEmail(loadedEmail);
+      setEmailNotifications(loadedEmailNotifications);
+      setSavedEmailNotifications(loadedEmailNotifications);
 
       setEditUsername(loadedUsername);
       setEditEmail(loadedEmail);

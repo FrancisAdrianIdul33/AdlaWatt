@@ -323,7 +323,9 @@ export async function getCurrentUserProfile() {
         const { data: profile, error: profileError } =
             await supabase
                 .from("users")
-                .select("id, username, email, terms_agreed, created_at")
+                .select(
+                    "id, username, email, terms_agreed, created_at, email_notifications",
+                )
                 .eq("id", user.id)
                 .single();
 
@@ -347,6 +349,10 @@ export async function getCurrentUserProfile() {
             email: profile?.email ?? user.email ?? "",
             termsAgreed: profile?.terms_agreed ?? false,
             createdAt: profile?.created_at ?? null,
+            // Global alert-email preference; default ON for
+            // legacy rows where the column reads null.
+            emailNotifications:
+                profile?.email_notifications ?? true,
         };
     } catch (error) {
         if (isAuthSessionMissingError(error)) {

@@ -434,13 +434,39 @@ const maybeSendAlertEmail = (
   }
 
   void getAuthenticatedUser()
-    .then((user) => {
+    .then(async (user) => {
       if (
         !user ||
         user.id !== userId ||
         !user.email
       ) {
         return;
+      }
+
+      // Global per-user email switch (preferences modal,
+      // default ON). OFF skips the send silently — in-app
+      // rows above are unaffected. Fail-open on read errors
+      // so a lookup hiccup never swallows a safety alert.
+      try {
+        const { data: prefs } = await supabase
+          .from("users")
+          .select("email_notifications")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (
+          prefs &&
+          (prefs as { email_notifications?: boolean | null })
+            .email_notifications === false
+        ) {
+          console.debug(
+            `[alert-email] skipped for "${rule.title}" (email notifications off).`,
+          );
+
+          return;
+        }
+      } catch {
+        // Fail-open: fall through to send.
       }
 
       return sendAlertEmail({
