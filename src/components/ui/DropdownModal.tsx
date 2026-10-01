@@ -32,6 +32,8 @@ interface DropdownModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  showCloseButton?: boolean;
+  dismissOnOverlayPress?: boolean;
 }
 
 export function DropdownModal({
@@ -39,6 +41,8 @@ export function DropdownModal({
   title,
   onClose,
   children,
+  showCloseButton = true,
+  dismissOnOverlayPress = true,
 }: DropdownModalProps) {
   const colors = useAppColors();
   const dropdownModalStyles = useMemo(
@@ -50,11 +54,17 @@ export function DropdownModal({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={
+        showCloseButton ? onClose : () => {}
+      }
     >
       <Pressable
         style={dropdownModalStyles.overlay}
-        onPress={onClose}
+        onPress={
+          dismissOnOverlayPress
+            ? onClose
+            : undefined
+        }
       >
         <Pressable
           style={dropdownModalStyles.card}
@@ -79,18 +89,20 @@ export function DropdownModal({
               {title}
             </AppText>
 
-            <Pressable
-              onPress={onClose}
-              style={dropdownModalStyles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <Ionicons
-                name="close-outline"
-                size={22}
-                color={colors.text}
-              />
-            </Pressable>
+            {showCloseButton && (
+              <Pressable
+                onPress={onClose}
+                style={dropdownModalStyles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Ionicons
+                  name="close-outline"
+                  size={22}
+                  color={colors.text}
+                />
+              </Pressable>
+            )}
           </View>
 
           {children}

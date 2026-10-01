@@ -17,6 +17,8 @@ import AuthWarning from "@/components/layout/AuthWarning";
 import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";
 import AppText from "@/components/ui/AppText";
+import { DropdownModal } from "@/components/ui/DropdownModal";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppColors } from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
@@ -401,13 +403,38 @@ export default function RegisterScreen() {
 
           <AuthWarning message={warning} />
 
-          {confirmationPending ? (
-            <View style={styles.confirmationBox}>
-              <AppText style={styles.confirmationTitle}>
-                Check your email
-              </AppText>
+          <AppButton
+            title={
+              loading
+                ? "Creating Account..."
+                : "Create Account"
+            }
+            onPress={handleRegister}
+            disabled={loading}
+            style={styles.createButton}
+          />
 
-              <AppText style={styles.confirmationText}>
+          <DropdownModal
+            visible={confirmationPending}
+            title="Check your email"
+            showCloseButton={false}
+            dismissOnOverlayPress={false}
+            onClose={() => {}}
+          >
+            <View style={styles.confirmationBody}>
+              <View
+                style={styles.mailIconWrap}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={48}
+                  color={colors.primary}
+                />
+              </View>
+
+              <AppText
+                style={styles.confirmationText}
+              >
                 We sent a confirmation link to{" "}
                 {confirmationEmail}. Click the link to
                 verify your account, then sign in.
@@ -450,18 +477,7 @@ export default function RegisterScreen() {
                 </AppText>
               </Pressable>
             </View>
-          ) : (
-            <AppButton
-              title={
-                loading
-                  ? "Creating Account..."
-                  : "Create Account"
-              }
-              onPress={handleRegister}
-              disabled={loading}
-              style={styles.createButton}
-            />
-          )}
+          </DropdownModal>
         </View>
 
         <AuthFooter
@@ -536,14 +552,16 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
 
-  confirmationBox: {
+  confirmationBody: {
     width: "100%",
+    alignItems: "center",
   },
 
-  confirmationTitle: {
-    textAlign: "center",
-    fontWeight: "700",
-    marginBottom: Spacing.xs,
+  mailIconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    marginBottom: Spacing.sm,
   },
 
   confirmationText: {
