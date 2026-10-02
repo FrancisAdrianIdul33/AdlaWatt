@@ -390,7 +390,7 @@ export default function AnalyticsScreen() {
               styles.headerTitle
             }
           >
-            Analytics
+            Analytics & Trends
           </AppText>
 
           <AppText
