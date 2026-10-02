@@ -1,6 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
 
 import AppText from "@/components/ui/AppText";
 import {
@@ -13,12 +17,14 @@ interface EmptyStateProps {
   title?: string;
   description?: string;
   icon?: keyof typeof Ionicons.glyphMap;
+  style?: ViewStyle;
 }
 
 export default function EmptyState({
   title = "No Activity Logs",
   description = "No activities match the selected filters.",
   icon = "document-text-outline",
+  style,
 }: EmptyStateProps) {
   const colors = useAppColors();
   const styles = useMemo(
@@ -26,7 +32,7 @@ export default function EmptyState({
     [colors],
   );
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <Ionicons
         name={icon}
         size={42}

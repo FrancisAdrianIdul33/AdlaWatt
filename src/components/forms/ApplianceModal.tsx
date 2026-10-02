@@ -20,6 +20,7 @@ import {
 } from "@/components/forms/applianceCard";
 import CustomApplianceModal from "@/components/forms/CustomApplianceModal";
 import AppText from "@/components/ui/AppText";
+import EmptyState from "@/components/ui/EmptyState";
 import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
@@ -194,6 +195,11 @@ export default function ApplianceModal({
   const [successMessage, setSuccessMessage] =
     useState("");
 
+  // True while custom appliances are being fetched, so the
+  // section can show a loading state instead of flashing empty.
+  const [isLoadingCustoms, setIsLoadingCustoms] =
+    useState(false);
+
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
 
@@ -227,11 +233,14 @@ export default function ApplianceModal({
   // ============================================================
 
   const loadAppliances = async () => {
+    setIsLoadingCustoms(true);
+
     const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       setAppliances([]);
       setArchivedCount(0);
+      setIsLoadingCustoms(false);
       return;
     }
 
@@ -248,6 +257,7 @@ export default function ApplianceModal({
         "Failed to load appliances:",
         error.message,
       );
+      setIsLoadingCustoms(false);
       return;
     }
 
@@ -299,6 +309,7 @@ export default function ApplianceModal({
           item.archive === true,
       ).length,
     );
+    setIsLoadingCustoms(false);
   };
 
   // ============================================================
@@ -958,6 +969,15 @@ export default function ApplianceModal({
           .includes(normalizedSearch),
     );
 
+  // Customs visible in the section. Loading/empty states own
+  // this list only when not searching; search results keep the
+  // previous hide-when-no-match behavior.
+  const customAppliances = filteredAppliances.filter(
+    (item) => item.area === CUSTOM_AREA,
+  );
+
+  const showCustomStates = normalizedSearch === "";
+
   // ============================================================
   // SELECT ALL (UNION-VISIBLE)
   // ============================================================
@@ -1129,12 +1149,9 @@ export default function ApplianceModal({
               </View>
             ) : null}
 
-            {/* Custom Appliances */}
-            {filteredAppliances.some(
-              (item) =>
-                item.area ===
-                "Custom Appliances",
-            ) && (
+            {/* Custom Appliances (header always shows) */}
+            {(showCustomStates ||
+              customAppliances.length > 0) && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <AppText
@@ -1155,53 +1172,66 @@ export default function ApplianceModal({
                     />
                   </View>
 
-                  <View style={styles.grid}>
-                    {filteredAppliances
-                      .filter(
-                        (item) =>
-                          item.area ===
-                          "Custom Appliances",
-                      )
-                      .map((appliance) => {
-                        const isSelected =
-                          selected.includes(
-                            appliance.id,
-                          );
+                  {isLoadingCustoms &&
+                  showCustomStates ? (
+                    <EmptyState
+                      title="Loading Custom Appliances"
+                      description="Fetching your custom appliances…"
+                      icon="sync-outline"
+                      style={styles.customState}
+                    />
+                  ) : customAppliances.length > 0 ? (
+                    <View style={styles.grid}>
+                      {customAppliances.map(
+                        (appliance) => {
+                          const isSelected =
+                            selected.includes(
+                              appliance.id,
+                            );
 
-                        return (
-                          <ApplianceBox
-                            key={appliance.id}
-                            name={appliance.name}
-                            wattage={appliance.watts}
-                            color={
-                              colors.primary
-                            }
-                            selected={isSelected}
-                            isCustom
-                            onPress={() =>
-                              toggleAppliance(
-                                appliance.id,
-                              )
-                            }
-                            onEdit={() =>
-                              openCustomEditor(
-                                appliance,
-                              )
-                            }
-                            onDelete={() =>
-                              handleCustomDelete(
-                                appliance.id,
-                              )
-                            }
-                            onArchive={() =>
-                              handleCustomArchive(
-                                appliance.id,
-                              )
-                            }
-                          />
-                        );
-                      })}
-                  </View>
+                          return (
+                            <ApplianceBox
+                              key={appliance.id}
+                              name={appliance.name}
+                              wattage={appliance.watts}
+                              color={
+                                colors.primary
+                              }
+                              selected={isSelected}
+                              isCustom
+                              onPress={() =>
+                                toggleAppliance(
+                                  appliance.id,
+                                )
+                              }
+                              onEdit={() =>
+                                openCustomEditor(
+                                  appliance,
+                                )
+                              }
+                              onDelete={() =>
+                                handleCustomDelete(
+                                  appliance.id,
+                                )
+                              }
+                              onArchive={() =>
+                                handleCustomArchive(
+                                  appliance.id,
+                                )
+                              }
+                            />
+                          );
+                        },
+                      )}
+                    </View>
+                  ) : showCustomStates ? (
+                    <EmptyState
+                      title="No Custom Appliances"
+                      description="You haven't added any yet. Tap Add Custom Appliance above to create one."
+                      icon="cube-outline"
+                      style={styles.customState}
+                    />
+                  ) : null}
                 </View>
               )}
 
@@ -1547,6 +1577,15 @@ const getStyles = (colors: AppColors) =>
     height: 3,
     borderRadius: 2,
     marginTop: 2,
+  },
+
+  // Loading/empty state card for the custom section. Matches
+  // the custom appliance box outer height (boxCustom 234) so
+  // both share one silhouette, plus breathing room before the
+  // next section header (stacks with the section margin).
+  customState: {
+    minHeight: 234,
+    marginBottom: Spacing.md,
   },
 
   customButton: {
