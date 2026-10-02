@@ -9,7 +9,6 @@ import type {
 import {
   classifyBatteryState,
   computeWattCap,
-  parseWattageRange,
 } from "@/services/recommendation";
 import { sendAlertEmail } from "@/services/alertEmailService";
 
@@ -1718,23 +1717,34 @@ const checkAppliancesBecameAdvisable = async (
     return;
   }
 
-  const { count, error } = await supabase
-    .from("appliances")
-    .select("app_id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("selection", true);
-
-  if (error) {
-    console.error(
-      "Appliances-became-advisable check error:",
-      error.message,
+  try {
+    const { fetchSelectedAppliances } = await import(
+      "@/services/appliancesService"
     );
+    const resolved = await fetchSelectedAppliances();
 
-    return;
-  }
+    if (resolved.length <= 0) {
+      return;
+    }
+  } catch {
+    const { count, error } = await supabase
+      .from("appliances")
+      .select("app_id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("selection", true);
 
-  if ((count ?? 0) <= 0) {
-    return;
+    if (error) {
+      console.error(
+        "Appliances-became-advisable check error:",
+        error.message,
+      );
+
+      return;
+    }
+
+    if ((count ?? 0) <= 0) {
+      return;
+    }
   }
 
   await createNotification(
@@ -1770,27 +1780,54 @@ const checkHighLoadWhileBatteryLow = async (
     return;
   }
 
-  const { data, error } = await supabase
-    .from("appliances")
-    .select("wattage")
-    .eq("user_id", userId)
-    .eq("selection", true);
+  let combinedMidWatts = 0;
 
-  if (error) {
-    console.error(
-      "High-load-while-low check error:",
-      error.message,
+  try {
+    const { fetchSelectedAppliances } = await import(
+      "@/services/appliancesService"
     );
+    const resolved = await fetchSelectedAppliances();
 
-    return;
+    combinedMidWatts = resolved.reduce(
+      (total, item) => total + (item.wattMin + item.wattMax) / 2,
+      0,
+    );
+  } catch {
+    const { data, error } = await supabase
+      .from("appliances")
+      .select("wattage_min, wattage_max")
+      .eq("user_id", userId)
+      .eq("selection", true);
+
+    if (error) {
+      console.error(
+        "High-load-while-low check error:",
+        error.message,
+      );
+
+      return;
+    }
+
+    combinedMidWatts = (data ?? []).reduce((total, row) => {
+      const min = Number(
+        (row as { wattage_min?: unknown }).wattage_min,
+      );
+      const max = Number(
+        (row as { wattage_max?: unknown }).wattage_max,
+      );
+
+      if (
+        !Number.isFinite(min) ||
+        !Number.isFinite(max) ||
+        min <= 0 ||
+        max < min
+      ) {
+        return total;
+      }
+
+      return total + (min + max) / 2;
+    }, 0);
   }
-
-  const combinedMidWatts = (data ?? []).reduce(
-    (total, row) =>
-      total +
-      (parseWattageRange(row.wattage)?.mid ?? 0),
-    0,
-  );
 
   if (combinedMidWatts <= 0) {
     return;

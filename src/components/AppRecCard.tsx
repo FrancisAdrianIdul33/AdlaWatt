@@ -290,6 +290,27 @@ export default function AppRecCard({
   // ============================================
 
   const loadAppliances = async () => {
+    try {
+      const { fetchSelectedAppliances } = await import(
+        "@/services/appliancesService"
+      );
+      const resolved = await fetchSelectedAppliances();
+
+      setHasSelectedAppliances(resolved.length > 0);
+      setAppliances(
+        resolved.map((item) => ({
+          id: item.appId ?? item.id,
+          name: item.name,
+          watts: item.display,
+          status: "advisable",
+        })),
+      );
+
+      return;
+    } catch {
+      // Fall back to legacy direct query below.
+    }
+
     const user = await getAuthenticatedUserSafe();
 
     if (!user) {
@@ -302,7 +323,7 @@ export default function AppRecCard({
       await supabase
         .from("appliances")
         .select(
-          "app_id, appliance_name, wattage, selection",
+          "app_id, appliance_name, wattage_min, wattage_max, selection",
         )
         .eq("user_id", user.id)
         .order("appliance_name");
@@ -328,12 +349,24 @@ export default function AppRecCard({
     );
 
     const mapped: Appliance[] =
-      selectedRows.map((item) => ({
-        id: item.app_id,
-        name: item.appliance_name,
-        watts: item.wattage,
-        status: "advisable",
-      }));
+      selectedRows.map((item) => {
+        const min = Number(item.wattage_min);
+        const max = Number(item.wattage_max);
+        const watts =
+          Number.isFinite(min) &&
+          Number.isFinite(max) &&
+          min > 0 &&
+          max >= min
+            ? `${min}-${max}W`
+            : "";
+
+        return {
+          id: item.app_id,
+          name: item.appliance_name,
+          watts,
+          status: "advisable",
+        };
+      });
 
     setAppliances(mapped);
   };
