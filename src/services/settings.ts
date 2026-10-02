@@ -88,3 +88,85 @@ export async function saveTypographyPreferences(
     // Intentionally ignored.
   }
 }
+
+// ============================================================
+// EMAIL NOTIFICATION SWITCH (v1)
+//
+// Last CONFIRMED value of the global per-user alert-email
+// switch, so the preferences toggle holds ON or OFF through
+// offline stretches and failed fetches instead of falling
+// back to the ON default (which phantom-flipped intentional
+// OFF values the next time anything was saved).
+//
+// Writes happen only on successful server load/save. Reads
+// prefer the per-user key, then the device-level last-known
+// key (covers offline sign-in where the user id is unknown
+// and shared devices between accounts).
+// ============================================================
+
+const EMAIL_NOTIFICATIONS_KEY =
+  "adlawatt.email_notifications.v1";
+
+const scopedEmailKey = (userId: string): string =>
+  `${EMAIL_NOTIFICATIONS_KEY}:${userId}`;
+
+function parseEmailFlag(value: unknown): boolean | null {
+  if (value === "1" || value === true) {
+    return true;
+  }
+
+  if (value === "0" || value === false) {
+    return false;
+  }
+
+  return null;
+}
+
+export async function loadCachedEmailNotifications(
+  userId?: string | null,
+): Promise<boolean | null> {
+  try {
+    if (userId) {
+      const scoped = parseEmailFlag(
+        await AsyncStorage.getItem(
+          scopedEmailKey(userId),
+        ),
+      );
+
+      if (scoped !== null) {
+        return scoped;
+      }
+    }
+
+    return parseEmailFlag(
+      await AsyncStorage.getItem(EMAIL_NOTIFICATIONS_KEY),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCachedEmailNotifications(
+  value: boolean,
+  userId?: string | null,
+): Promise<void> {
+  // Best-effort like typography: the UI already holds the
+  // confirmed value, so a blocked store must not break flow.
+  try {
+    const raw = value ? "1" : "0";
+
+    if (userId) {
+      await AsyncStorage.setItem(
+        scopedEmailKey(userId),
+        raw,
+      );
+    }
+
+    await AsyncStorage.setItem(
+      EMAIL_NOTIFICATIONS_KEY,
+      raw,
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}

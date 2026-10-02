@@ -43,7 +43,7 @@ import {
   logSettings,
 } from "@/services/activityLogService";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -54,6 +54,10 @@ import {
   type FontFamilyOption,
   type FontSizeOption,
 } from "@/services/typography";
+import {
+  loadCachedEmailNotifications,
+  saveCachedEmailNotifications,
+} from "@/services/settings";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -287,6 +291,11 @@ export default function SettingsScreen() {
         }
 
         setSavedEmailNotifications(emailNotifications);
+
+        await saveCachedEmailNotifications(
+          emailNotifications,
+          emailProfile.userId,
+        );
       }
 
       // Theme last: the flip re-renders screens, so it
@@ -308,6 +317,27 @@ export default function SettingsScreen() {
   // ============================================
   // LOAD ACCOUNT PROFILE
   // ============================================
+
+  // Strong switch: paint the last confirmed email value
+  // from cache instantly, so an offline open never flashes
+  // the ON default. The server load below overwrites this
+  // on success and refreshes the cache.
+  useEffect(() => {
+    const hydrateEmailSwitch = async () => {
+      const user = await getAuthenticatedUserSafe();
+
+      const cached = await loadCachedEmailNotifications(
+        user?.id ?? null,
+      );
+
+      if (cached !== null) {
+        setEmailNotifications(cached);
+        setSavedEmailNotifications(cached);
+      }
+    };
+
+    hydrateEmailSwitch();
+  }, []);
 
   useEffect(() => {
     const loadAccount = async () => {
@@ -335,6 +365,11 @@ export default function SettingsScreen() {
       setEmail(loadedEmail);
       setEmailNotifications(loadedEmailNotifications);
       setSavedEmailNotifications(loadedEmailNotifications);
+
+      await saveCachedEmailNotifications(
+        loadedEmailNotifications,
+        result.userId,
+      );
 
       setEditUsername(loadedUsername);
       setEditEmail(loadedEmail);
