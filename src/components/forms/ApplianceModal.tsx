@@ -11,7 +11,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 
@@ -40,7 +39,6 @@ import {
   Typography,
 } from "@/constants/theme";
 import { Control, Field, Touch } from "@/constants/sizing";
-import { useTypography } from "@/hooks/useTypography";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
@@ -69,6 +67,11 @@ type ApplianceModalProps = {
  *               wattage_min/max from GIVEN_CATALOG }
  *  - custom = { catalog_key NULL, wattage_min/max interval }
  * Catalog wattage/area always come from GIVEN_CATALOG in code.
+ *
+ * v6 archive flag: archive = true means archived (hidden).
+ * The DB trigger stores archive := NOT selection, so only
+ * selected customs (archive = false) are listed. Deselecting
+ * archives the row at once. An archives viewer is future work.
  */
 const toFiniteNumber = (value: unknown): number | null => {
   const num =
@@ -173,10 +176,10 @@ export default function ApplianceModal({
   const [searchText, setSearchText] =
     useState("");
 
-  const [customVisible, setCustomVisible] =
+  const [addModalVisible, setAddModalVisible] =
     useState(false);
 
-  const [addModalVisible, setAddModalVisible] =
+  const [editModalVisible, setEditModalVisible] =
     useState(false);
 
   const [customName, setCustomName] =
@@ -197,13 +200,13 @@ export default function ApplianceModal({
   const [isReset, setIsReset] =
     useState(false);
 
-  // Customs the user created but left unselected
-  // (archive = false through the DB trigger).
+  // Customs the user archived (archive = true through
+  // the DB trigger). Archived rows are hidden from the list
+  // until the archives viewer lands.
   const [archivedCount, setArchivedCount] =
     useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
-  const customFormY = useRef(0);
 
   const colors = useAppColors();
 
@@ -218,15 +221,6 @@ export default function ApplianceModal({
     area === "Custom Appliances"
       ? colors.primary
       : getAreaColor(area, colors.border);
-
-  const { scaledSize, family, weight } =
-    useTypography();
-
-  const inputFontStyle = {
-    fontSize: scaledSize(14),
-    fontFamily: family,
-    fontWeight: weight,
-  };
 
   // ============================================================
   // LOAD APPLIANCES
@@ -267,8 +261,14 @@ export default function ApplianceModal({
       )
       .map((item) => String(item.catalog_key));
 
+    // Archived customs (archive = true) are hidden from
+    // the list until the archives viewer lands.
     const customs: Appliance[] = rows
-      .filter((item) => item.type === "custom")
+      .filter(
+        (item) =>
+          item.type === "custom" &&
+          item.archive !== true,
+      )
       .map((item) => ({
         id: String(item.app_id),
         name: String(item.appliance_name),
@@ -296,7 +296,7 @@ export default function ApplianceModal({
       rows.filter(
         (item) =>
           item.type === "custom" &&
-          item.selection !== true,
+          item.archive === true,
       ).length,
     );
   };
@@ -319,7 +319,7 @@ export default function ApplianceModal({
 
     setSelected([]);
     setSearchText("");
-    setCustomVisible(false);
+    setEditModalVisible(false);
     setAddModalVisible(false);
     setCustomName("");
     setCustomWatts("");
@@ -376,12 +376,13 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
-    setCustomVisible(false);
+    setEditModalVisible(false);
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
     // Catalog picks are deleted; every remaining custom
-    // becomes unselected (archived) through the DB trigger.
+    // becomes archive = true (hidden) through the DB trigger.
+    setAppliances([]);
     setArchivedCount(appliances.length);
 
     logAppliance.selectionReset();
@@ -446,15 +447,15 @@ export default function ApplianceModal({
   };
 
   // ============================================================
-  // CANCEL CUSTOM FORM
+  // CANCEL EDIT MODAL
   // ============================================================
 
-  const handleCustomCancel = () => {
+  const handleEditCancel = () => {
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
     setEditingCustom(null);
-    setCustomVisible(false);
+    setEditModalVisible(false);
   };
 
   // ============================================================
@@ -559,7 +560,10 @@ export default function ApplianceModal({
         type: "custom",
         wattage_min: interval.min,
         wattage_max: interval.max,
-        selection: false,
+        // New customs start selected: under the v6 archive
+        // flag an unselected row would be archive = true and
+        // hidden from the list at once.
+        selection: true,
       })
       .select(
         "app_id, appliance_name, wattage_min, wattage_max",
@@ -596,6 +600,10 @@ export default function ApplianceModal({
     setAppliances((current) => [
       ...current,
       appliance,
+    ]);
+
+    setSelected((current) => [
+      ...new Set([...current, appliance.id]),
     ]);
 
     setCustomName("");
@@ -744,7 +752,7 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
-    setCustomVisible(false);
+    setEditModalVisible(false);
 
     setSuccessMessage(
       `${name} successfully updated!`,
@@ -811,7 +819,84 @@ export default function ApplianceModal({
   };
 
   // ============================================================
-  // OPEN CUSTOM EDITOR
+  // ARCHIVE CUSTOM APPLIANCE
+  // ============================================================
+  //
+  // Deselecting stores archive = true through the v6 DB
+  // trigger, which hides the row from the list at once.
+  // Recovery waits for the archives viewer.
+  // ============================================================
+
+  const handleCustomArchive = async (
+    id: string,
+  ) => {
+    const user = await getAuthenticatedUserSafe();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to archive an appliance.",
+      );
+      return;
+    }
+
+    const target = appliances.find(
+      (item) => item.id === id,
+    );
+
+    const { error } = await supabase
+      .from("appliances")
+      .update({
+        selection: false,
+      })
+      .eq("app_id", id)
+      .eq("user_id", user.id)
+      .eq("type", "custom");
+
+    if (error) {
+      console.error(
+        "Custom appliance archive error:",
+        error.message,
+      );
+
+      setCustomError(
+        "Unable to archive appliance. Please try again.",
+      );
+
+      return;
+    }
+
+    const name =
+      target?.name ?? "Custom appliance";
+
+    setAppliances((current) =>
+      current.filter((item) => item.id !== id),
+    );
+
+    setSelected((current) =>
+      current.filter((item) => item !== id),
+    );
+
+    setArchivedCount(
+      (current) => current + 1,
+    );
+
+    logAppliance.archived(name);
+
+    setSuccessMessage(
+      `${name} archived.`,
+    );
+
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 5000);
+  };
+
+  // ============================================================
+  // OPEN CUSTOM EDITOR (EDIT MODAL)
+  // ============================================================
+  //
+  // Opens the shared add/edit dialog prefilled with the custom
+  // appliance values, using the exact same layout as adding.
   // ============================================================
 
   const openCustomEditor = (
@@ -825,17 +910,7 @@ export default function ApplianceModal({
     );
 
     setCustomError("");
-    setCustomVisible(true);
-
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(
-          customFormY.current - 20,
-          0,
-        ),
-        animated: true,
-      });
-    });
+    setEditModalVisible(true);
   };
 
   // ============================================================
@@ -1036,106 +1111,6 @@ export default function ApplianceModal({
               </Pressable>
             </View>
 
-            {/* Custom Form (Edit-only, inline) */}
-            {customVisible && editingCustom && (
-              <View
-                style={styles.customForm}
-                onLayout={(event) => {
-                  customFormY.current =
-                    event.nativeEvent.layout.y;
-                }}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.infoNote}
-                >
-                  Check the appliance wattage first, for
-                  example, soldering wire may use 15-25W.
-                </AppText>
-
-                <TextInput
-                  value={customName}
-                  onChangeText={(text) => {
-                    setCustomName(text);
-                    setCustomError("");
-                  }}
-                  placeholder="Enter valid appliance name"
-                  placeholderTextColor={
-                    colors.textSecondary
-                  }
-                  allowFontScaling={false}
-                  style={[styles.input, inputFontStyle]}
-                />
-
-                <TextInput
-                  value={customWatts}
-                  onChangeText={(text) => {
-                    const value = text.replace(
-                      /[^\d.-]/g,
-                      "",
-                    );
-
-                    setCustomWatts(value);
-                    setCustomError("");
-                  }}
-                  placeholder="Enter wattage like 15-25"
-                  placeholderTextColor={
-                    colors.textSecondary
-                  }
-                  allowFontScaling={false}
-                  style={[styles.input, inputFontStyle]}
-                  keyboardType="numeric"
-                />
-
-                {customError ? (
-                  <AppText
-                    variant="caption"
-                    style={styles.customError}
-                  >
-                    {customError}
-                  </AppText>
-                ) : null}
-
-                <View style={styles.customActions}>
-                  <Pressable
-                    onPress={handleCustomCancel}
-                    style={({ pressed }) => [
-                      styles.customAction,
-                      styles.cancelAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={styles.cancelText}
-                    >
-                      Cancel
-                    </AppText>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={handleCustomUpdate}
-                    disabled={
-                      !customName.trim() ||
-                      !customWatts.trim()
-                    }
-                    style={({ pressed }) => [
-                      styles.customAction,
-                      styles.addAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={styles.addText}
-                    >
-                      Save
-                    </AppText>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
             {/* Success Message */}
             {successMessage ? (
               <View style={styles.successPanel}>
@@ -1215,6 +1190,11 @@ export default function ApplianceModal({
                             }
                             onDelete={() =>
                               handleCustomDelete(
+                                appliance.id,
+                              )
+                            }
+                            onArchive={() =>
+                              handleCustomArchive(
                                 appliance.id,
                               )
                             }
@@ -1430,6 +1410,30 @@ export default function ApplianceModal({
           onCancel={handleAddCancel}
           onAdd={handleCustomAdd}
         />
+
+        <CustomApplianceModal
+          visible={editModalVisible}
+          mode="edit"
+          name={customName}
+          watts={customWatts}
+          error={customError}
+          onNameChange={(text) => {
+            setCustomName(text);
+            setCustomError("");
+          }}
+          onWattsChange={(text) => {
+            const value = text.replace(
+              /[^\d.-]/g,
+              "",
+            );
+
+            setCustomWatts(value);
+            setCustomError("");
+          }}
+          onCancel={handleEditCancel}
+          onAdd={handleCustomAdd}
+          onSave={handleCustomUpdate}
+        />
       </View>
     </Modal>
   );
@@ -1561,22 +1565,6 @@ const getStyles = (colors: AppColors) =>
     fontSize: 14,
   },
 
-  customForm: {
-    gap: 8,
-    marginTop: 9,
-  },
-
-  input: {
-    minHeight: Field.minHeight,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: Radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    color: colors.text,
-    fontSize: 14,
-  },
-
   grid: applianceCardGrid,
 
   searchRow: {
@@ -1683,54 +1671,6 @@ const getStyles = (colors: AppColors) =>
   buttonPressed: {
     backgroundColor: colors.glass.whiteStrong,
     opacity: 1,
-  },
-
-  customActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 15,
-    marginTop: 10,
-  },
-
-  customAction: {
-    flex: 1,
-    minHeight: Control.button,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderRadius: Radius.md,
-  },
-
-  cancelAction: {
-    borderColor: colors.error,
-  },
-
-  addAction: {
-    borderColor: colors.primary,
-  },
-
-  cancelText: {
-    color: colors.error,
-    fontWeight: "700",
-  },
-
-  addText: {
-    color: colors.accentContent,
-    fontWeight: "700",
-  },
-
-  infoNote: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 2,
-  },
-
-  customError: {
-    color: colors.error,
-    fontSize: 12,
-    fontWeight: "600",
   },
 
   successPanel: {
