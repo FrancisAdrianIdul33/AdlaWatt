@@ -24,6 +24,11 @@ import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
+import {
+  CUSTOM_AREA,
+  GIVEN_CATALOG,
+  type CatalogItem,
+} from "@/constants/applianceCatalog";
 import { logAppliance } from "@/services/activityLogService";
 import {
   useAppColors,
@@ -59,16 +64,66 @@ type ApplianceModalProps = {
 };
 
 /*
- * Database area -> UI area
+ * v5 schema: DB holds user picks only, no wattage column.
+ *  - given  = { catalog_key LIKE 'catalog:%',
+ *               wattage_min/max from GIVEN_CATALOG }
+ *  - custom = { catalog_key NULL, wattage_min/max interval }
+ * Catalog wattage/area always come from GIVEN_CATALOG in code.
  */
-const databaseToUiArea: Record<string, string> = {
-  "Living Area": "Living Area",
-  "Bedroom": "Bedroom",
-  "Kitchen & Dining Area": "Kitchen Area",
-  "Work & Study Area": "Work/Study Area",
-  "Bathroom & Laundry Area": "Bathroom Area",
-  "Porch & Yard": "Porch",
-  "Custom Appliances": "Custom Appliances",
+const toFiniteNumber = (value: unknown): number | null => {
+  const num =
+    typeof value === "number"
+      ? value
+      : Number(String(value ?? "").replace(/W$/i, "").trim());
+
+  return Number.isFinite(num) && num > 0 ? num : null;
+};
+
+const formatIntervalWatts = (
+  min: number,
+  max: number,
+): string => `${min}-${max}W`;
+
+const formatCustomWatts = (
+  wattMin: unknown,
+  wattMax: unknown,
+): string => {
+  const min = toFiniteNumber(wattMin);
+  const max = toFiniteNumber(wattMax);
+
+  if (min !== null && max !== null && max >= min) {
+    return formatIntervalWatts(min, max);
+  }
+
+  return "";
+};
+
+/* Parses "15-25" / "15 - 25" / "15.5-25.5" into { min, max }. */
+const parseWattInterval = (
+  raw: string,
+): { min: number; max: number } | null => {
+  const match = raw.match(
+    /^(\d+(?:\.\d{1,2})?)\s*-\s*(\d+(?:\.\d{1,2})?)$/,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const min = Number(match[1]);
+  const max = Number(match[2]);
+
+  if (
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    min < 1 ||
+    max > 720 ||
+    min > max
+  ) {
+    return null;
+  }
+
+  return { min, max };
 };
 
 /*
@@ -88,69 +143,6 @@ const getAreaColor = (
   fallback: string,
 ) =>
   areaColors[area] ?? fallback;
-
-/*
- * GIVEN CATALOG (code copy of SQL §7 inserts)
- *
- * Phase 1 transfer: predefined appliances live here so the
- * table can later drop its given-row inserts. Display stays
- * "min-maxW" to keep parseWattageRange + validators working.
- * Keys are namespaced catalog: — never collides with
- * String(app_id) customs. DB still seeds givens until the
- * insert-less SQL lands (deduped by name at render).
- */
-
-type CatalogItem = {
-  key: string;
-  name: string;
-  wattMin: number;
-  wattMax: number;
-  display: string;
-  uiArea: string;
-};
-
-const catalogDisplay = (
-  min: number,
-  max: number,
-): string => `${min}-${max}W`;
-
-const GIVEN_CATALOG: CatalogItem[] = [
-  // Living Area
-  { key: "catalog:living:stand-fan", name: "Stand Fan / Desk Fan", wattMin: 35, wattMax: 75, display: catalogDisplay(35, 75), uiArea: "Living Area" },
-  { key: "catalog:living:led-tv", name: '32" to 43" LED Smart TV', wattMin: 30, wattMax: 80, display: catalogDisplay(30, 80), uiArea: "Living Area" },
-  { key: "catalog:living:router", name: "Wi-Fi Router / Fiber Modem", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Living Area" },
-  { key: "catalog:living:tv-box", name: "Digital TV Box", wattMin: 5, wattMax: 15, display: catalogDisplay(5, 15), uiArea: "Living Area" },
-  { key: "catalog:living:speaker", name: "Portable Bluetooth Speaker / Mini Soundbar", wattMin: 10, wattMax: 50, display: catalogDisplay(10, 50), uiArea: "Living Area" },
-  { key: "catalog:living:bulb", name: "LED Bulb / Ceiling Light", wattMin: 7, wattMax: 15, display: catalogDisplay(7, 15), uiArea: "Living Area" },
-  // Bedroom
-  { key: "catalog:bedroom:wall-fan", name: "Wall Fan / Clip Fan", wattMin: 25, wattMax: 50, display: catalogDisplay(25, 50), uiArea: "Bedroom" },
-  { key: "catalog:bedroom:phone-charger", name: "Smartphone Fast Charger", wattMin: 10, wattMax: 33, display: catalogDisplay(10, 33), uiArea: "Bedroom" },
-  { key: "catalog:bedroom:tablet-charger", name: "Tablet Charger", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Bedroom" },
-  { key: "catalog:bedroom:emergency-light", name: "Rechargeable Emergency Light / Flashlight", wattMin: 5, wattMax: 15, display: catalogDisplay(5, 15), uiArea: "Bedroom" },
-  { key: "catalog:bedroom:swatter", name: "Electric Mosquito Swatter / Insect Trap", wattMin: 2, wattMax: 5, display: catalogDisplay(2, 5), uiArea: "Bedroom" },
-  { key: "catalog:bedroom:night-light", name: "LED Night Light", wattMin: 3, wattMax: 9, display: catalogDisplay(3, 9), uiArea: "Bedroom" },
-  // Kitchen Area
-  { key: "catalog:kitchen:refrigerator", name: "Single Door / Small Inverter Refrigerator", wattMin: 60, wattMax: 120, display: catalogDisplay(60, 120), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:rice-cooker", name: "Small Rice Cooker", wattMin: 300, wattMax: 500, display: catalogDisplay(300, 500), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:dispenser", name: "Tabletop Water Dispenser", wattMin: 50, wattMax: 80, display: catalogDisplay(50, 80), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:blender", name: "Basic Kitchen Blender", wattMin: 200, wattMax: 350, display: catalogDisplay(200, 350), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:multi-cooker", name: "Mini Electric Multi-Cooker / Pot", wattMin: 300, wattMax: 500, display: catalogDisplay(300, 500), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:exhaust-fan", name: "Exhaust Fan", wattMin: 20, wattMax: 45, display: catalogDisplay(20, 45), uiArea: "Kitchen Area" },
-  { key: "catalog:kitchen:bulb", name: "LED Light Bulb", wattMin: 9, wattMax: 18, display: catalogDisplay(9, 18), uiArea: "Kitchen Area" },
-  // Work/Study Area
-  { key: "catalog:work:laptop-adapter", name: "Laptop Power Adapter", wattMin: 45, wattMax: 65, display: catalogDisplay(45, 65), uiArea: "Work/Study Area" },
-  { key: "catalog:work:usb-fan", name: "Mini USB / Desk Fan", wattMin: 5, wattMax: 20, display: catalogDisplay(5, 20), uiArea: "Work/Study Area" },
-  { key: "catalog:work:desk-lamp", name: "LED Study Desk Lamp", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Work/Study Area" },
-  { key: "catalog:work:printer", name: "Basic Inkjet Printer", wattMin: 10, wattMax: 30, display: catalogDisplay(10, 30), uiArea: "Work/Study Area" },
-  // Bathroom Area
-  { key: "catalog:bath:washing-machine", name: "Twin-Tub / Single-Tub Washing Machine", wattMin: 150, wattMax: 350, display: catalogDisplay(150, 350), uiArea: "Bathroom Area" },
-  { key: "catalog:bath:clipper", name: "Rechargeable Hair Clipper / Trimmer", wattMin: 5, wattMax: 10, display: catalogDisplay(5, 10), uiArea: "Bathroom Area" },
-  { key: "catalog:bath:bulb", name: "Bathroom LED Bulb", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Bathroom Area" },
-  { key: "catalog:bath:exhaust-fan", name: "Small Exhaust Fan", wattMin: 15, wattMax: 30, display: catalogDisplay(15, 30), uiArea: "Bathroom Area" },
-  // Porch
-  { key: "catalog:porch:bulb", name: "Outdoor Porch LED Bulb", wattMin: 10, wattMax: 20, display: catalogDisplay(10, 20), uiArea: "Porch" },
-  { key: "catalog:porch:cctv", name: "Home CCTV Camera System", wattMin: 5, wattMax: 12, display: catalogDisplay(5, 12), uiArea: "Porch" },
-];
 
 const catalogToAppliance = (
   item: CatalogItem,
@@ -205,6 +197,11 @@ export default function ApplianceModal({
   const [isReset, setIsReset] =
     useState(false);
 
+  // Customs the user created but left unselected
+  // (archive = false through the DB trigger).
+  const [archivedCount, setArchivedCount] =
+    useState(0);
+
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
 
@@ -240,16 +237,16 @@ export default function ApplianceModal({
 
     if (!user) {
       setAppliances([]);
+      setArchivedCount(0);
       return;
     }
 
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, wattage, area, type, status",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
       )
       .eq("user_id", user.id)
-      .order("area")
       .order("appliance_name");
 
     if (error) {
@@ -260,13 +257,47 @@ export default function ApplianceModal({
       return;
     }
 
-    setAppliances(
-      (data ?? []).map((item) => ({
+    const rows = data ?? [];
+
+    const pickedCatalogKeys = rows
+      .filter(
+        (item) =>
+          typeof item.catalog_key === "string" &&
+          item.catalog_key.startsWith("catalog:"),
+      )
+      .map((item) => String(item.catalog_key));
+
+    const customs: Appliance[] = rows
+      .filter((item) => item.type === "custom")
+      .map((item) => ({
         id: String(item.app_id),
         name: String(item.appliance_name),
-        watts: String(item.wattage),
-        area: databaseToUiArea[item.area] ?? item.area,
-      })),
+        watts: formatCustomWatts(
+          item.wattage_min,
+          item.wattage_max,
+        ),
+        area: CUSTOM_AREA,
+      }));
+
+    const selectedCustomIds = rows
+      .filter(
+        (item) =>
+          item.type === "custom" &&
+          item.selection === true,
+      )
+      .map((item) => String(item.app_id));
+
+    setAppliances(customs);
+    setSelected([
+      ...pickedCatalogKeys,
+      ...selectedCustomIds,
+    ]);
+    setArchivedCount(
+      rows.filter(
+        (item) =>
+          item.type === "custom" &&
+          item.selection !== true,
+      ).length,
     );
   };
 
@@ -324,10 +355,9 @@ export default function ApplianceModal({
       return;
     }
 
-    const { error } = await supabase
-      .from("appliances")
-      .update({ selection: false })
-      .eq("user_id", user.id);
+    const { error } = await supabase.rpc(
+      "reset_appliance_selection",
+    );
 
     if (error) {
       console.error(
@@ -350,6 +380,9 @@ export default function ApplianceModal({
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
+    // Catalog picks are deleted; every remaining custom
+    // becomes unselected (archived) through the DB trigger.
+    setArchivedCount(appliances.length);
 
     logAppliance.selectionReset();
   };
@@ -366,36 +399,40 @@ export default function ApplianceModal({
       return;
     }
 
-    const { error: resetError } = await supabase
-      .from("appliances")
-      .update({ selection: false })
-      .eq("user_id", user.id);
+    const selectedSet = new Set(selected);
 
-    if (resetError) {
+    const catalogPicks = GIVEN_CATALOG.filter(
+      (item) => selectedSet.has(item.key),
+    ).map((item) => ({
+      key: item.key,
+      name: item.name,
+      wattMin: item.wattMin,
+      wattMax: item.wattMax,
+    }));
+
+    const customSelected = appliances
+      .filter((item) => selectedSet.has(item.id))
+      .map((item) => item.id);
+
+    const { error: saveError } = await supabase.rpc(
+      "save_appliance_selection",
+      {
+        p_catalog: catalogPicks,
+        p_custom_selected: customSelected,
+      },
+    );
+
+    if (saveError) {
       console.error(
-        "Reset appliance selection error:",
-        resetError.message,
+        "Save appliance selection error:",
+        saveError.message,
+      );
+
+      setCustomError(
+        "Unable to save appliance selection.",
       );
 
       return;
-    }
-
-    if (selected.length > 0) {
-      const { error: selectionError } =
-        await supabase
-          .from("appliances")
-          .update({ selection: true })
-          .eq("user_id", user.id)
-          .in("app_id", selected);
-
-      if (selectionError) {
-        console.error(
-          "Update appliance selection error:",
-          selectionError.message,
-        );
-
-        return;
-      }
     }
 
     const selectedItems = displayAppliances.filter(
@@ -445,7 +482,7 @@ export default function ApplianceModal({
 
   const handleCustomAdd = async () => {
     const name = customName.trim();
-    const watts = customWatts.trim();
+    const wattsRaw = customWatts.trim();
 
     if (
       !/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(
@@ -458,32 +495,18 @@ export default function ApplianceModal({
       return;
     }
 
-    if (!/^\d+-\d+$/.test(watts)) {
+    if (!/^\d+(\.\d{1,2})?\s*-\s*\d+(\.\d{1,2})?$/.test(wattsRaw)) {
       setCustomError(
-        "Enter valid wattage intervals, for example 15-25.",
+        "Enter wattage interval, for example 15-25.",
       );
       return;
     }
 
-    const [minWatts, maxWatts] = watts
-      .split("-")
-      .map(Number);
+    const interval = parseWattInterval(wattsRaw);
 
-    if (
-      minWatts < 1 ||
-      maxWatts < 1 ||
-      minWatts > 720 ||
-      maxWatts > 720
-    ) {
+    if (!interval) {
       setCustomError(
-        "Appliance wattage must not exceed 720W.",
-      );
-      return;
-    }
-
-    if (minWatts > maxWatts) {
-      setCustomError(
-        "Enter a valid wattage interval.",
+        "Enter a valid wattage interval between 1W and 720W.",
       );
       return;
     }
@@ -533,14 +556,13 @@ export default function ApplianceModal({
       .insert({
         user_id: user.id,
         appliance_name: name,
-        wattage: `${watts}W`,
-        area: "Custom Appliances",
         type: "custom",
+        wattage_min: interval.min,
+        wattage_max: interval.max,
         selection: false,
-        status: true,
       })
       .select(
-        "app_id, appliance_name, wattage, area",
+        "app_id, appliance_name, wattage_min, wattage_max",
       )
       .single();
 
@@ -558,15 +580,18 @@ export default function ApplianceModal({
     }
 
     const appliance: Appliance = {
-      id: data.app_id,
-      name: data.appliance_name,
-      watts: data.wattage,
-      area: "Custom Appliances",
+      id: String(data.app_id),
+      name: String(data.appliance_name),
+      watts: formatCustomWatts(
+        data.wattage_min,
+        data.wattage_max,
+      ),
+      area: CUSTOM_AREA,
     };
 
     onCustomAdd?.(appliance);
 
-    logAppliance.added(name, `${watts}W`);
+    logAppliance.added(name, appliance.watts);
 
     setAppliances((current) => [
       ...current,
@@ -595,7 +620,7 @@ export default function ApplianceModal({
     if (!editingCustom) return;
 
     const name = customName.trim();
-    const watts = customWatts.trim();
+    const wattsRaw = customWatts.trim();
 
     if (
       !/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(
@@ -608,26 +633,18 @@ export default function ApplianceModal({
       return;
     }
 
-    if (!/^\d+-\d+$/.test(watts)) {
+    if (!/^\d+(\.\d{1,2})?\s*-\s*\d+(\.\d{1,2})?$/.test(wattsRaw)) {
       setCustomError(
-        "Enter wattage like 15-25.",
+        "Enter wattage interval, for example 15-25.",
       );
       return;
     }
 
-    const [minWatts, maxWatts] = watts
-      .split("-")
-      .map(Number);
+    const interval = parseWattInterval(wattsRaw);
 
-    if (
-      minWatts < 1 ||
-      maxWatts < 1 ||
-      minWatts > 720 ||
-      maxWatts > 720 ||
-      minWatts > maxWatts
-    ) {
+    if (!interval) {
       setCustomError(
-        "Enter a valid wattage interval up to 720W.",
+        "Enter a valid wattage interval between 1W and 720W.",
       );
       return;
     }
@@ -677,13 +694,14 @@ export default function ApplianceModal({
       .from("appliances")
       .update({
         appliance_name: name,
-        wattage: `${watts}W`,
+        wattage_min: interval.min,
+        wattage_max: interval.max,
       })
       .eq("app_id", editingCustom.id)
       .eq("user_id", user.id)
       .eq("type", "custom")
       .select(
-        "app_id, appliance_name, wattage, area",
+        "app_id, appliance_name, wattage_min, wattage_max",
       )
       .single();
 
@@ -701,10 +719,13 @@ export default function ApplianceModal({
     }
 
     const updated: Appliance = {
-      id: data.app_id,
-      name: data.appliance_name,
-      watts: data.wattage,
-      area: "Custom Appliances",
+      id: String(data.app_id),
+      name: String(data.appliance_name),
+      watts: formatCustomWatts(
+        data.wattage_min,
+        data.wattage_max,
+      ),
+      area: CUSTOM_AREA,
     };
 
     setAppliances((current) =>
@@ -839,60 +860,19 @@ export default function ApplianceModal({
     .toLowerCase();
 
   // ============================================================
-  // DISPLAY LIST (catalog-first)
+  // DISPLAY LIST (catalog-first, slim schema)
   // ============================================================
   //
-  // Givens render from GIVEN_CATALOG (canonical min-maxW +
-  // uiArea). When the old DB still seeds given rows, resolve
-  // each catalog entry to its DB id by name so toggle /
-  // selection / Save keep working. Customs always come from
-  // DB. After the insert-less SQL lands, catalog entries fall
-  // back to their catalog: keys (phase 2 wires insert-on-save).
+  // Catalog always renders from GIVEN_CATALOG in code.
+  // DB only holds user picks: given rows (catalog_key) for
+  // selection state, custom rows for user-created items.
+  // `appliances` state holds customs only.
   // ============================================================
 
-  const displayAppliances: Appliance[] = (() => {
-    const dbByName = new Map(
-      appliances.map((item) => [
-        item.name.trim().toLowerCase(),
-        item,
-      ]),
-    );
-
-    const catalogResolved = GIVEN_CATALOG.map(
-      (catalogItem) => {
-        const dbMatch = dbByName.get(
-          catalogItem.name.trim().toLowerCase(),
-        );
-
-        if (dbMatch) {
-          return {
-            id: dbMatch.id,
-            name: catalogItem.name,
-            watts: catalogItem.display,
-            area: catalogItem.uiArea,
-          } as Appliance;
-        }
-
-        return catalogToAppliance(catalogItem);
-      },
-    );
-
-    const catalogNames = new Set(
-      GIVEN_CATALOG.map((catalogItem) =>
-        catalogItem.name.trim().toLowerCase(),
-      ),
-    );
-
-    const dbCustoms = appliances.filter(
-      (item) =>
-        item.area === "Custom Appliances" &&
-        !catalogNames.has(
-          item.name.trim().toLowerCase(),
-        ),
-    );
-
-    return [...catalogResolved, ...dbCustoms];
-  })();
+  const displayAppliances: Appliance[] = [
+    ...GIVEN_CATALOG.map(catalogToAppliance),
+    ...appliances,
+  ];
 
   const filteredAppliances =
     displayAppliances.filter(
@@ -1091,14 +1071,14 @@ export default function ApplianceModal({
                   value={customWatts}
                   onChangeText={(text) => {
                     const value = text.replace(
-                      /[^\d-]/g,
+                      /[^\d.-]/g,
                       "",
                     );
 
                     setCustomWatts(value);
                     setCustomError("");
                   }}
-                  placeholder="Enter wattage like 15-20"
+                  placeholder="Enter wattage like 15-25"
                   placeholderTextColor={
                     colors.textSecondary
                   }
@@ -1359,7 +1339,7 @@ export default function ApplianceModal({
               <View
                 style={styles.selectedGroup}
                 accessibilityRole="text"
-                accessibilityLabel="0 appliances archived"
+                accessibilityLabel={`${archivedCount} appliances archived`}
               >
                 <Ionicons
                   name="archive-outline"
@@ -1371,7 +1351,9 @@ export default function ApplianceModal({
                   variant="caption"
                   style={styles.selectedText}
                 >
-                  0 appliances archived
+                  {archivedCount} appliance
+                  {archivedCount !== 1 ? "s" : ""}{" "}
+                  archived
                 </AppText>
               </View>
             </View>
@@ -1438,7 +1420,7 @@ export default function ApplianceModal({
           }}
           onWattsChange={(text) => {
             const value = text.replace(
-              /[^\d-]/g,
+              /[^\d.-]/g,
               "",
             );
 

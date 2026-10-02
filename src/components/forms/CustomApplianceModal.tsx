@@ -97,7 +97,7 @@ export default function CustomApplianceModal({
       <TextInput
         value={watts}
         onChangeText={onWattsChange}
-        placeholder="Enter wattage like 15-20"
+        placeholder="Enter wattage like 15-25"
         placeholderTextColor={
           colors.textSecondary
         }
