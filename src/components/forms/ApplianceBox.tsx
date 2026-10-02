@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
 import {
   Image,
@@ -57,6 +57,11 @@ export default function ApplianceBox({
   const [deleteMode, setDeleteMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
 
+  // A tap on the nested 3-dot toggle also bubbles to the outer
+  // box Pressable. The flag makes the outer handler ignore that
+  // one tap so opening/closing the menu never toggles selection.
+  const suppressNextSelect = useRef(false);
+
   const applianceCardStyles =
     useApplianceCardStyles();
 
@@ -77,35 +82,53 @@ export default function ApplianceBox({
     setDeleteMode(false);
   };
 
+  // The same 3-dot icon opens and closes the options menu.
+  // There is no back arrow: tapping the dots again returns
+  // the box to its default view.
+  const handleDotsPress = () => {
+    suppressNextSelect.current = true;
+    setMenuMode((current) => !current);
+  };
+
+  const handleBoxPress = () => {
+    if (suppressNextSelect.current) {
+      suppressNextSelect.current = false;
+      return;
+    }
+
+    onPress?.();
+  };
+
+  const renderDotsToggle = (
+    accessibilityLabel: string,
+  ) => (
+    <Pressable
+      onPress={handleDotsPress}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [
+        styles.menuDots,
+        pressed && styles.actionPressed,
+      ]}
+    >
+      <MaterialCommunityIcons
+        name="dots-vertical"
+        size={Touch.icon}
+        color={colors.textSecondary}
+      />
+    </Pressable>
+  );
+
   const renderMenuLayer = () => (
     <>
       {/* ================================================= */}
-      {/* BACK ARROW */}
+      {/* 2x2 ACTION GRID (centered both axes) */}
       {/* ================================================= */}
 
-      <Pressable
-        onPress={() => setMenuMode(false)}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel="Back to appliance"
-        style={({ pressed }) => [
-          styles.menuBack,
-          pressed && styles.actionPressed,
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="arrow-left"
-          size={24}
-          color={colors.text}
-        />
-      </Pressable>
-
-      {/* ================================================= */}
-      {/* 2x2 ACTION GRID */}
-      {/* ================================================= */}
-
-      <View style={styles.menuGrid}>
-        {/* EDIT */}
+      <View style={styles.menuArea}>
+        <View style={styles.menuGrid}>
+          {/* EDIT */}
 
         <Pressable
           onPress={onEdit}
@@ -180,6 +203,15 @@ export default function ApplianceBox({
             color={colors.error}
           />
         </Pressable>
+        </View>
+      </View>
+
+      {/* ================================================= */}
+      {/* CLOSE: same 3-dot icon (no back arrow) */}
+      {/* ================================================= */}
+
+      <View style={styles.dotsRow}>
+        {renderDotsToggle("Hide appliance options")}
       </View>
     </>
   );
@@ -306,13 +338,22 @@ export default function ApplianceBox({
       >
         {wattage}
       </AppText>
+
+      {/* ================================================= */}
+      {/* 3-DOT OPTIONS TOGGLE (custom boxes only) */}
+      {/* ================================================= */}
+
+      {isCustom ? (
+        <View style={styles.dotsRow}>
+          {renderDotsToggle("Show appliance options")}
+        </View>
+      ) : null}
     </>
   );
 
   return (
     <Pressable
-      onPress={menuMode || deleteMode ? undefined : onPress}
-      onLongPress={isCustom ? () => setMenuMode(true) : undefined}
+      onPress={menuMode || deleteMode ? undefined : handleBoxPress}
       disabled={deleteMode || !onPress}
       style={({ pressed }) => [
         applianceCardStyles.boxCompact,
@@ -338,7 +379,7 @@ const getStyles = (colors: AppColors) =>
   StyleSheet.create({
   selectionCircle: {
     position: "absolute",
-    top: 10,
+    bottom: 12,
     left: 10,
     zIndex: 10,
 
@@ -353,21 +394,36 @@ const getStyles = (colors: AppColors) =>
   },
 
   /* ======================================================= */
-  /* SECOND LAYER (LONG-PRESS MENU) */
+  /* SECOND LAYER (OPTIONS MENU) */
   /* ======================================================= */
 
-  menuBack: {
-    alignSelf: "flex-start",
-    width: Touch.target,
-    height: Touch.target,
+  // In-flow row pinning the 3-dot toggle to the right side
+  // below the content, in both the default and menu layers.
+  // Name/wattage keep their exact catalog spots because the
+  // dots own dedicated layout space inside boxCustom.
+  // hitSlop={10} on the toggle keeps the effective target 48px.
+  dotsRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    marginTop: 4,
+  },
 
-    borderRadius: 24,
-
+  menuDots: {
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
+  },
 
-    marginLeft: -4,
-    marginBottom: 16,
+  // Flexible area absorbing the height difference between the
+  // default content and the 2x2 grid, so the dots row below it
+  // lands at the exact same Y in both layers (fixed toggle).
+  // The grid stays horizontally centered by menuGrid and is
+  // vertically centered here.
+  menuArea: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
   },
 
   menuGrid: {
