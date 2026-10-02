@@ -19,7 +19,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control, Touch } from "@/constants/sizing";
+import { Touch } from "@/constants/sizing";
 
 type ApplianceBoxProps = {
   name: string;
@@ -55,6 +55,7 @@ export default function ApplianceBox({
   onArchive,
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
+  const [archiveMode, setArchiveMode] = useState(false);
   const [menuMode, setMenuMode] = useState(false);
 
   // A tap on the nested 3-dot toggle also bubbles to the outer
@@ -80,6 +81,16 @@ export default function ApplianceBox({
 
   const handleDeleteCancel = () => {
     setDeleteMode(false);
+  };
+
+  const handleArchiveConfirm = () => {
+    setArchiveMode(false);
+    setMenuMode(false);
+    onArchive?.();
+  };
+
+  const handleArchiveCancel = () => {
+    setArchiveMode(false);
   };
 
   // The same 3-dot icon opens and closes the options menu.
@@ -169,7 +180,7 @@ export default function ApplianceBox({
         {/* ARCHIVE */}
 
         <Pressable
-          onPress={onArchive}
+          onPress={() => setArchiveMode(true)}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel="Archive appliance"
@@ -236,6 +247,9 @@ export default function ApplianceBox({
 
         <Pressable
           onPress={handleDeleteCancel}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Do not delete appliance"
           style={({ pressed }) => [
             styles.confirmButton,
             styles.noButton,
@@ -254,6 +268,9 @@ export default function ApplianceBox({
 
         <Pressable
           onPress={handleDeleteConfirm}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Confirm delete appliance"
           style={({ pressed }) => [
             styles.confirmButton,
             styles.yesButton,
@@ -263,6 +280,67 @@ export default function ApplianceBox({
           <AppText
             variant="caption"
             style={styles.yesButtonText}
+          >
+            Yes
+          </AppText>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const renderArchiveConfirmation = () => (
+    <View style={styles.deleteConfirmation}>
+      <MaterialCommunityIcons
+        name="archive-outline"
+        size={30}
+        color={colors.accentContent}
+      />
+
+      <AppText
+        variant="caption"
+        style={styles.deleteQuestion}
+      >
+        Archive this appliance?
+      </AppText>
+
+      <View style={styles.confirmActions}>
+        {/* NO */}
+
+        <Pressable
+          onPress={handleArchiveCancel}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Do not archive appliance"
+          style={({ pressed }) => [
+            styles.confirmButton,
+            styles.noButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            style={styles.noButtonText}
+          >
+            No
+          </AppText>
+        </Pressable>
+
+        {/* YES */}
+
+        <Pressable
+          onPress={handleArchiveConfirm}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Confirm archive appliance"
+          style={({ pressed }) => [
+            styles.confirmButton,
+            styles.archiveButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            style={styles.archiveButtonText}
           >
             Yes
           </AppText>
@@ -353,8 +431,12 @@ export default function ApplianceBox({
 
   return (
     <Pressable
-      onPress={menuMode || deleteMode ? undefined : handleBoxPress}
-      disabled={deleteMode || !onPress}
+      onPress={
+        menuMode || deleteMode || archiveMode
+          ? undefined
+          : handleBoxPress
+      }
+      disabled={deleteMode || archiveMode || !onPress}
       style={({ pressed }) => [
         applianceCardStyles.boxCompact,
         {
@@ -366,6 +448,8 @@ export default function ApplianceBox({
     >
       {deleteMode && isCustom ? (
         renderDeleteConfirmation()
+      ) : archiveMode && isCustom ? (
+        renderArchiveConfirmation()
       ) : menuMode && isCustom ? (
         renderMenuLayer()
       ) : (
@@ -468,15 +552,19 @@ const getStyles = (colors: AppColors) =>
   confirmActions: {
     width: "100%",
     flexDirection: "column",
-    gap: 8,
+    alignItems: "center",
+    gap: 10,
     marginTop: 12,
-    paddingHorizontal: 6,
   },
 
+  // Compact text-sized buttons: minWidth keeps No/Yes an
+  // identical pair. hitSlop on each button restores the 48px
+  // pressable floor (visible height is ~36px).
   confirmButton: {
-    width: "100%",
-    minHeight: Control.button,
-    paddingVertical: 9,
+    minWidth: 96,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderWidth: 2,
     borderRadius: Radius.md,
 
     alignItems: "center",
@@ -485,10 +573,17 @@ const getStyles = (colors: AppColors) =>
 
   noButton: {
     backgroundColor: colors.surface,
+    borderColor: colors.primary,
   },
 
   yesButton: {
     backgroundColor: colors.error,
+    borderColor: colors.error,
+  },
+
+  archiveButton: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
   noButtonText: {
@@ -497,6 +592,11 @@ const getStyles = (colors: AppColors) =>
   },
 
   yesButtonText: {
+    color: colors.onPrimary,
+    fontWeight: "600",
+  },
+
+  archiveButtonText: {
     color: colors.onPrimary,
     fontWeight: "600",
   },
