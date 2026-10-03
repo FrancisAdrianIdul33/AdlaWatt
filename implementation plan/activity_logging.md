@@ -119,7 +119,7 @@ Rules:
 
 | Event | Type | Call site |
 |---|---|---|
-| Preferences Saved | `info` | `handleSavePreferences()` (single entry for font + theme) |
+| Preferences Saved | `info` | `handleSavePreferences()` (single entry for font + theme + email toggle) |
 
 - Local-only toggles (color-blind mode, vibration, email, language) log nothing until persisted.
 

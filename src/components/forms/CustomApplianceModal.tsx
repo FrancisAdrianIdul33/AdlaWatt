@@ -23,16 +23,18 @@ import { Control, Field } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
 
 // ============================================================
-// CUSTOM APPLIANCE MODAL (ADD-ONLY)
+// CUSTOM APPLIANCE MODAL (ADD + EDIT)
 //
-// Add flow extracted from ApplianceModal into the shared
-// DropdownModal shell so it matches CalendarModal: same
-// overlay, same centered card, same header. Edit flow stays
-// inline in ApplianceModal for now.
+// Shared DropdownModal shell (same overlay, centered card,
+// and header as CalendarModal) for both flows. Add flow is
+// driven by ApplianceModal; edit flow reuses this exact
+// layout prefilled with the custom appliance values, so
+// both dialogs look identical apart from title + confirm.
 // ============================================================
 
 type CustomApplianceModalProps = {
   visible: boolean;
+  mode?: "add" | "edit";
   name: string;
   watts: string;
   error: string;
@@ -40,10 +42,12 @@ type CustomApplianceModalProps = {
   onWattsChange: (text: string) => void;
   onCancel: () => void;
   onAdd: () => void;
+  onSave?: () => void;
 };
 
 export default function CustomApplianceModal({
   visible,
+  mode = "add",
   name,
   watts,
   error,
@@ -51,6 +55,7 @@ export default function CustomApplianceModal({
   onWattsChange,
   onCancel,
   onAdd,
+  onSave,
 }: CustomApplianceModalProps) {
   const colors = useAppColors();
 
@@ -68,10 +73,19 @@ export default function CustomApplianceModal({
     fontWeight: weight,
   };
 
+  const isEdit = mode === "edit";
+  const title = isEdit
+    ? "Edit Custom Appliance"
+    : "Add Custom Appliance";
+  const confirmLabel = isEdit ? "Save" : "Add";
+  const handleConfirm = isEdit
+    ? (onSave ?? onAdd)
+    : onAdd;
+
   return (
     <DropdownModal
       visible={visible}
-      title="Add Custom Appliance"
+      title={title}
       onClose={onCancel}
     >
       <AppText
@@ -91,20 +105,28 @@ export default function CustomApplianceModal({
         }
         allowFontScaling={false}
         style={[styles.input, inputFontStyle]}
-        accessibilityLabel="Add custom appliance name"
+        accessibilityLabel={
+          isEdit
+            ? "Edit custom appliance name"
+            : "Add custom appliance name"
+        }
       />
 
       <TextInput
         value={watts}
         onChangeText={onWattsChange}
-        placeholder="Enter wattage like 15-20"
+        placeholder="Enter wattage like 15-25"
         placeholderTextColor={
           colors.textSecondary
         }
         allowFontScaling={false}
         style={[styles.input, inputFontStyle]}
         keyboardType="numeric"
-        accessibilityLabel="Add custom appliance wattage"
+        accessibilityLabel={
+          isEdit
+            ? "Edit custom appliance wattage"
+            : "Add custom appliance wattage"
+        }
       />
 
       {error ? (
@@ -125,7 +147,11 @@ export default function CustomApplianceModal({
             pressed && styles.pressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Cancel add custom appliance"
+          accessibilityLabel={
+            isEdit
+              ? "Cancel edit custom appliance"
+              : "Cancel add custom appliance"
+          }
         >
           <AppText
             variant="caption"
@@ -136,7 +162,7 @@ export default function CustomApplianceModal({
         </Pressable>
 
         <Pressable
-          onPress={onAdd}
+          onPress={handleConfirm}
           disabled={
             !name.trim() || !watts.trim()
           }
@@ -146,13 +172,17 @@ export default function CustomApplianceModal({
             pressed && styles.pressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Add custom appliance"
+          accessibilityLabel={
+            isEdit
+              ? "Save custom appliance"
+              : "Add custom appliance"
+          }
         >
           <AppText
             variant="caption"
             style={styles.addText}
           >
-            Add
+            {confirmLabel}
           </AppText>
         </Pressable>
       </View>

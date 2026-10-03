@@ -157,7 +157,8 @@ const statusMeta = (
 };
 
 /*
- * UI area names -> database area names
+ * UI area names (resolved areas already use these names —
+ * catalog uiArea values and "Custom Appliances").
  */
 const areaMap: Record<
   Exclude<Area, "All Areas">,
@@ -165,10 +166,10 @@ const areaMap: Record<
 > = {
   "Living Area": "Living Area",
   Bedroom: "Bedroom",
-  "Kitchen Area": "Kitchen & Dining Area",
-  "Work/Study Area": "Work & Study Area",
-  "Bathroom Area": "Bathroom & Laundry Area",
-  Porch: "Porch & Yard",
+  "Kitchen Area": "Kitchen Area",
+  "Work/Study Area": "Work/Study Area",
+  "Bathroom Area": "Bathroom Area",
+  Porch: "Porch",
   Custom: "Custom Appliances",
 };
 
@@ -214,6 +215,26 @@ export default function AppliancesScreen() {
   ] = useState(false);
 
   const loadSelectedAppliances = async () => {
+    try {
+      const { fetchSelectedAppliances } = await import(
+        "@/services/appliancesService"
+      );
+      const resolved = await fetchSelectedAppliances();
+
+      setSelectedAppliances(
+        resolved.map((item) => ({
+          id: item.id,
+          name: item.name,
+          watts: item.display,
+          area: item.area,
+        })),
+      );
+
+      return;
+    } catch {
+      // Fall back to legacy direct query below.
+    }
+
     const user = await getAuthenticatedUserSafe();
 
     if (!user) {
@@ -224,11 +245,9 @@ export default function AppliancesScreen() {
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, wattage, area",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection",
       )
       .eq("user_id", user.id)
-      .eq("selection", true)
-      .order("area")
       .order("appliance_name");
 
     if (error) {
@@ -239,13 +258,53 @@ export default function AppliancesScreen() {
       return;
     }
 
+    const { CATALOG_BY_KEY } = await import(
+      "@/constants/applianceCatalog"
+    );
+
     setSelectedAppliances(
-      (data ?? []).map((item) => ({
-        id: item.app_id,
-        name: item.appliance_name,
-        watts: item.wattage,
-        area: item.area,
-      })),
+      (data ?? [])
+        .filter(
+          (item) =>
+            typeof item.catalog_key === "string" ||
+            (item.type === "custom" &&
+              item.selection === true),
+        )
+        .map((item) => {
+          if (
+            typeof item.catalog_key === "string"
+          ) {
+            const catalog =
+              CATALOG_BY_KEY.get(item.catalog_key);
+
+            if (catalog) {
+              return {
+                id: catalog.key,
+                name: catalog.name,
+                watts: catalog.display,
+                area: catalog.uiArea,
+              };
+            }
+          }
+
+          const minWatts = Number(item.wattage_min);
+          const maxWatts = Number(item.wattage_max);
+
+          const watts =
+            Number.isFinite(minWatts) &&
+            Number.isFinite(maxWatts) &&
+            minWatts > 0 &&
+            maxWatts >= minWatts
+              ? `${minWatts}-${maxWatts}W`
+              : "";
+
+          return {
+            id: String(item.app_id),
+            name: String(item.appliance_name),
+            watts,
+            area: "Custom Appliances",
+          };
+        }),
     );
   };
 

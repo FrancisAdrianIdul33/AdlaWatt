@@ -180,6 +180,14 @@ export const logAppliance = {
     });
   },
 
+  archived(name: string): void {
+    logActivity({
+      title: "Appliance Archived",
+      description: `${name} archived.`,
+      type: "info",
+    });
+  },
+
   selectionSaved(count: number): void {
     logActivity({
       title: "Selection Saved",

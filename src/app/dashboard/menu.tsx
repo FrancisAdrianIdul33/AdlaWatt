@@ -43,7 +43,7 @@ import {
   logSettings,
 } from "@/services/activityLogService";
 
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -54,11 +54,12 @@ import {
   type FontFamilyOption,
   type FontSizeOption,
 } from "@/services/typography";
+import {
+  loadCachedEmailNotifications,
+  saveCachedEmailNotifications,
+} from "@/services/settings";
 
 import { Ionicons } from "@expo/vector-icons";
-
-// TEMP-TEST: delete with the test button once verified.
-import { sendAlertEmail } from "@/services/alertEmailService";
 
 export default function SettingsScreen() {
   // ============================================
@@ -145,12 +146,14 @@ export default function SettingsScreen() {
   const [vibration, setVibration] =
     useState(true);
 
+  // Global per-user alert-email switch (server column,
+  // default ON). Drafted like typography: flips instantly,
+  // commits on Save, discards on Cancel.
   const [emailNotifications, setEmailNotifications] =
-    useState(false);
+    useState(true);
 
-  // TEMP-TEST: delete with the test button once verified.
-  const [isSendingTestEmail, setIsSendingTestEmail] =
-    useState(false);
+  const [savedEmailNotifications, setSavedEmailNotifications] =
+    useState(true);
 
   // ============================================
   // PREFERENCE DROPDOWNS
@@ -210,6 +213,7 @@ export default function SettingsScreen() {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
       setThemeDraft(savedTheme);
+      setEmailNotifications(savedEmailNotifications);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
@@ -217,6 +221,7 @@ export default function SettingsScreen() {
     preferencesExpanded,
     savedTypography,
     savedTheme,
+    savedEmailNotifications,
   ]);
 
   const THEME_OPTIONS: readonly ThemeOption[] = [
@@ -245,6 +250,7 @@ export default function SettingsScreen() {
     setFontSize(savedTypography.fontSize);
     setFontFamily(savedTypography.fontFamily);
     setThemeDraft(savedTheme);
+    setEmailNotifications(savedEmailNotifications);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -263,12 +269,41 @@ export default function SettingsScreen() {
         fontFamily,
       });
 
+      // Email switch: global per-user column; revert the
+      // draft on failure so the UI never lies about it.
+      const emailProfile = await getCurrentUserProfile();
+
+      if (emailProfile.success && emailProfile.userId) {
+        const { error: emailError } = await supabase
+          .from("users")
+          .update({
+            email_notifications: emailNotifications,
+          })
+          .eq("id", emailProfile.userId);
+
+        if (emailError) {
+          console.error(
+            "Email preference save error:",
+            emailError.message,
+          );
+          setEmailNotifications(savedEmailNotifications);
+          return;
+        }
+
+        setSavedEmailNotifications(emailNotifications);
+
+        await saveCachedEmailNotifications(
+          emailNotifications,
+          emailProfile.userId,
+        );
+      }
+
       // Theme last: the flip re-renders screens, so it
       // lands as the modal closes instead of mid-save.
       await commitTheme(themeDraft);
 
       logSettings.preferencesSaved(
-        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode.`,
+        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode, email ${emailNotifications ? "on" : "off"}.`,
       );
 
       setFontFamilyOpen(false);
@@ -282,6 +317,27 @@ export default function SettingsScreen() {
   // ============================================
   // LOAD ACCOUNT PROFILE
   // ============================================
+
+  // Strong switch: paint the last confirmed email value
+  // from cache instantly, so an offline open never flashes
+  // the ON default. The server load below overwrites this
+  // on success and refreshes the cache.
+  useEffect(() => {
+    const hydrateEmailSwitch = async () => {
+      const user = await getAuthenticatedUserSafe();
+
+      const cached = await loadCachedEmailNotifications(
+        user?.id ?? null,
+      );
+
+      if (cached !== null) {
+        setEmailNotifications(cached);
+        setSavedEmailNotifications(cached);
+      }
+    };
+
+    hydrateEmailSwitch();
+  }, []);
 
   useEffect(() => {
     const loadAccount = async () => {
@@ -302,8 +358,18 @@ export default function SettingsScreen() {
       const loadedEmail =
         result.email ?? "";
 
+      const loadedEmailNotifications =
+        result.emailNotifications ?? true;
+
       setUsername(loadedUsername);
       setEmail(loadedEmail);
+      setEmailNotifications(loadedEmailNotifications);
+      setSavedEmailNotifications(loadedEmailNotifications);
+
+      await saveCachedEmailNotifications(
+        loadedEmailNotifications,
+        result.userId,
+      );
 
       setEditUsername(loadedUsername);
       setEditEmail(loadedEmail);
@@ -1574,72 +1640,6 @@ export default function SettingsScreen() {
                   setEmailNotifications,
                 )}
               </View>
-
-              {/* TEMP-TEST: delete this block once email verified. */}
-              <Pressable
-                onPress={async () => {
-                  if (isSendingTestEmail) {
-                    return;
-                  }
-
-                  setIsSendingTestEmail(true);
-
-                  try {
-                    const result =
-                      await sendAlertEmail({
-                        subject:
-                          "AdlaWatt Alert: Battery Empty (Test)",
-                        title: "Battery Empty",
-                        description:
-                          "Battery has reached 0% charge or 100% depth of discharge. The BMS may disconnect the system. (Test email — safe to delete.)",
-                        type: "alert",
-                        timestamp:
-                          new Date().toLocaleString(),
-                      });
-
-                    console.log(
-                      "[test-email] recipient:",
-                      result.recipient,
-                      "result:",
-                      result.success
-                        ? "success"
-                        : result.error,
-                    );
-
-                    Alert.alert(
-                      result.success
-                        ? "Test email sent"
-                        : "Test email failed",
-                      result.success
-                        ? `Sent to ${result.recipient}. Check that exact inbox (including Spam) for the branded Battery Empty alert from adlawatt@agentmail.to.`
-                        : (result.error ??
-                          "Unknown error."),
-                    );
-                  } finally {
-                    setIsSendingTestEmail(false);
-                  }
-                }}
-                disabled={isSendingTestEmail}
-                accessibilityRole="button"
-                accessibilityLabel="Send test alert email"
-                style={({ pressed }) => [
-                  styles.modalFooterButton,
-                  styles.modalCancelButton,
-                  pressed && styles.pressed,
-                  { marginTop: 12 },
-                ]}
-              >
-                <AppText
-                  variant="body"
-                  style={
-                    styles.modalCancelButtonText
-                  }
-                >
-                  {isSendingTestEmail
-                    ? "Sending test email..."
-                    : "Send Test Alert Email (temporary)"}
-                </AppText>
-              </Pressable>
           </View>
 
           <View style={styles.modalFooter}>

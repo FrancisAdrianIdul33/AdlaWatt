@@ -9,7 +9,6 @@ import type {
 import {
   classifyBatteryState,
   computeWattCap,
-  parseWattageRange,
 } from "@/services/recommendation";
 import { sendAlertEmail } from "@/services/alertEmailService";
 
@@ -147,6 +146,37 @@ const getAuthenticatedUser =
     // on fresh install, or before session restore — avoids
     // "Auth session missing!" console.error noise on login.
     return getAuthenticatedUserSafe();
+  };
+
+// Logout guard: stale timers / Realtime callbacks capture a
+// userId string that outlives the session. After signOut the
+// JWT is gone, so any notifications insert would 401 / violate
+// RLS (user_id = auth.uid()). Skip those writes silently.
+// Local getSession only — no network, safe during teardown.
+const isStaleLogoutWrite =
+  async (
+    userId: string,
+  ): Promise<boolean> => {
+    if (
+      !currentUserId ||
+      currentUserId !== userId
+    ) {
+      return true;
+    }
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+
+    return false;
   };
 
 
@@ -298,6 +328,16 @@ const createNotification = async (
   rule: NotificationRule,
 ): Promise<boolean> => {
 
+  if (
+    await isStaleLogoutWrite(userId)
+  ) {
+    console.debug(
+      `[notifications] skipped "${rule.title}" (signed out).`,
+    );
+
+    return false;
+  }
+
   const now = Date.now();
 
   const cooldownKey =
@@ -348,6 +388,24 @@ const createNotification = async (
     .maybeSingle();
 
   if (existingError) {
+    // Logout race (401 / RLS after signOut) is expected —
+    // downgrade to debug when the session is gone.
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.debug(
+          "Skipped notification cooldown check (signed out).",
+        );
+
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
     console.error(
       "Error checking previous notification:",
       existingError.message,
@@ -392,6 +450,22 @@ const createNotification = async (
     });
 
   if (insertError) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.debug(
+          `[notifications] skipped "${rule.title}" insert (signed out).`,
+        );
+
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
     console.error(
       `Error creating notification "${rule.title}":`,
       insertError.message,
@@ -434,13 +508,39 @@ const maybeSendAlertEmail = (
   }
 
   void getAuthenticatedUser()
-    .then((user) => {
+    .then(async (user) => {
       if (
         !user ||
         user.id !== userId ||
         !user.email
       ) {
         return;
+      }
+
+      // Global per-user email switch (preferences modal,
+      // default ON). OFF skips the send silently — in-app
+      // rows above are unaffected. Fail-open on read errors
+      // so a lookup hiccup never swallows a safety alert.
+      try {
+        const { data: prefs } = await supabase
+          .from("users")
+          .select("email_notifications")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (
+          prefs &&
+          (prefs as { email_notifications?: boolean | null })
+            .email_notifications === false
+        ) {
+          console.debug(
+            `[alert-email] skipped for "${rule.title}" (email notifications off).`,
+          );
+
+          return;
+        }
+      } catch {
+        // Fail-open: fall through to send.
       }
 
       return sendAlertEmail({
@@ -489,6 +589,16 @@ const createNotificationWithCooldown =
     rule: NotificationRule,
     cooldownMs: number,
   ): Promise<boolean> => {
+
+    if (
+      await isStaleLogoutWrite(userId)
+    ) {
+      console.debug(
+        `[notifications] skipped "${rule.title}" (signed out).`,
+      );
+
+      return false;
+    }
 
     const now = Date.now();
 
@@ -1607,23 +1717,34 @@ const checkAppliancesBecameAdvisable = async (
     return;
   }
 
-  const { count, error } = await supabase
-    .from("appliances")
-    .select("app_id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("selection", true);
-
-  if (error) {
-    console.error(
-      "Appliances-became-advisable check error:",
-      error.message,
+  try {
+    const { fetchSelectedAppliances } = await import(
+      "@/services/appliancesService"
     );
+    const resolved = await fetchSelectedAppliances();
 
-    return;
-  }
+    if (resolved.length <= 0) {
+      return;
+    }
+  } catch {
+    const { count, error } = await supabase
+      .from("appliances")
+      .select("app_id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("selection", true);
 
-  if ((count ?? 0) <= 0) {
-    return;
+    if (error) {
+      console.error(
+        "Appliances-became-advisable check error:",
+        error.message,
+      );
+
+      return;
+    }
+
+    if ((count ?? 0) <= 0) {
+      return;
+    }
   }
 
   await createNotification(
@@ -1659,27 +1780,54 @@ const checkHighLoadWhileBatteryLow = async (
     return;
   }
 
-  const { data, error } = await supabase
-    .from("appliances")
-    .select("wattage")
-    .eq("user_id", userId)
-    .eq("selection", true);
+  let combinedMidWatts = 0;
 
-  if (error) {
-    console.error(
-      "High-load-while-low check error:",
-      error.message,
+  try {
+    const { fetchSelectedAppliances } = await import(
+      "@/services/appliancesService"
     );
+    const resolved = await fetchSelectedAppliances();
 
-    return;
+    combinedMidWatts = resolved.reduce(
+      (total, item) => total + (item.wattMin + item.wattMax) / 2,
+      0,
+    );
+  } catch {
+    const { data, error } = await supabase
+      .from("appliances")
+      .select("wattage_min, wattage_max")
+      .eq("user_id", userId)
+      .eq("selection", true);
+
+    if (error) {
+      console.error(
+        "High-load-while-low check error:",
+        error.message,
+      );
+
+      return;
+    }
+
+    combinedMidWatts = (data ?? []).reduce((total, row) => {
+      const min = Number(
+        (row as { wattage_min?: unknown }).wattage_min,
+      );
+      const max = Number(
+        (row as { wattage_max?: unknown }).wattage_max,
+      );
+
+      if (
+        !Number.isFinite(min) ||
+        !Number.isFinite(max) ||
+        min <= 0 ||
+        max < min
+      ) {
+        return total;
+      }
+
+      return total + (min + max) / 2;
+    }, 0);
   }
-
-  const combinedMidWatts = (data ?? []).reduce(
-    (total, row) =>
-      total +
-      (parseWattageRange(row.wattage)?.mid ?? 0),
-    0,
-  );
 
   if (combinedMidWatts <= 0) {
     return;
@@ -3236,9 +3384,7 @@ const startComponentsNotificationWatcher =
               status ===
                 "CHANNEL_ERROR" ||
               status ===
-                "TIMED_OUT" ||
-              status ===
-                "CLOSED"
+                "TIMED_OUT"
             ) {
 
               console.warn(
@@ -3246,6 +3392,11 @@ const startComponentsNotificationWatcher =
                 status,
               );
             }
+
+            // CLOSED after explicit removeChannel (e.g. logout
+            // or screen unmount) is expected teardown — stay
+            // silent. Unexpected service-side closes still
+            // surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
   };
@@ -3491,15 +3642,10 @@ export const startMonitoringNotificationWatcher =
               );
             }
 
-            if (
-              status ===
-              "CLOSED"
-            ) {
-
-              console.warn(
-                "Notification service Realtime channel closed.",
-              );
-            }
+            // CLOSED after explicit removeChannel (e.g. logout
+            // or screen unmount) is expected teardown — stay
+            // silent. Unexpected service-side closes still
+            // surface via CHANNEL_ERROR/TIMED_OUT.
           },
         );
 

@@ -24,8 +24,10 @@ import { Radius } from "@/constants/theme";
  */
 /*
  * Shared card shell. `box` reserves room for the status badge used by
- * AppRecCard and ApplianceStatusBox; `boxCompact` is the tighter version
- * used inside ApplianceModal where only the image, name and wattage show;
+ * AppRecCard and ApplianceStatusBox; `boxCompact` is the modal version
+ * used inside ApplianceModal for catalog and custom boxes alike (one
+ * height keeps grid rows level; customs hold the 3-dot row in their
+ * extra space, catalogs carry it as breathing room);
  * `boxSlim` fits just the image and name for ComponentStatusBox
  * (110 image + 8 + 40 name + 24 padding = 182, no slack).
  */
@@ -63,7 +65,9 @@ export const getApplianceCardStyles = (
 
     boxCompact: {
       ...applianceCardBox,
-      height: 202,
+      // 202 base content + 4 gap + 28 dots row (customs render
+      // the row; catalogs keep the space empty).
+      height: 234,
       backgroundColor: colors.surface,
     },
 
