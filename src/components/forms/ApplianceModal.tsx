@@ -873,12 +873,6 @@ export default function ApplianceModal({
     setCustomError("");
     setAddModalVisible(false);
 
-    // New customs are active (Layer 1). If added from Layer 2,
-    // return there so the new item is visible under the banner.
-    if (layer === 2) {
-      closeArchiveLayer();
-    }
-
     setSuccessMessage(
       `${name} successfully added!`,
     );
@@ -1471,12 +1465,10 @@ export default function ApplianceModal({
   };
 
   // ============================================================
-  // ACTION ROW (Add Custom + Archived/Back)
+  // ACTION ROW (Add Custom + Archived, Layer 1 only)
   // ============================================================
   //
-  // One shared row rendered per layer: Layer 1 shows it below
-  // its search box, Layer 2 below the archived search box.
-  // Second button toggles layers (Archived with count / Back).
+  // Layer 2 has no buttons; return uses the footer Back button.
   // ============================================================
 
   const renderActionRow = () => (
@@ -1507,59 +1499,32 @@ export default function ApplianceModal({
         </AppText>
       </Pressable>
 
-      {layer === 1 ? (
-        <Pressable
-          onPress={openArchiveLayer}
-          style={({ pressed }) => [
-            styles.archiveRowButton,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Archived appliances, ${archivedCount} archived`}
-        >
-          <Ionicons
-            name="archive-outline"
-            size={18}
-            color={colors.text}
-          />
+      <Pressable
+        onPress={openArchiveLayer}
+        style={({ pressed }) => [
+          styles.archiveRowButton,
+          pressed && styles.pressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`Archived appliances, ${archivedCount} archived`}
+      >
+        <Ionicons
+          name="archive-outline"
+          size={18}
+          color={colors.text}
+        />
 
-          <AppText
-            variant="caption"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            style={styles.archiveRowButtonText}
-          >
-            {archivedCount > 0
-              ? `Archived (${archivedCount})`
-              : "Archived"}
-          </AppText>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={closeArchiveLayer}
-          style={({ pressed }) => [
-            styles.archiveRowButton,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Back to appliances"
+        <AppText
+          variant="caption"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={styles.archiveRowButtonText}
         >
-          <Ionicons
-            name="arrow-back"
-            size={18}
-            color={colors.text}
-          />
-
-          <AppText
-            variant="caption"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            style={styles.archiveRowButtonText}
-          >
-            Back
-          </AppText>
-        </Pressable>
-      )}
+          {archivedCount > 0
+            ? `Archived (${archivedCount})`
+            : "Archived"}
+        </AppText>
+      </Pressable>
     </View>
   );
 
@@ -1660,7 +1625,7 @@ export default function ApplianceModal({
             contentContainerStyle={
               styles.contentContainer
             }
-            showsVerticalScrollIndicator
+            showsVerticalScrollIndicator={false}
           >
             {/* Battery Advisory (Layer 1 only) */}
             {layer === 1 ? (
@@ -1939,9 +1904,6 @@ export default function ApplianceModal({
                     />
                   </View>
                 </View>
-
-                {/* Action row below the archived search box */}
-                {renderActionRow()}
 
                 {/* Archived grid (same box layout, viewer-only) */}
                 <View style={styles.section}>
