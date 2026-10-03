@@ -188,6 +188,14 @@ export const logAppliance = {
     });
   },
 
+  unarchived(name: string): void {
+    logActivity({
+      title: "Appliance Unarchived",
+      description: `${name} restored.`,
+      type: "info",
+    });
+  },
+
   selectionSaved(count: number): void {
     logActivity({
       title: "Selection Saved",

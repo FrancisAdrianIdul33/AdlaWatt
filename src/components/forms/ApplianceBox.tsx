@@ -31,12 +31,18 @@ type ApplianceBoxProps = {
   // Main appliance selection
   onPress?: () => void;
 
+  // Layer 2 (archived viewer) is display-only: no selection
+  // circle and tapping the box does nothing. The 3-dot menu
+  // still works for edit / unarchive / delete.
+  selectable?: boolean;
+
   // Custom appliance controls
   isCustom?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   onCamera?: () => void;
   onArchive?: () => void;
+  archiveVariant?: "archive" | "unarchive";
 };
 
 const defaultImage = require("@/assets/images/adlawatt-icon.png");
@@ -48,11 +54,13 @@ export default function ApplianceBox({
   imageSource = defaultImage,
   selected = false,
   onPress,
+  selectable = true,
   isCustom = false,
   onEdit,
   onDelete,
   onCamera,
   onArchive,
+  archiveVariant = "archive",
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [archiveMode, setArchiveMode] = useState(false);
@@ -101,7 +109,13 @@ export default function ApplianceBox({
     setMenuMode((current) => !current);
   };
 
+  const isUnarchive = archiveVariant === "unarchive";
+
   const handleBoxPress = () => {
+    if (!selectable) {
+      return;
+    }
+
     if (suppressNextSelect.current) {
       suppressNextSelect.current = false;
       return;
@@ -177,20 +191,28 @@ export default function ApplianceBox({
           />
         </Pressable>
 
-        {/* ARCHIVE */}
+        {/* ARCHIVE / UNARCHIVE */}
 
         <Pressable
           onPress={() => setArchiveMode(true)}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel="Archive appliance"
+          accessibilityLabel={
+            isUnarchive
+              ? "Unarchive appliance"
+              : "Archive appliance"
+          }
           style={({ pressed }) => [
             styles.iconButton,
             pressed && styles.actionPressed,
           ]}
         >
           <MaterialCommunityIcons
-            name="archive"
+            name={
+              isUnarchive
+                ? "archive-arrow-up-outline"
+                : "archive"
+            }
             size={22}
             color={colors.accentContent}
           />
@@ -291,7 +313,11 @@ export default function ApplianceBox({
   const renderArchiveConfirmation = () => (
     <View style={styles.deleteConfirmation}>
       <MaterialCommunityIcons
-        name="archive-outline"
+        name={
+          isUnarchive
+            ? "archive-arrow-up-outline"
+            : "archive-outline"
+        }
         size={30}
         color={colors.accentContent}
       />
@@ -300,7 +326,9 @@ export default function ApplianceBox({
         variant="caption"
         style={styles.deleteQuestion}
       >
-        Archive this appliance?
+        {isUnarchive
+          ? "Unarchive this appliance?"
+          : "Archive this appliance?"}
       </AppText>
 
       <View style={styles.confirmActions}>
@@ -310,7 +338,11 @@ export default function ApplianceBox({
           onPress={handleArchiveCancel}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Do not archive appliance"
+          accessibilityLabel={
+            isUnarchive
+              ? "Do not unarchive appliance"
+              : "Do not archive appliance"
+          }
           style={({ pressed }) => [
             styles.confirmButton,
             styles.noButton,
@@ -331,7 +363,11 @@ export default function ApplianceBox({
           onPress={handleArchiveConfirm}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Confirm archive appliance"
+          accessibilityLabel={
+            isUnarchive
+              ? "Confirm unarchive appliance"
+              : "Confirm archive appliance"
+          }
           style={({ pressed }) => [
             styles.confirmButton,
             styles.archiveButton,
@@ -352,28 +388,30 @@ export default function ApplianceBox({
   const renderNormalLayer = () => (
     <>
       {/* ================================================= */}
-      {/* SELECTION CIRCLE */}
+      {/* SELECTION CIRCLE (hidden in archived viewer) */}
       {/* ================================================= */}
 
-      <View
-        style={[
-          styles.selectionCircle,
-          {
-            borderColor: color,
-            backgroundColor: selected
-              ? color
-              : colors.surface,
-          },
-        ]}
-      >
-        {selected && (
-          <MaterialCommunityIcons
-            name="check"
-            size={18}
-            color={colors.onPrimary}
-          />
-        )}
-      </View>
+      {selectable ? (
+        <View
+          style={[
+            styles.selectionCircle,
+            {
+              borderColor: color,
+              backgroundColor: selected
+                ? color
+                : colors.surface,
+            },
+          ]}
+        >
+          {selected && (
+            <MaterialCommunityIcons
+              name="check"
+              size={18}
+              color={colors.onPrimary}
+            />
+          )}
+        </View>
+      ) : null}
 
       {/* ================================================= */}
       {/* APPLIANCE IMAGE */}
@@ -436,7 +474,12 @@ export default function ApplianceBox({
           ? undefined
           : handleBoxPress
       }
-      disabled={deleteMode || archiveMode || !onPress}
+      disabled={
+        deleteMode ||
+        archiveMode ||
+        !selectable ||
+        !onPress
+      }
       style={({ pressed }) => [
         applianceCardStyles.boxCompact,
         {

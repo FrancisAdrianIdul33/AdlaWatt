@@ -212,6 +212,32 @@ export default function ApplianceModal({
   const [archivedCount, setArchivedCount] =
     useState(0);
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Layer 1 = Add Appliances (catalog + active customs).
+  // Layer 2 = Archived viewer (archive=true customs only).
+  // Same shell/modal, only the content layer swaps.
+  const [layer, setLayer] = useState<1 | 2>(1);
+
+  const [archivedAppliances, setArchivedAppliances] =
+    useState<Appliance[]>([]);
+
+  const [archiveSearchText, setArchiveSearchText] =
+    useState("");
+
+  // Custom ids the user deleted/archived/reset locally this
+  // session. Prop customs are merged into the display so a
+  // selected custom never vanishes while loading, but ids in
+  // here are excluded so a deleted custom does not reappear
+  // via the prop fallback before the parent refreshes.
+  const [dismissedCustomIds, setDismissedCustomIds] =
+    useState<string[]>([]);
+
+  // Guards the async load: only the latest open may write
+  // state, so a slow fetch cannot overwrite newer toggles
+  // and closing mid-fetch cannot set state for a dead open.
+  const loadSeq = useRef(0);
+
   const scrollRef = useRef<ScrollView>(null);
 
   const colors = useAppColors();
@@ -231,14 +257,37 @@ export default function ApplianceModal({
   // ============================================================
   // LOAD APPLIANCES
   // ============================================================
+  //
+  // Single open wins: `seq` invalidates stale fetches, and the
+  // final selection is the UNION of DB state + the prop snapshot
+  // taken at open, so a slow/empty fetch can never wipe the
+  // parent's selected customs.
+  // ============================================================
 
-  const loadAppliances = async () => {
+  const loadAppliances = async (
+    propSnapshot: Appliance[],
+  ) => {
+    const seq = loadSeq.current + 1;
+    loadSeq.current = seq;
+
     setIsLoadingCustoms(true);
 
     const user = await getAuthenticatedUserSafe();
 
+    if (loadSeq.current !== seq) {
+      return;
+    }
+
     if (!user) {
-      setAppliances([]);
+      const propIds = propSnapshot.map(({ id }) => id);
+      const propCustoms = propSnapshot.filter(
+        (item) => item.area === CUSTOM_AREA,
+      );
+      // Dismissed is always empty on fresh open (cleared in the
+      // open effect), so no filter needed here.
+      setAppliances(propCustoms);
+      setArchivedAppliances([]);
+      setSelected(propIds);
       setArchivedCount(0);
       setIsLoadingCustoms(false);
       return;
@@ -252,10 +301,32 @@ export default function ApplianceModal({
       .eq("user_id", user.id)
       .order("appliance_name");
 
+    if (loadSeq.current !== seq) {
+      return;
+    }
+
     if (error) {
       console.error(
         "Failed to load appliances:",
         error.message,
+      );
+      // Keep the prop snapshot visible instead of flashing
+      // empty: selected customs must stay displayed even when
+      // the fetch fails.
+      const propIds = propSnapshot.map(({ id }) => id);
+      const propCustoms = propSnapshot.filter(
+        (item) => item.area === CUSTOM_AREA,
+      );
+      setAppliances((current) => {
+        if (current.length > 0) {
+          return current;
+        }
+        return propCustoms;
+      });
+      setSelected((current) =>
+        current.length > 0
+          ? current
+          : propIds,
       );
       setIsLoadingCustoms(false);
       return;
@@ -267,17 +338,34 @@ export default function ApplianceModal({
       .filter(
         (item) =>
           typeof item.catalog_key === "string" &&
-          item.catalog_key.startsWith("catalog:"),
+          item.catalog_key.startsWith("catalog:") &&
+          item.selection !== false,
       )
       .map((item) => String(item.catalog_key));
 
-    // Archived customs (archive = true) are hidden from
-    // the list until the archives viewer lands.
+    // Layer 1 list: active customs (archive != true).
+    // Layer 2 list: archived customs (archive == true).
     const customs: Appliance[] = rows
       .filter(
         (item) =>
           item.type === "custom" &&
           item.archive !== true,
+      )
+      .map((item) => ({
+        id: String(item.app_id),
+        name: String(item.appliance_name),
+        watts: formatCustomWatts(
+          item.wattage_min,
+          item.wattage_max,
+        ),
+        area: CUSTOM_AREA,
+      }));
+
+    const archived: Appliance[] = rows
+      .filter(
+        (item) =>
+          item.type === "custom" &&
+          item.archive === true,
       )
       .map((item) => ({
         id: String(item.app_id),
@@ -297,39 +385,139 @@ export default function ApplianceModal({
       )
       .map((item) => String(item.app_id));
 
+    const propIds = propSnapshot.map(({ id }) => id);
+
     setAppliances(customs);
+    setArchivedAppliances(archived);
     setSelected([
-      ...pickedCatalogKeys,
-      ...selectedCustomIds,
+      ...new Set([
+        ...pickedCatalogKeys,
+        ...selectedCustomIds,
+        ...propIds,
+      ]),
     ]);
-    setArchivedCount(
-      rows.filter(
-        (item) =>
-          item.type === "custom" &&
-          item.archive === true,
-      ).length,
+    setArchivedCount(archived.length);
+    setIsLoadingCustoms(false);
+
+    console.debug(
+      `[ApplianceModal] loaded rows=${rows.length} active=${customs.length} archived=${archived.length}`,
     );
+  };
+
+  // ============================================================
+  // LOAD ARCHIVED ONLY (Layer 2 refetch)
+  // ============================================================
+  //
+  // Layer 2 refetches on open so it never depends on the
+  // Layer 1 snapshot timing: even if the item was archived from
+  // a prop-fallback row or an earlier fetch was stale, opening
+  // the archive layer always reads fresh archive=true rows.
+  // ============================================================
+
+  const loadArchived = async () => {
+    const seq = loadSeq.current + 1;
+    loadSeq.current = seq;
+
+    setIsLoadingCustoms(true);
+
+    const user = await getAuthenticatedUserSafe();
+
+    if (loadSeq.current !== seq) {
+      return;
+    }
+
+    if (!user) {
+      setArchivedAppliances([]);
+      setArchivedCount(0);
+      setIsLoadingCustoms(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("appliances")
+      .select(
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
+      )
+      .eq("user_id", user.id)
+      .eq("type", "custom")
+      .eq("archive", true)
+      .order("appliance_name");
+
+    if (loadSeq.current !== seq) {
+      return;
+    }
+
+    if (error) {
+      console.error(
+        "Failed to load archived appliances:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to load archived appliances. Please try again.",
+      );
+      setIsLoadingCustoms(false);
+      return;
+    }
+
+    const archived: Appliance[] = (data ?? []).map(
+      (item) => ({
+        id: String(item.app_id),
+        name: String(item.appliance_name),
+        watts: formatCustomWatts(
+          item.wattage_min,
+          item.wattage_max,
+        ),
+        area: CUSTOM_AREA,
+      }),
+    );
+
+    console.debug(
+      `[ApplianceModal] loaded archived=${archived.length}`,
+    );
+
+    setArchivedAppliances(archived);
+    setArchivedCount(archived.length);
     setIsLoadingCustoms(false);
   };
 
   // ============================================================
   // MODAL STATE
   // ============================================================
+  //
+  // Deps are [visible] only on purpose. Depending on the
+  // `selectedAppliances` array would re-run the loader mid-edit
+  // (wiping toggles + search) whenever the parent re-renders
+  // with a new array identity. The prop is snapshotted once per
+  // open for the immediate paint + DB union above.
+  // ============================================================
 
   useEffect(() => {
     if (visible) {
-      loadAppliances();
+      const snapshot = selectedAppliances;
 
-      setSelected(
-        selectedAppliances.map(({ id }) => id),
-      );
-
+      // Immediate paint so selected customs are visible even
+      // before the DB fetch resolves. loadAppliances() owns the
+      // seq guard, so a slow fetch cannot overwrite a newer open
+      // and closing mid-fetch invalidates it.
+      setSelected(snapshot.map(({ id }) => id));
+      setDismissedCustomIds([]);
       setSearchText("");
+      setArchiveSearchText("");
+      setLayer(1);
+      setIsSaving(false);
+
+      void loadAppliances(snapshot);
+
       return;
     }
 
+    loadSeq.current += 1;
     setSelected([]);
     setSearchText("");
+    setArchiveSearchText("");
+    setLayer(1);
+    setArchivedAppliances([]);
+    setIsLoadingCustoms(false);
     setEditModalVisible(false);
     setAddModalVisible(false);
     setCustomName("");
@@ -338,7 +526,10 @@ export default function ApplianceModal({
     setSuccessMessage("");
     setEditingCustom(null);
     setIsReset(false);
-  }, [visible, selectedAppliances]);
+    setIsSaving(false);
+    setDismissedCustomIds([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   // ============================================================
   // TOGGLE APPLIANCE
@@ -391,10 +582,39 @@ export default function ApplianceModal({
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
-    // Catalog picks are deleted; every remaining custom
-    // becomes archive = true (hidden) through the DB trigger.
+    // Catalog picks are deleted; Layer 1 customs move to Layer 2
+    // (archive = true through RPC/trigger). Hide prop-merged
+    // customs too, otherwise the prop fallback would resurrect
+    // them after reset.
+    const resetVisibleCustomIds = [
+      ...new Set([
+        ...appliances.map((item) => item.id),
+        ...selectedAppliances
+          .filter((item) => item.area === CUSTOM_AREA)
+          .map((item) => item.id),
+      ]),
+    ];
+    setDismissedCustomIds((current) => [
+      ...new Set([...current, ...resetVisibleCustomIds]),
+    ]);
+    const movedToArchive = appliances;
     setAppliances([]);
-    setArchivedCount(appliances.length);
+    setArchivedAppliances((current) => {
+      const byId = new Map(
+        current.map((item) => [item.id, item]),
+      );
+      for (const item of movedToArchive) {
+        if (!byId.has(item.id)) {
+          byId.set(item.id, item);
+        }
+      }
+      return [...byId.values()].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+    });
+    setArchivedCount(
+      (current) => current + movedToArchive.length,
+    );
 
     logAppliance.selectionReset();
   };
@@ -404,12 +624,25 @@ export default function ApplianceModal({
   // ============================================================
 
   const handleSave = async () => {
+    if (isLoadingCustoms) {
+      setCustomError(
+        "Still loading your custom appliances. Please wait a moment and try again.",
+      );
+      return;
+    }
+
+    if (isSaving) {
+      return;
+    }
+
     const user = await getAuthenticatedUserSafe();
 
     if (!user) {
       console.error("No authenticated user.");
       return;
     }
+
+    setIsSaving(true);
 
     const selectedSet = new Set(selected);
 
@@ -422,7 +655,23 @@ export default function ApplianceModal({
       wattMax: item.wattMax,
     }));
 
-    const customSelected = appliances
+    // Union DB customs + prop customs (minus locally dismissed)
+    // so a selected custom can never be dropped just because the
+    // fetch had not finished or had filtered it out.
+    const customsForSave = [
+      ...new Map(
+        [
+          ...appliances,
+          ...selectedAppliances.filter(
+            (item) =>
+              item.area === CUSTOM_AREA &&
+              !dismissedCustomIds.includes(item.id),
+          ),
+        ].map((item) => [item.id, item]),
+      ).values(),
+    ];
+
+    const customSelected = customsForSave
       .filter((item) => selectedSet.has(item.id))
       .map((item) => item.id);
 
@@ -433,6 +682,8 @@ export default function ApplianceModal({
         p_custom_selected: customSelected,
       },
     );
+
+    setIsSaving(false);
 
     if (saveError) {
       console.error(
@@ -755,6 +1006,15 @@ export default function ApplianceModal({
       ),
     );
 
+    // Edit works from either layer; keep both lists in sync.
+    setArchivedAppliances((current) =>
+      current.map((item) =>
+        item.id === updated.id
+          ? updated
+          : item,
+      ),
+    );
+
     onCustomUpdate?.(updated);
 
     logAppliance.updated(name);
@@ -810,7 +1070,11 @@ export default function ApplianceModal({
       return;
     }
 
-    const removed = appliances.find(
+    const removed =
+      appliances.find((item) => item.id === id) ??
+      archivedAppliances.find((item) => item.id === id);
+
+    const wasArchived = archivedAppliances.some(
       (item) => item.id === id,
     );
 
@@ -818,8 +1082,24 @@ export default function ApplianceModal({
       current.filter((item) => item.id !== id),
     );
 
+    setArchivedAppliances((current) =>
+      current.filter((item) => item.id !== id),
+    );
+
+    if (wasArchived) {
+      setArchivedCount((current) =>
+        Math.max(0, current - 1),
+      );
+    }
+
     setSelected((current) =>
       current.filter((item) => item !== id),
+    );
+
+    setDismissedCustomIds((current) =>
+      current.includes(id)
+        ? current
+        : [...current, id],
     );
 
     logAppliance.removed(
@@ -830,12 +1110,13 @@ export default function ApplianceModal({
   };
 
   // ============================================================
-  // ARCHIVE CUSTOM APPLIANCE
+  // ARCHIVE CUSTOM APPLIANCE (Layer 1 -> Layer 2)
   // ============================================================
   //
-  // Deselecting stores archive = true through the v6 DB
-  // trigger, which hides the row from the list at once.
-  // Recovery waits for the archives viewer.
+  // v7 manual archive: archive_appliance() sets
+  // (selection=false, archive=true) or raises
+  // 'Appliance not found.' Strict RPC-only so a missing v7
+  // migration surfaces loudly instead of silently succeeding.
   // ============================================================
 
   const handleCustomArchive = async (
@@ -850,18 +1131,24 @@ export default function ApplianceModal({
       return;
     }
 
-    const target = appliances.find(
-      (item) => item.id === id,
-    );
+    // The row may be rendered from the prop fallback merge
+    // (DB fetch pending) rather than `appliances` state, so look
+    // in both places. Otherwise archiving a prop-fallback row
+    // would vanish from Layer 1 without ever reaching Layer 2.
+    const target =
+      appliances.find((item) => item.id === id) ??
+      selectedAppliances.find(
+        (item) =>
+          item.id === id && item.area === CUSTOM_AREA,
+      ) ??
+      null;
 
-    const { error } = await supabase
-      .from("appliances")
-      .update({
-        selection: false,
-      })
-      .eq("app_id", id)
-      .eq("user_id", user.id)
-      .eq("type", "custom");
+    const { error } = await supabase.rpc(
+      "archive_appliance",
+      {
+        p_app_id: id,
+      },
+    );
 
     if (error) {
       console.error(
@@ -869,9 +1156,23 @@ export default function ApplianceModal({
         error.message,
       );
 
-      setCustomError(
-        "Unable to archive appliance. Please try again.",
-      );
+      if (
+        error.message.includes("Appliance not found")
+      ) {
+        setCustomError(
+          "Appliance not found. It may have been deleted.",
+        );
+      } else if (
+        error.message.includes("archive_appliance")
+      ) {
+        setCustomError(
+          "Archive service is not updated. Please apply the v7 database script.",
+        );
+      } else {
+        setCustomError(
+          "Unable to archive appliance. Please try again.",
+        );
+      }
 
       return;
     }
@@ -879,12 +1180,30 @@ export default function ApplianceModal({
     const name =
       target?.name ?? "Custom appliance";
 
+    const moved: Appliance | null = target ?? null;
+
     setAppliances((current) =>
       current.filter((item) => item.id !== id),
     );
 
+    if (moved) {
+      setArchivedAppliances((current) =>
+        current.some((item) => item.id === moved.id)
+          ? current
+          : [...current, moved].sort((a, b) =>
+              a.name.localeCompare(b.name),
+            ),
+      );
+    }
+
     setSelected((current) =>
       current.filter((item) => item !== id),
+    );
+
+    setDismissedCustomIds((current) =>
+      current.includes(id)
+        ? current
+        : [...current, id],
     );
 
     setArchivedCount(
@@ -895,6 +1214,107 @@ export default function ApplianceModal({
 
     setSuccessMessage(
       `${name} archived.`,
+    );
+
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 5000);
+  };
+
+  // ============================================================
+  // UNARCHIVE CUSTOM APPLIANCE (Layer 2 -> Layer 1, unticked)
+  // ============================================================
+  //
+  // v7 manual archive: unarchive_appliance() restores
+  // (selection=false, archive=false) or raises
+  // 'Appliance not found.' Strict RPC-only so a missing v7
+  // migration surfaces loudly instead of silently succeeding.
+  // ============================================================
+
+  const handleCustomUnarchive = async (
+    id: string,
+  ) => {
+    const user = await getAuthenticatedUserSafe();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to unarchive an appliance.",
+      );
+      return;
+    }
+
+    const target = archivedAppliances.find(
+      (item) => item.id === id,
+    );
+
+    const { error } = await supabase.rpc(
+      "unarchive_appliance",
+      {
+        p_app_id: id,
+      },
+    );
+
+    if (error) {
+      console.error(
+        "Custom appliance unarchive error:",
+        error.message,
+      );
+
+      if (
+        error.message.includes("Appliance not found")
+      ) {
+        setCustomError(
+          "Appliance not found. It may have been deleted.",
+        );
+      } else if (
+        error.message.includes("unarchive_appliance")
+      ) {
+        setCustomError(
+          "Archive service is not updated. Please apply the v7 database script.",
+        );
+      } else {
+        setCustomError(
+          "Unable to unarchive appliance. Please try again.",
+        );
+      }
+
+      return;
+    }
+
+    const name =
+      target?.name ?? "Custom appliance";
+
+    setArchivedAppliances((current) =>
+      current.filter((item) => item.id !== id),
+    );
+
+    setArchivedCount((current) =>
+      Math.max(0, current - 1),
+    );
+
+    if (target) {
+      setAppliances((current) =>
+        current.some((item) => item.id === target.id)
+          ? current
+          : [...current, target].sort((a, b) =>
+              a.name.localeCompare(b.name),
+            ),
+      );
+    }
+
+    // Ensure restored item is unticked in Layer 1.
+    setSelected((current) =>
+      current.filter((item) => item !== id),
+    );
+
+    setDismissedCustomIds((current) =>
+      current.filter((item) => item !== id),
+    );
+
+    logAppliance.unarchived(name);
+
+    setSuccessMessage(
+      `${name} restored.`,
     );
 
     setTimeout(() => {
@@ -952,13 +1372,43 @@ export default function ApplianceModal({
   // Catalog always renders from GIVEN_CATALOG in code.
   // DB only holds user picks: given rows (catalog_key) for
   // selection state, custom rows for user-created items.
-  // `appliances` state holds customs only.
+  // `appliances` state holds DB customs only; prop customs are
+  // merged in (minus locally dismissed) so a selected custom
+  // stays displayed with the catalog boxes even while the fetch
+  // is pending, fails, or filtered the row out.
   // ============================================================
 
-  const displayAppliances: Appliance[] = [
-    ...GIVEN_CATALOG.map(catalogToAppliance),
-    ...appliances,
-  ];
+  const propCustomFallback = useMemo(
+    () =>
+      selectedAppliances.filter(
+        (item) =>
+          item.area === CUSTOM_AREA &&
+          !dismissedCustomIds.includes(item.id),
+      ),
+    [selectedAppliances, dismissedCustomIds],
+  );
+
+  const mergedCustoms = useMemo(() => {
+    const byId = new Map<string, Appliance>(
+      appliances.map((item) => [item.id, item]),
+    );
+
+    for (const item of propCustomFallback) {
+      if (!byId.has(item.id)) {
+        byId.set(item.id, item);
+      }
+    }
+
+    return [...byId.values()];
+  }, [appliances, propCustomFallback]);
+
+  const displayAppliances: Appliance[] = useMemo(
+    () => [
+      ...GIVEN_CATALOG.map(catalogToAppliance),
+      ...mergedCustoms,
+    ],
+    [mergedCustoms],
+  );
 
   const filteredAppliances =
     displayAppliances.filter(
@@ -977,6 +1427,42 @@ export default function ApplianceModal({
   );
 
   const showCustomStates = normalizedSearch === "";
+
+  // ============================================================
+  // LAYER 2 (ARCHIVED VIEWER) FILTER
+  // ============================================================
+
+  const normalizedArchiveSearch = archiveSearchText
+    .trim()
+    .toLowerCase();
+
+  const filteredArchivedAppliances =
+    archivedAppliances.filter(
+      (appliance) =>
+        !normalizedArchiveSearch ||
+        appliance.name
+          .toLowerCase()
+          .includes(normalizedArchiveSearch),
+    );
+
+  const showArchivedStates =
+    normalizedArchiveSearch === "";
+
+  const openArchiveLayer = () => {
+    setCustomError("");
+    setArchiveSearchText("");
+    setLayer(2);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    // Always refetch so Layer 2 reflects the table, not just
+    // the optimistic Layer 1 state.
+    void loadArchived();
+  };
+
+  const closeArchiveLayer = () => {
+    setArchiveSearchText("");
+    setLayer(1);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
 
   // ============================================================
   // SELECT ALL (UNION-VISIBLE)
@@ -1014,20 +1500,41 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Header */}
+          {/* Header: Layer 1 = Add, Layer 2 = Archived viewer */}
           <View style={styles.header}>
+            {layer === 2 ? (
+              <Pressable
+                onPress={closeArchiveLayer}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back to appliances"
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={colors.headerContent}
+                />
+              </Pressable>
+            ) : null}
+
             <AppText
               variant="heading"
               style={styles.title}
             >
-              Add Appliances
+              {layer === 2
+                ? "Archived Appliances"
+                : "Add Appliances"}
             </AppText>
 
             <Pressable
               onPress={onClose}
               style={styles.closeButton}
               accessibilityRole="button"
-              accessibilityLabel="Close Add Appliances"
+              accessibilityLabel={
+                layer === 2
+                  ? "Close Archived Appliances"
+                  : "Close Add Appliances"
+              }
             >
               <Ionicons
                 name="close"
@@ -1036,6 +1543,29 @@ export default function ApplianceModal({
               />
             </Pressable>
           </View>
+
+          {/* Thin success banner: full-spread white strip pinned
+              directly below the header, shared by both layers.
+              Single text line + hairline, static while the list
+              scrolls beneath. */}
+          {successMessage ? (
+            <View style={styles.successBanner}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={16}
+                color="#00805A"
+              />
+
+              <AppText
+                variant="caption"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={styles.successBannerText}
+              >
+                {successMessage}
+              </AppText>
+            </View>
+          ) : null}
 
           {/* Content */}
           <ScrollView
@@ -1046,112 +1576,101 @@ export default function ApplianceModal({
             }
             showsVerticalScrollIndicator
           >
-            {/* Battery Advisory */}
-            <View style={styles.advisory}>
-              <View style={styles.advisoryRow}>
-                <Ionicons
-                  name="battery-half-outline"
-                  size={24}
-                  color={colors.accentContent}
-                />
+            {/* Battery Advisory (Layer 1 only) */}
+            {layer === 1 ? (
+              <View style={styles.advisory}>
+                <View style={styles.advisoryRow}>
+                  <Ionicons
+                    name="battery-half-outline"
+                    size={24}
+                    color={colors.accentContent}
+                  />
 
-                <View style={styles.advisoryText}>
-                  <AppText
-                    variant="body"
-                    style={styles.advisoryTitle}
-                  >
-                    Battery Capacity: 720 Wh
-                  </AppText>
+                  <View style={styles.advisoryText}>
+                    <AppText
+                      variant="body"
+                      style={styles.advisoryTitle}
+                    >
+                      Battery Capacity: 720 Wh
+                    </AppText>
 
-                  <AppText
-                    variant="caption"
-                    style={
-                      styles.advisoryDescription
-                    }
-                  >
-                    Select the appliances you want to use
-                    and keep them within the available
-                    energy capacity.
-                  </AppText>
+                    <AppText
+                      variant="caption"
+                      style={
+                        styles.advisoryDescription
+                      }
+                    >
+                      Select the appliances you want to use
+                      and keep them within the available
+                      energy capacity.
+                    </AppText>
+                  </View>
                 </View>
-              </View>
-            </View>
-
-            {/* Search + Archives */}
-            <View style={styles.searchRow}>
-              <View style={styles.searchBoxFlex}>
-                <SearchBox
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  placeholder="Search appliances..."
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  accessibilityLabel="Search appliances"
-                />
-              </View>
-
-              <Pressable
-                onPress={() => {}}
-                style={({ pressed }) => [
-                  styles.archiveButton,
-                  pressed && styles.pressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Archives"
-              >
-                <Ionicons
-                  name="archive-outline"
-                  size={20}
-                  color={colors.onPrimary}
-                />
-              </Pressable>
-            </View>
-
-            {/* Custom Appliance */}
-            <View style={styles.customSection}>
-              <Pressable
-                onPress={handleAddOpen}
-                style={({ pressed }) => [
-                  styles.customButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={20}
-                  color={colors.onPrimary}
-                />
-
-                <AppText
-                  variant="caption"
-                  style={styles.customButtonText}
-                >
-                  Add Custom Appliance
-                </AppText>
-              </Pressable>
-            </View>
-
-            {/* Success Message */}
-            {successMessage ? (
-              <View style={styles.successPanel}>
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={20}
-                  color={colors.accentContent}
-                />
-
-                <AppText
-                  variant="caption"
-                  style={styles.successText}
-                >
-                  {successMessage}
-                </AppText>
               </View>
             ) : null}
 
-            {/* Custom Appliances (header always shows) */}
-            {(showCustomStates ||
-              customAppliances.length > 0) && (
+            {/* Search + Archives (Layer 1 only; Layer 2 has its own search below) */}
+            {layer === 1 ? (
+              <View style={styles.searchRow}>
+                <View style={styles.searchBoxFlex}>
+                  <SearchBox
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    placeholder="Search appliances..."
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    accessibilityLabel="Search appliances"
+                  />
+                </View>
+
+                <Pressable
+                  onPress={openArchiveLayer}
+                  style={({ pressed }) => [
+                    styles.archiveButton,
+                    pressed && styles.pressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Archives, ${archivedCount} archived`}
+                >
+                  <Ionicons
+                    name="archive-outline"
+                    size={20}
+                    color={colors.onPrimary}
+                  />
+                </Pressable>
+              </View>
+            ) : null}
+
+            {/* Custom Appliance (Layer 1 only) */}
+            {layer === 1 ? (
+              <View style={styles.customSection}>
+                <Pressable
+                  onPress={handleAddOpen}
+                  style={({ pressed }) => [
+                    styles.customButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={20}
+                    color={colors.onPrimary}
+                  />
+
+                  <AppText
+                    variant="caption"
+                    style={styles.customButtonText}
+                  >
+                    Add Custom Appliance
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {/* Custom Appliances Layer 1 only (header always shows) */}
+            {layer === 1 &&
+              (showCustomStates ||
+                customAppliances.length > 0) && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <AppText
@@ -1235,30 +1754,31 @@ export default function ApplianceModal({
                 </View>
               )}
 
-            {/* Appliance Categories */}
-            {sections.map((section) => {
-              const items =
-                filteredAppliances.filter(
-                  (item) =>
-                    item.area === section,
-                );
+            {/* Appliance Categories (Layer 1 only) */}
+            {layer === 1 &&
+              sections.map((section) => {
+                const items =
+                  filteredAppliances.filter(
+                    (item) =>
+                      item.area === section,
+                  );
 
-              if (items.length === 0) {
-                return null;
-              }
+                if (items.length === 0) {
+                  return null;
+                }
 
-              return (
-                <View
-                  key={section}
-                  style={styles.section}
-                >
-                  <View style={styles.sectionHeader}>
-                    <AppText
-                      variant="body"
-                      style={styles.sectionTitle}
-                    >
-                      {section}
-                    </AppText>
+                return (
+                  <View
+                    key={section}
+                    style={styles.section}
+                  >
+                    <View style={styles.sectionHeader}>
+                      <AppText
+                        variant="body"
+                        style={styles.sectionTitle}
+                      >
+                        {section}
+                      </AppText>
 
                       <View
                         style={[
@@ -1269,39 +1789,40 @@ export default function ApplianceModal({
                           },
                         ]}
                       />
-                  </View>
+                    </View>
 
-                  <View style={styles.grid}>
-                    {items.map((appliance) => {
-                      const isSelected =
-                        selected.includes(
-                          appliance.id,
+                    <View style={styles.grid}>
+                      {items.map((appliance) => {
+                        const isSelected =
+                          selected.includes(
+                            appliance.id,
+                          );
+
+                        return (
+                          <ApplianceBox
+                            key={appliance.id}
+                            name={appliance.name}
+                            wattage={appliance.watts}
+                            color={areaColor(
+                              appliance.area,
+                            )}
+                            selected={isSelected}
+                            onPress={() =>
+                              toggleAppliance(
+                                appliance.id,
+                              )
+                            }
+                          />
                         );
-
-                      return (
-                        <ApplianceBox
-                          key={appliance.id}
-                          name={appliance.name}
-                          wattage={appliance.watts}
-                          color={areaColor(
-                            appliance.area,
-                          )}
-                          selected={isSelected}
-                          onPress={() =>
-                            toggleAppliance(
-                              appliance.id,
-                            )
-                          }
-                        />
-                      );
-                    })}
+                      })}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })}
 
-            {/* No Search Results */}
-            {normalizedSearch.length > 0 &&
+            {/* No Search Results (Layer 1 only) */}
+            {layer === 1 &&
+              normalizedSearch.length > 0 &&
               filteredAppliances.length === 0 && (
                 <View style={styles.noResults}>
                   <Ionicons
@@ -1320,10 +1841,200 @@ export default function ApplianceModal({
                   </AppText>
                 </View>
               )}
+
+            {/* ================= LAYER 2: ARCHIVED VIEWER ================= */}
+            {layer === 2 ? (
+              <>
+                {/* Archived advisory */}
+                <View style={styles.advisory}>
+                  <View style={styles.advisoryRow}>
+                    <Ionicons
+                      name="archive-outline"
+                      size={24}
+                      color={colors.accentContent}
+                    />
+
+                    <View style={styles.advisoryText}>
+                      <AppText
+                        variant="body"
+                        style={styles.advisoryTitle}
+                      >
+                        Archived Appliances
+                      </AppText>
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.advisoryDescription
+                        }
+                      >
+                        Archived customs are hidden from
+                        selection. Unarchive to return them
+                        to the list as unticked.
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Archived search (no archive button here) */}
+                <View style={styles.searchRow}>
+                  <View style={styles.searchBoxFlex}>
+                    <SearchBox
+                      value={archiveSearchText}
+                      onChangeText={
+                        setArchiveSearchText
+                      }
+                      placeholder="Search archived..."
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      accessibilityLabel="Search archived appliances"
+                    />
+                  </View>
+                </View>
+
+                {/* Archived grid (same box layout, viewer-only) */}
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <AppText
+                      variant="body"
+                      style={styles.sectionTitle}
+                    >
+                      Archived Appliances
+                    </AppText>
+
+                    <View
+                      style={[
+                        styles.sectionLine,
+                        {
+                          backgroundColor:
+                            colors.border,
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  {isLoadingCustoms &&
+                  showArchivedStates ? (
+                    <EmptyState
+                      title="Loading Archived Appliances"
+                      description="Fetching your archived appliances…"
+                      icon="sync-outline"
+                      style={styles.customState}
+                    />
+                  ) : filteredArchivedAppliances.length >
+                    0 ? (
+                    <View style={styles.grid}>
+                      {filteredArchivedAppliances.map(
+                        (appliance) => (
+                          <ApplianceBox
+                            key={appliance.id}
+                            name={appliance.name}
+                            wattage={appliance.watts}
+                            color={colors.primary}
+                            selectable={false}
+                            isCustom
+                            archiveVariant="unarchive"
+                            onEdit={() =>
+                              openCustomEditor(
+                                appliance,
+                              )
+                            }
+                            onDelete={() =>
+                              handleCustomDelete(
+                                appliance.id,
+                              )
+                            }
+                            onArchive={() =>
+                              handleCustomUnarchive(
+                                appliance.id,
+                              )
+                            }
+                          />
+                        ),
+                      )}
+                    </View>
+                  ) : showArchivedStates ? (
+                    <EmptyState
+                      title="No Archived Appliances"
+                      description="Nothing archived yet. Archived customs will appear here."
+                      icon="archive-outline"
+                      style={styles.customState}
+                    />
+                  ) : null}
+                </View>
+
+                {/* No Archived Search Results */}
+                {normalizedArchiveSearch.length > 0 &&
+                  filteredArchivedAppliances.length ===
+                    0 && (
+                    <View style={styles.noResults}>
+                      <Ionicons
+                        name="search-outline"
+                        size={28}
+                        color={
+                          colors.textSecondary
+                        }
+                      />
+
+                      <AppText
+                        variant="caption"
+                        style={styles.noResultsText}
+                      >
+                        {`No archived appliances found for "${archiveSearchText.trim()}"`}
+                      </AppText>
+                    </View>
+                  )}
+              </>
+            ) : null}
           </ScrollView>
 
-          {/* Footer */}
-          <View style={styles.footer}>
+          {/* Footer: Layer 1 = selection actions, Layer 2 = viewer count + back */}
+          {layer === 2 ? (
+            <View style={styles.footer}>
+              <View style={styles.selectedInfo}>
+                <View
+                  style={styles.selectedGroup}
+                  accessibilityRole="text"
+                  accessibilityLabel={`${archivedCount} appliances archived`}
+                >
+                  <Ionicons
+                    name="archive-outline"
+                    size={17}
+                    color={colors.headerContent}
+                  />
+
+                  <AppText
+                    variant="caption"
+                    style={styles.selectedText}
+                  >
+                    {archivedCount} appliance
+                    {archivedCount !== 1 ? "s" : ""}{" "}
+                    archived
+                  </AppText>
+                </View>
+              </View>
+
+              <View style={styles.footerButtons}>
+                <Pressable
+                  onPress={closeArchiveLayer}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to appliances"
+                >
+                  <AppText
+                    variant="caption"
+                    style={styles.actionText}
+                  >
+                    Back
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.footer}>
             <View style={styles.selectedInfo}>
               <View
                 style={styles.selectedGroup}
@@ -1403,20 +2114,38 @@ export default function ApplianceModal({
 
               <Pressable
                 onPress={handleSave}
+                disabled={isLoadingCustoms || isSaving}
                 style={({ pressed }) => [
                   styles.actionButton,
                   pressed && styles.buttonPressed,
+                  (isLoadingCustoms || isSaving) &&
+                    styles.pressed,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isSaving
+                    ? "Saving appliance selection"
+                    : isLoadingCustoms
+                      ? "Loading custom appliances"
+                      : "Save appliance selection"
+                }
               >
                 <AppText
                   variant="caption"
                   style={styles.actionText}
                 >
-                  {isReset ? "Save" : "Add"}
+                  {isSaving
+                    ? "Saving..."
+                    : isLoadingCustoms
+                      ? "Loading..."
+                      : isReset
+                        ? "Save"
+                        : "Add"}
                 </AppText>
               </Pressable>
             </View>
-          </View>
+            </View>
+          )}
         </View>
 
         <CustomApplianceModal
@@ -1712,16 +2441,25 @@ const getStyles = (colors: AppColors) =>
     opacity: 1,
   },
 
-  successPanel: {
+  // Thin full-spread success strip pinned directly below the
+  // header (outside the scroll padding). Frozen white + frozen
+  // dark-green ink so it stays readable in both themes, same
+  // convention as the frozen badge scales in colors.ts. Height
+  // hugs one caption line: no minHeight, single-line ellipsis.
+  successBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginBottom: Spacing.md,
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
 
-  successText: {
+  successBannerText: {
     flex: 1,
-    color: colors.accentContent,
+    color: "#14532D",
     fontWeight: "600",
   },
 });
