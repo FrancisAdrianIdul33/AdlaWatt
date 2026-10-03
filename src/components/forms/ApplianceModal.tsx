@@ -39,7 +39,7 @@ import {
   Spacing,
   Typography,
 } from "@/constants/theme";
-import { Control, Field, Touch } from "@/constants/sizing";
+import { Control, Touch } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
@@ -873,6 +873,12 @@ export default function ApplianceModal({
     setCustomError("");
     setAddModalVisible(false);
 
+    // New customs are active (Layer 1). If added from Layer 2,
+    // return there so the new item is visible under the banner.
+    if (layer === 2) {
+      closeArchiveLayer();
+    }
+
     setSuccessMessage(
       `${name} successfully added!`,
     );
@@ -1465,6 +1471,99 @@ export default function ApplianceModal({
   };
 
   // ============================================================
+  // ACTION ROW (Add Custom + Archived/Back)
+  // ============================================================
+  //
+  // One shared row rendered per layer: Layer 1 shows it below
+  // its search box, Layer 2 below the archived search box.
+  // Second button toggles layers (Archived with count / Back).
+  // ============================================================
+
+  const renderActionRow = () => (
+    <View style={styles.customSection}>
+      <Pressable
+        onPress={handleAddOpen}
+        style={({ pressed }) => [
+          styles.customButton,
+          styles.customButtonHalf,
+          pressed && styles.pressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Add custom appliance"
+      >
+        <Ionicons
+          name="add-circle-outline"
+          size={20}
+          color={colors.onPrimary}
+        />
+
+        <AppText
+          variant="caption"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={styles.customButtonText}
+        >
+          Add Custom
+        </AppText>
+      </Pressable>
+
+      {layer === 1 ? (
+        <Pressable
+          onPress={openArchiveLayer}
+          style={({ pressed }) => [
+            styles.archiveRowButton,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Archived appliances, ${archivedCount} archived`}
+        >
+          <Ionicons
+            name="archive-outline"
+            size={18}
+            color={colors.text}
+          />
+
+          <AppText
+            variant="caption"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={styles.archiveRowButtonText}
+          >
+            {archivedCount > 0
+              ? `Archived (${archivedCount})`
+              : "Archived"}
+          </AppText>
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={closeArchiveLayer}
+          style={({ pressed }) => [
+            styles.archiveRowButton,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Back to appliances"
+        >
+          <Ionicons
+            name="arrow-back"
+            size={18}
+            color={colors.text}
+          />
+
+          <AppText
+            variant="caption"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={styles.archiveRowButtonText}
+          >
+            Back
+          </AppText>
+        </Pressable>
+      )}
+    </View>
+  );
+
+  // ============================================================
   // SELECT ALL (UNION-VISIBLE)
   // ============================================================
   //
@@ -1500,23 +1599,10 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Header: Layer 1 = Add, Layer 2 = Archived viewer */}
+          {/* Header: Layer 1 = Add, Layer 2 = Archived viewer.
+              Layer 2 has no back arrow; the title sits left and
+              return uses the row/footer Back buttons. */}
           <View style={styles.header}>
-            {layer === 2 ? (
-              <Pressable
-                onPress={closeArchiveLayer}
-                style={styles.closeButton}
-                accessibilityRole="button"
-                accessibilityLabel="Back to appliances"
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={24}
-                  color={colors.headerContent}
-                />
-              </Pressable>
-            ) : null}
-
             <AppText
               variant="heading"
               style={styles.title}
@@ -1609,7 +1695,7 @@ export default function ApplianceModal({
               </View>
             ) : null}
 
-            {/* Search + Archives (Layer 1 only; Layer 2 has its own search below) */}
+            {/* Search (Layer 1 only; Layer 2 has its own search below) */}
             {layer === 1 ? (
               <View style={styles.searchRow}>
                 <View style={styles.searchBoxFlex}>
@@ -1622,50 +1708,12 @@ export default function ApplianceModal({
                     accessibilityLabel="Search appliances"
                   />
                 </View>
-
-                <Pressable
-                  onPress={openArchiveLayer}
-                  style={({ pressed }) => [
-                    styles.archiveButton,
-                    pressed && styles.pressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Archives, ${archivedCount} archived`}
-                >
-                  <Ionicons
-                    name="archive-outline"
-                    size={20}
-                    color={colors.onPrimary}
-                  />
-                </Pressable>
               </View>
             ) : null}
 
-            {/* Custom Appliance (Layer 1 only) */}
-            {layer === 1 ? (
-              <View style={styles.customSection}>
-                <Pressable
-                  onPress={handleAddOpen}
-                  style={({ pressed }) => [
-                    styles.customButton,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={20}
-                    color={colors.onPrimary}
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={styles.customButtonText}
-                  >
-                    Add Custom Appliance
-                  </AppText>
-                </Pressable>
-              </View>
-            ) : null}
+            {/* Action row Layer 1 only here; Layer 2 renders it
+                below its own search box. */}
+            {layer === 1 ? renderActionRow() : null}
 
             {/* Custom Appliances Layer 1 only (header always shows) */}
             {layer === 1 &&
@@ -1876,7 +1924,7 @@ export default function ApplianceModal({
                   </View>
                 </View>
 
-                {/* Archived search (no archive button here) */}
+                {/* Archived search */}
                 <View style={styles.searchRow}>
                   <View style={styles.searchBoxFlex}>
                     <SearchBox
@@ -1891,6 +1939,9 @@ export default function ApplianceModal({
                     />
                   </View>
                 </View>
+
+                {/* Action row below the archived search box */}
+                {renderActionRow()}
 
                 {/* Archived grid (same box layout, viewer-only) */}
                 <View style={styles.section}>
@@ -2282,6 +2333,8 @@ const getStyles = (colors: AppColors) =>
   },
 
   customSection: {
+    flexDirection: "row",
+    gap: 8,
     marginBottom: Spacing.lg,
   },
 
@@ -2333,6 +2386,28 @@ const getStyles = (colors: AppColors) =>
     fontSize: 14,
   },
 
+  customButtonHalf: {
+    flex: 1,
+  },
+
+  archiveRowButton: {
+    flex: 1,
+    minHeight: Control.button,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: Radius.md,
+  },
+
+  archiveRowButtonText: {
+    flexShrink: 1,
+    color: colors.text,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
   grid: applianceCardGrid,
 
   searchRow: {
@@ -2343,18 +2418,6 @@ const getStyles = (colors: AppColors) =>
 
   searchBoxFlex: {
     flex: 1,
-  },
-
-  archiveButton: {
-    width: Field.height,
-    height: Field.height,
-    minWidth: Touch.target,
-    minHeight: Touch.target,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: Radius.md,
-    backgroundColor: colors.primary,
-    marginBottom: 18,
   },
 
   noResults: {

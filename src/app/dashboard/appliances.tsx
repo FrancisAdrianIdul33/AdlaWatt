@@ -461,31 +461,33 @@ export default function AppliancesScreen() {
         </View>
 
         {/* Controls */}
-        <View style={styles.controls}>
-          {/* Add New */}
-          <Pressable
-            onPress={() =>
-              setApplianceModalVisible(true)
-            }
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && styles.pressed,
-            ]}
+        {/* Select Appliances (full spread, above the filters) */}
+        <Pressable
+          onPress={() =>
+            setApplianceModalVisible(true)
+          }
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Select appliances"
+        >
+          <Ionicons
+            name="add-outline"
+            size={18}
+            color={colors.onPrimary}
+          />
+
+          <AppText
+            variant="caption"
+            style={styles.addButtonText}
           >
-            <Ionicons
-              name="add-outline"
-              size={18}
-              color={colors.onPrimary}
-            />
+            Select Appliances
+          </AppText>
+        </Pressable>
 
-            <AppText
-              variant="caption"
-              style={styles.addButtonText}
-            >
-              Add New
-            </AppText>
-          </Pressable>
-
+        <View style={styles.controls}>
           {/* Power Filter */}
           <View style={styles.filterWrapper}>
             <Pressable
@@ -768,6 +770,7 @@ const getStyles = (colors: AppColors) =>
   },
 
   addButton: {
+    width: "100%",
     minHeight: Control.button,
     flexDirection: "row",
     alignItems: "center",
@@ -776,6 +779,7 @@ const getStyles = (colors: AppColors) =>
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingHorizontal: 12,
+    marginBottom: dimensions.gap,
   },
 
   addButtonText: {
