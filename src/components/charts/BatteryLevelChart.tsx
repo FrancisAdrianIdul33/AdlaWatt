@@ -188,6 +188,12 @@ export default function BatteryLevelChart({
   const average = isEmpty
     ? null
     : real.reduce((sum, p) => sum + p.value, 0) / real.length;
+  // Peak matches the thin max line: highest max across periods.
+  const peak = isEmpty
+    ? null
+    : Math.max(
+        ...real.map((p) => p.max ?? p.value),
+      );
   const belowFloor = lowest != null && lowest < floor;
 
   useEffect(() => {
@@ -229,6 +235,14 @@ export default function BatteryLevelChart({
           label="Average"
           value={
             average != null ? `${Math.round(average)}%` : "-"
+          }
+          color={colors.text}
+        />
+
+        <Stat
+          label="Peak"
+          value={
+            peak != null ? `${Math.round(peak)}%` : "-"
           }
           color={colors.text}
         />
@@ -401,15 +415,18 @@ const styles = StyleSheet.create({
 
   stat: {
     flex: 1,
+    alignItems: "center",
   },
 
   statLabel: {
     fontSize: 11,
+    textAlign: "center",
   },
 
   statValue: {
     fontSize: 20,
     fontVariant: ["tabular-nums"],
+    textAlign: "center",
   },
 
   chartWrap: {

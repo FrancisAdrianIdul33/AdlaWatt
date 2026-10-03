@@ -381,15 +381,18 @@ const styles = StyleSheet.create({
 
   stat: {
     flex: 1,
+    alignItems: "center",
   },
 
   statLabel: {
     fontSize: 11,
+    textAlign: "center",
   },
 
   statValue: {
     fontSize: 20,
     fontVariant: ["tabular-nums"],
+    textAlign: "center",
   },
 
   donutWrap: {
