@@ -1813,6 +1813,96 @@ export interface UnsafeBarPoint {
   label: string;
 }
 
+export type BatteryActivityKey =
+  | "charging"
+  | "discharging"
+  | "idle";
+
+export interface BatteryActivitySlice {
+  key: BatteryActivityKey;
+  label: string;
+  value: number;
+  percent: number;
+}
+
+export function getBatteryActivityData(
+  groupedMonitoring: MonitoringBucket[],
+): BatteryActivitySlice[] {
+  let charging = 0;
+  let discharging = 0;
+  let idle = 0;
+
+  groupedMonitoring.forEach(
+    (bucket) => {
+      bucket.rows.forEach(
+        (row) => {
+          const status =
+            String(
+              row.battery_status ??
+                "",
+            )
+              .trim()
+              .toLowerCase();
+
+          if (
+            status === "charging"
+          ) {
+            charging += 1;
+          } else if (
+            status ===
+            "discharging"
+          ) {
+            discharging += 1;
+          } else if (
+            status === "idle"
+          ) {
+            idle += 1;
+          }
+        },
+      );
+    },
+  );
+
+  const total =
+    charging +
+    discharging +
+    idle;
+
+  const toPercent = (
+    count: number,
+  ): number =>
+    total > 0
+      ? Math.round(
+          (count / total) *
+            100,
+        )
+      : 0;
+
+  return [
+    {
+      key: "charging",
+      label: "Charging",
+      value: charging,
+      percent:
+        toPercent(charging),
+    },
+    {
+      key: "discharging",
+      label: "Discharging",
+      value: discharging,
+      percent: toPercent(
+        discharging,
+      ),
+    },
+    {
+      key: "idle",
+      label: "Idle",
+      value: idle,
+      percent: toPercent(idle),
+    },
+  ];
+}
+
 export function getBatteryChartRangeData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,

@@ -8,6 +8,7 @@ import BatteryLevelChart, {
   BatteryLevelPoint,
 } from "@/components/charts/BatteryLevelChart";
 import UnsafeDischargeChart from "@/components/charts/UnsafeDischargeChart";
+import BatteryActivityChart from "@/components/charts/BatteryActivityChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -30,11 +31,13 @@ import {
   generateAdlaWattCsv,
   generateAdlaWattPdf,
   getBatteryChartRangeData,
+  getBatteryActivityData,
   getDefaultRange,
   getUnsafeDischargeChartData,
   groupMonitoringHistory,
   loadAnalyticsData,
   prepareReportData,
+  type BatteryActivitySlice,
   type UnsafeBarPoint,
 } from "@/services/analyticsService";
 import React, {
@@ -140,6 +143,22 @@ export default function AnalyticsScreen() {
       monitoringHistory,
       unsafeFrequency,
     ]);
+
+  const activitySlices =
+    useMemo<BatteryActivitySlice[]>(() => {
+      // Range total: grouping is invariant (sum across buckets
+      // equals sum across rows), so a fixed bucketing is used
+      // and no frequency toggle is shown for this card.
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          "Daily",
+        );
+
+      return getBatteryActivityData(
+        buckets,
+      );
+    }, [monitoringHistory]);
 
   const loadAnalytics =
     useCallback(
@@ -460,6 +479,16 @@ export default function AnalyticsScreen() {
         >
           <UnsafeDischargeChart
             points={unsafePoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Battery Activity"
+          subtitle="How often it charges vs drains."
+          icon="pie-chart-outline"
+        >
+          <BatteryActivityChart
+            slices={activitySlices}
           />
         </AnalyticsChartCard>
 
