@@ -1,10 +1,13 @@
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   LayoutChangeEvent,
   Platform,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -109,6 +112,12 @@ export default function BatteryLevelChart({
   const onLayout = (e: LayoutChangeEvent) =>
     setBoxW(e.nativeEvent.layout.width);
 
+  // Own the chart's scroll ref: the library scrolls to the end
+  // on content-size change, but on web that can fire before
+  // layout/fonts settle and stop short. These delayed passes
+  // re-assert the end position without remounting (no flash).
+  const scrollRef = useRef<ScrollView | null>(null);
+
   // Skip non-finite values (periods with no data).
   const real = useMemo(
     () =>
@@ -159,6 +168,29 @@ export default function BatteryLevelChart({
     : real.reduce((sum, p) => sum + p.value, 0) / real.length;
   const belowFloor = lowest != null && lowest < floor;
 
+  useEffect(() => {
+    if (isEmpty || boxW <= 0) {
+      return;
+    }
+
+    const first = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({
+        animated: false,
+      });
+    }, 300);
+
+    const second = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({
+        animated: false,
+      });
+    }, 1000);
+
+    return () => {
+      clearTimeout(first);
+      clearTimeout(second);
+    };
+  }, [isEmpty, boxW, data.length]);
+
   return (
     <View style={styles.container}>
       {/* Stats: text labels, not color only. */}
@@ -202,9 +234,10 @@ export default function BatteryLevelChart({
         style={styles.chartWrap}
       >
         {boxW > 0 ? (
-          <LineChart
-            key={`battery-${data.length}`}
-            data={data}
+            <LineChart
+              key={`battery-${data.length}`}
+              data={data}
+              scrollRef={scrollRef}
             height={CHART_HEIGHT}
             width={chartW}
             curved
