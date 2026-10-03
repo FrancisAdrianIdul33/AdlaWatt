@@ -1808,6 +1808,11 @@ export interface BatteryRangePoint {
   label?: string;
 }
 
+export interface UnsafeBarPoint {
+  value: number;
+  label: string;
+}
+
 export function getBatteryChartRangeData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
@@ -1838,6 +1843,32 @@ export function getBatteryChartRangeData(
           0,
           100,
         ),
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+export function getUnsafeDischargeChartData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): UnsafeBarPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const unsafeCount =
+        bucket.rows.filter(
+          (row) =>
+            getDoDStatus(
+              toNumber(row.battery_level),
+            ) === "Unsafe",
+        ).length;
+
+      return {
+        value: unsafeCount,
         label:
           formatDateLabel(
             bucket.date,

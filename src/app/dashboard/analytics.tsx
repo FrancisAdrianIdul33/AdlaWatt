@@ -7,6 +7,7 @@ import AnalyticsChartCard from "@/components/AnalyticsChartCard";
 import BatteryLevelChart, {
   BatteryLevelPoint,
 } from "@/components/charts/BatteryLevelChart";
+import UnsafeDischargeChart from "@/components/charts/UnsafeDischargeChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -30,9 +31,11 @@ import {
   generateAdlaWattPdf,
   getBatteryChartRangeData,
   getDefaultRange,
+  getUnsafeDischargeChartData,
   groupMonitoringHistory,
   loadAnalyticsData,
   prepareReportData,
+  type UnsafeBarPoint,
 } from "@/services/analyticsService";
 import React, {
   useCallback,
@@ -97,6 +100,13 @@ export default function AnalyticsScreen() {
     "Daily",
   );
 
+  const [
+    unsafeFrequency,
+    setUnsafeFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
   const batteryPoints =
     useMemo<BatteryLevelPoint[]>(() => {
       const buckets =
@@ -112,6 +122,23 @@ export default function AnalyticsScreen() {
     }, [
       monitoringHistory,
       batteryFrequency,
+    ]);
+
+  const unsafePoints =
+    useMemo<UnsafeBarPoint[]>(() => {
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          unsafeFrequency,
+        );
+
+      return getUnsafeDischargeChartData(
+        buckets,
+        unsafeFrequency,
+      );
+    }, [
+      monitoringHistory,
+      unsafeFrequency,
     ]);
 
   const loadAnalytics =
@@ -419,6 +446,20 @@ export default function AnalyticsScreen() {
         >
           <BatteryLevelChart
             points={batteryPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Unsafe Discharge Events"
+          subtitle="Snapshots below 20% per period. Lower is better."
+          icon="warning-outline"
+          frequency={unsafeFrequency}
+          onFrequencyChange={
+            setUnsafeFrequency
+          }
+        >
+          <UnsafeDischargeChart
+            points={unsafePoints}
           />
         </AnalyticsChartCard>
 
