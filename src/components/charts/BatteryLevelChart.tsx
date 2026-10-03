@@ -78,6 +78,9 @@ function Stat({
    BATTERY LEVEL OVER TIME
    Curved area chart (react-native-gifted-charts, SVG-based so it
    works on native and web with no extra engine loading).
+   Average renders bold green with area fill; peak (max) renders
+   as a thin green second series so any 100 sample touches the
+   top line even when the average sits below it.
    The Y axis is always 0 to 100%. The chart is the VISIBLE
    width only, so gifted-charts scrolls the plot inside and
    the left % axis stays fixed while lines terminate at the
@@ -147,6 +150,25 @@ export default function BatteryLevelChart({
         : real.map((p) => ({
             value: clampPercent(p.value),
             label: p.label ?? "",
+          })),
+    [real, isEmpty],
+  );
+
+  // Peak (max) line: same length/order as avg, no x-labels
+  // (labels stay on the primary series to avoid duplicates).
+  // Any 100 sample touches the top via this faint line even
+  // when the average sits below it.
+  const dataMax = useMemo(
+    () =>
+      isEmpty
+        ? [
+            { value: 0 },
+            { value: 0 },
+          ]
+        : real.map((p) => ({
+            value: clampPercent(
+              p.max ?? p.value,
+            ),
           })),
     [real, isEmpty],
   );
@@ -237,13 +259,17 @@ export default function BatteryLevelChart({
             <LineChart
               key={`battery-${data.length}`}
               data={data}
+              data2={dataMax}
               scrollRef={scrollRef}
-            height={CHART_HEIGHT}
-            width={chartW}
-            curved
+              height={CHART_HEIGHT}
+              width={chartW}
+              overflowTop={8}
+              curved
             areaChart
             color={chartColors.green}
+            color2={chartColors.green}
             thickness={3}
+            thickness2={1.5}
             startFillColor={chartColors.green}
             endFillColor={chartColors.green}
             startOpacity={colors.isDark ? 0.22 : 0.32}
@@ -271,7 +297,9 @@ export default function BatteryLevelChart({
             rulesThickness={1}
             showVerticalLines={false}
             hideDataPoints={isEmpty || Platform.OS === "web"}
+            hideDataPoints2={isEmpty || Platform.OS === "web"}
             dataPointsColor={chartColors.green}
+            dataPointsColor2={chartColors.green}
             dataPointsRadius={3}
             spacing={spacing}
             initialSpacing={20}
@@ -295,12 +323,12 @@ export default function BatteryLevelChart({
       </View>
 
       {/* Legend: line style + text so meaning never depends
-          on color alone (solid green = battery %, dashed red
-          = safety floor). */}
+          on color alone (solid green = avg battery %, thin
+          green = peak, dashed red = safety floor). */}
       <View
         style={styles.legend}
         accessibilityRole="text"
-        accessibilityLabel="Legend: solid line battery percent, dashed line safety floor"
+        accessibilityLabel="Legend: solid line average battery percent, thin line peak, dashed line safety floor"
       >
         <View style={styles.legendItem}>
           <View
@@ -314,7 +342,23 @@ export default function BatteryLevelChart({
             variant="caption"
             style={styles.legendText}
           >
-            Battery %
+            Average
+          </AppText>
+        </View>
+
+        <View style={styles.legendItem}>
+          <View
+            style={[
+              styles.legendSwatchThin,
+              { backgroundColor: chartColors.green },
+            ]}
+          />
+
+          <AppText
+            variant="caption"
+            style={styles.legendText}
+          >
+            Peak
           </AppText>
         </View>
 
@@ -392,6 +436,13 @@ const styles = StyleSheet.create({
     width: 18,
     height: 3,
     borderRadius: 2,
+  },
+
+  legendSwatchThin: {
+    width: 18,
+    height: 1.5,
+    borderRadius: 1,
+    opacity: 0.7,
   },
 
   legendSwatchDashed: {
