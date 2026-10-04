@@ -7,6 +7,8 @@ import AnalyticsChartCard from "@/components/AnalyticsChartCard";
 import BatteryLevelChart, {
   BatteryLevelPoint,
 } from "@/components/charts/BatteryLevelChart";
+import UnsafeDischargeChart from "@/components/charts/UnsafeDischargeChart";
+import BatteryActivityChart from "@/components/charts/BatteryActivityChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -29,10 +31,14 @@ import {
   generateAdlaWattCsv,
   generateAdlaWattPdf,
   getBatteryChartRangeData,
+  getBatteryActivityData,
   getDefaultRange,
+  getUnsafeDischargeChartData,
   groupMonitoringHistory,
   loadAnalyticsData,
   prepareReportData,
+  type BatteryActivitySlice,
+  type UnsafeBarPoint,
 } from "@/services/analyticsService";
 import React, {
   useCallback,
@@ -97,6 +103,13 @@ export default function AnalyticsScreen() {
     "Daily",
   );
 
+  const [
+    unsafeFrequency,
+    setUnsafeFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
   const batteryPoints =
     useMemo<BatteryLevelPoint[]>(() => {
       const buckets =
@@ -113,6 +126,39 @@ export default function AnalyticsScreen() {
       monitoringHistory,
       batteryFrequency,
     ]);
+
+  const unsafePoints =
+    useMemo<UnsafeBarPoint[]>(() => {
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          unsafeFrequency,
+        );
+
+      return getUnsafeDischargeChartData(
+        buckets,
+        unsafeFrequency,
+      );
+    }, [
+      monitoringHistory,
+      unsafeFrequency,
+    ]);
+
+  const activitySlices =
+    useMemo<BatteryActivitySlice[]>(() => {
+      // Range total: grouping is invariant (sum across buckets
+      // equals sum across rows), so a fixed bucketing is used
+      // and no frequency toggle is shown for this card.
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          "Daily",
+        );
+
+      return getBatteryActivityData(
+        buckets,
+      );
+    }, [monitoringHistory]);
 
   const loadAnalytics =
     useCallback(
@@ -410,7 +456,7 @@ export default function AnalyticsScreen() {
         ====================================================== */}
         <AnalyticsChartCard
           title="Battery Level Over Time"
-          subtitle="Average battery level per period, with the 20% safety floor marked."
+          subtitle="Average battery level per period, with the unsafe zone below the 20% safety floor marked."
           icon="battery-half-outline"
           frequency={batteryFrequency}
           onFrequencyChange={
@@ -419,6 +465,30 @@ export default function AnalyticsScreen() {
         >
           <BatteryLevelChart
             points={batteryPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Unsafe Discharge Events"
+          subtitle="Snapshots below 20% per period. Lower is better."
+          icon="warning-outline"
+          frequency={unsafeFrequency}
+          onFrequencyChange={
+            setUnsafeFrequency
+          }
+        >
+          <UnsafeDischargeChart
+            points={unsafePoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Battery Activity"
+          subtitle="How often it charges vs drains."
+          icon="battery-half-outline"
+        >
+          <BatteryActivityChart
+            slices={activitySlices}
           />
         </AnalyticsChartCard>
 

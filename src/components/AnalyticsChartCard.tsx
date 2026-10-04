@@ -25,8 +25,8 @@ export interface AnalyticsChartCardProps {
   title: string;
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
-  frequency: ChartFrequency;
-  onFrequencyChange: (
+  frequency?: ChartFrequency;
+  onFrequencyChange?: (
     frequency: ChartFrequency,
   ) => void;
   children: React.ReactNode;
@@ -94,21 +94,24 @@ export default function AnalyticsChartCard({
           {subtitle}
         </AppText>
 
-        {/* Frequency */}
-        <SlidingToggle<ChartFrequency>
-          value={frequency}
-          onChange={onFrequencyChange}
-          style={styles.frequencyToggleColors}
-          options={FREQUENCIES.map(
-            (option) => ({
-              value: option,
-              label: option,
-              activeColor: colors.primary,
-              accessibilityLabel:
-                `${title} ${option} view`,
-            }),
-          )}
-        />
+        {/* Frequency (optional — omitted for range-total charts
+            like Battery Activity where grouping is invariant) */}
+        {frequency && onFrequencyChange ? (
+          <SlidingToggle<ChartFrequency>
+            value={frequency}
+            onChange={onFrequencyChange}
+            style={styles.frequencyToggleColors}
+            options={FREQUENCIES.map(
+              (option) => ({
+                value: option,
+                label: option,
+                activeColor: colors.primary,
+                accessibilityLabel:
+                  `${title} ${option} view`,
+              }),
+            )}
+          />
+        ) : null}
 
         {/* Chart Area */}
         <View

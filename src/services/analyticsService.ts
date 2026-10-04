@@ -216,6 +216,10 @@ export interface AnalyticsReportData {
 
 export const DEFAULT_DAYS = 366;
 
+// PostgREST caps a single response (default 1000 rows), so
+// long history ranges must be walked page by page.
+export const ANALYTICS_PAGE_SIZE = 1000;
+
 export const FREQUENCIES: ChartFrequency[] = [
   "Daily",
   "Weekly",
@@ -1518,124 +1522,177 @@ export async function loadAnalyticsData(
       };
     }
 
-    const {
-      data:
-        monitoringRows,
-      error:
-        monitoringError,
-    } =
-      await supabase
-        .from(
-          "monitoring_history",
-        )
-        .select(
-          [
+    // Paginated fetch: without paging, the server caps a
+    // single response and the chart silently truncates to the
+    // oldest rows. Pages walk forward until a short page.
+    const monitoringRows: unknown[] = [];
+
+    for (
+      let pageStart = 0;
+      ;
+      pageStart += ANALYTICS_PAGE_SIZE
+    ) {
+      const {
+        data:
+          monitoringPage,
+        error:
+          monitoringError,
+      } =
+        await supabase
+          .from(
+            "monitoring_history",
+          )
+          .select(
+            [
+              "recorded_at",
+              "battery_level",
+              "battery_status",
+              "time_remaining",
+              "solar_input",
+              "solar_status",
+              "solar_timer",
+              "solar_voltage",
+              "solar_current",
+              "total_energy",
+              "current_load",
+              "device_status",
+              "last_seen",
+              "battery_temperature",
+              "battery_temperature_status",
+              "solar_temperature",
+              "solar_temperature_status",
+              "voltage",
+              "watt_hours",
+              "cumulative_energy_input_wh",
+              "cumulative_energy_output_wh",
+              "energy_input_wh",
+              "energy_output_wh",
+            ].join(","),
+          )
+          .eq(
+            "user_id",
+            user.id,
+          )
+          .gte(
             "recorded_at",
-            "battery_level",
-            "battery_status",
-            "time_remaining",
-            "solar_input",
-            "solar_status",
-            "solar_timer",
-            "solar_voltage",
-            "solar_current",
-            "total_energy",
-            "current_load",
-            "device_status",
-            "last_seen",
-            "battery_temperature",
-            "battery_temperature_status",
-            "solar_temperature",
-            "solar_temperature_status",
-            "voltage",
-            "watt_hours",
-            "cumulative_energy_input_wh",
-            "cumulative_energy_output_wh",
-            "energy_input_wh",
-            "energy_output_wh",
-          ].join(","),
-        )
-        .eq(
-          "user_id",
-          user.id,
-        )
-        .gte(
-          "recorded_at",
-          range.start.toISOString(),
-        )
-        .lte(
-          "recorded_at",
-          getInclusiveRangeEnd(
-            range,
-          ).toISOString(),
-        )
-        .order(
-          "recorded_at",
-          {
-            ascending: true,
-          },
+            range.start.toISOString(),
+          )
+          .lte(
+            "recorded_at",
+            getInclusiveRangeEnd(
+              range,
+            ).toISOString(),
+          )
+          .order(
+            "recorded_at",
+            {
+              ascending: true,
+            },
+          )
+          .range(
+            pageStart,
+            pageStart + ANALYTICS_PAGE_SIZE - 1,
+          );
+
+      if (
+        monitoringError
+      ) {
+        console.error(
+          "Analytics monitoring history error:",
+          monitoringError.message,
         );
 
-    if (
-      monitoringError
-    ) {
-      console.error(
-        "Analytics monitoring history error:",
-        monitoringError.message,
+        break;
+      }
+
+      monitoringRows.push(
+        ...(monitoringPage ?? []),
       );
+
+      if (
+        !monitoringPage ||
+        monitoringPage.length < ANALYTICS_PAGE_SIZE
+      ) {
+        break;
+      }
     }
 
-    const {
-      data:
-        applianceRows,
-      error:
-        applianceError,
-    } =
-      await supabase
-        .from(
-          "appliance_usage_history",
-        )
-        .select(
-          [
-            "usage_id",
+    const applianceRows: unknown[] = [];
+
+    for (
+      let pageStart = 0;
+      ;
+      pageStart += ANALYTICS_PAGE_SIZE
+    ) {
+      const {
+        data:
+          appliancePage,
+        error:
+          applianceError,
+      } =
+        await supabase
+          .from(
+            "appliance_usage_history",
+          )
+          .select(
+            [
+              "usage_id",
+              "user_id",
+              "app_id",
+              "appliance_name",
+              "recorded_at",
+              "status",
+              "wattage",
+              "duration_seconds",
+              "energy_wh",
+            ].join(","),
+          )
+          .eq(
             "user_id",
-            "app_id",
-            "appliance_name",
+            user.id,
+          )
+          .gte(
             "recorded_at",
-            "status",
-            "wattage",
-            "duration_seconds",
-            "energy_wh",
-          ].join(","),
-        )
-        .eq(
-          "user_id",
-          user.id,
-        )
-        .gte(
-          "recorded_at",
-          range.start.toISOString(),
-        )
-        .lte(
-          "recorded_at",
-          getInclusiveRangeEnd(
-            range,
-          ).toISOString(),
-        )
-        .order(
-          "recorded_at",
-          {
-            ascending: true,
-          },
+            range.start.toISOString(),
+          )
+          .lte(
+            "recorded_at",
+            getInclusiveRangeEnd(
+              range,
+            ).toISOString(),
+          )
+          .order(
+            "recorded_at",
+            {
+              ascending: true,
+            },
+          )
+          .range(
+            pageStart,
+            pageStart + ANALYTICS_PAGE_SIZE - 1,
+          );
+
+      if (
+        applianceError
+      ) {
+        console.error(
+          "Analytics appliance history error:",
+          applianceError.message,
         );
 
-    if (
-      applianceError
-    ) {
-      console.error(
-        "Analytics appliance history error:",
-        applianceError.message,
+        break;
+      }
+
+      applianceRows.push(
+        ...(appliancePage ?? []),
       );
+
+      if (
+        !appliancePage ||
+        appliancePage.length < ANALYTICS_PAGE_SIZE
+      ) {
+        break;
+      }
     }
 
     return {
@@ -1751,6 +1808,101 @@ export interface BatteryRangePoint {
   label?: string;
 }
 
+export interface UnsafeBarPoint {
+  value: number;
+  label: string;
+}
+
+export type BatteryActivityKey =
+  | "charging"
+  | "discharging"
+  | "idle";
+
+export interface BatteryActivitySlice {
+  key: BatteryActivityKey;
+  label: string;
+  value: number;
+  percent: number;
+}
+
+export function getBatteryActivityData(
+  groupedMonitoring: MonitoringBucket[],
+): BatteryActivitySlice[] {
+  let charging = 0;
+  let discharging = 0;
+  let idle = 0;
+
+  groupedMonitoring.forEach(
+    (bucket) => {
+      bucket.rows.forEach(
+        (row) => {
+          const status =
+            String(
+              row.battery_status ??
+                "",
+            )
+              .trim()
+              .toLowerCase();
+
+          if (
+            status === "charging"
+          ) {
+            charging += 1;
+          } else if (
+            status ===
+            "discharging"
+          ) {
+            discharging += 1;
+          } else if (
+            status === "idle"
+          ) {
+            idle += 1;
+          }
+        },
+      );
+    },
+  );
+
+  const total =
+    charging +
+    discharging +
+    idle;
+
+  const toPercent = (
+    count: number,
+  ): number =>
+    total > 0
+      ? Math.round(
+          (count / total) *
+            100,
+        )
+      : 0;
+
+  return [
+    {
+      key: "charging",
+      label: "Charging",
+      value: charging,
+      percent:
+        toPercent(charging),
+    },
+    {
+      key: "discharging",
+      label: "Discharging",
+      value: discharging,
+      percent: toPercent(
+        discharging,
+      ),
+    },
+    {
+      key: "idle",
+      label: "Idle",
+      value: idle,
+      percent: toPercent(idle),
+    },
+  ];
+}
+
 export function getBatteryChartRangeData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
@@ -1781,6 +1933,32 @@ export function getBatteryChartRangeData(
           0,
           100,
         ),
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+export function getUnsafeDischargeChartData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): UnsafeBarPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const unsafeCount =
+        bucket.rows.filter(
+          (row) =>
+            getDoDStatus(
+              toNumber(row.battery_level),
+            ) === "Unsafe",
+        ).length;
+
+      return {
+        value: unsafeCount,
         label:
           formatDateLabel(
             bucket.date,
