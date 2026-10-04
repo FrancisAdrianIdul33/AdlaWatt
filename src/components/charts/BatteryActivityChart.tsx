@@ -1,5 +1,9 @@
 import {
+  useCallback,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
   StyleSheet,
@@ -25,6 +29,8 @@ import type {
 
 const DONUT_RADIUS = 85;
 const DONUT_INNER_RADIUS = 55;
+const SELECTION_RESET_MS = 5000;
+const FOCUS_EXPAND_RADIUS = 8;
 
 /* ============================================================
    SMALL UI PIECES
@@ -58,73 +64,13 @@ function Stat({
   );
 }
 
-function BreakdownRow({
-  swatchColor,
-  label,
-  detail,
-  percent,
-  trackColor,
-}: {
-  swatchColor: string;
-  label: string;
-  detail: string;
-  percent: number;
-  trackColor: string;
-}) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowHeader}>
-        <View
-          style={[
-            styles.rowSwatch,
-            { backgroundColor: swatchColor },
-          ]}
-        />
-
-        <AppText
-          variant="caption"
-          style={styles.rowLabel}
-        >
-          {label}
-        </AppText>
-
-        <AppText
-          variant="caption"
-          style={styles.rowDetail}
-        >
-          {detail}
-        </AppText>
-      </View>
-
-      <View
-        style={[
-          styles.track,
-          { backgroundColor: trackColor },
-        ]}
-      >
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${Math.max(
-                0,
-                Math.min(100, percent),
-              )}%`,
-              backgroundColor: swatchColor,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
 /* ============================================================
    BATTERY ACTIVITY DONUT
-   Charging = green, Discharging = yellow, Idle = gray muted.
+   Charging = green, Discharging = yellow, Idle = red (error).
    No blue anywhere: every slice sets an explicit color.
-   Text + percent + count carry meaning so color is never
-   the only indicator (green/yellow is deuteranopia-risky).
+   Stats carry % and the center carries counts, so color is
+   never the only indicator (green/red is deuteranopia-risky).
+   Tapping a slice reveals its samples in the center for 5s.
    Yellow slice never hosts white text (dark ink only).
    ============================================================ */
 
@@ -187,12 +133,86 @@ export default function BatteryActivityChart({
 
   const isEmpty = total <= 0;
 
-  // Explicit frozen mapping: green / yellow / gray. No blue.
+  // Tap-to-reveal: center swaps total -> tapped slice count,
+  // then auto-reverts after 5s. Rapid taps restart the clock.
+  // Expand is driven through mount-time focus: datum onPress
+  // skips the library's internal focus (gifted-charts-core
+  // PieChart/main.js calls item.onPress instead of focusing),
+  // so each selection remounts with focusedPieIndex and the
+  // slice renders expanded via extraRadius + entrance animation.
+  const [
+    selectedKey,
+    setSelectedKey,
+  ] = useState<BatteryActivityKey | null>(null);
+  // Position of the tapped slice within the rendered (value > 0)
+  // data array. Null renders nothing focused.
+  const [
+    focusedIndex,
+    setFocusedIndex,
+  ] = useState<number | null>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearResetTimer = () => {
+    if (resetTimer.current != null) {
+      clearTimeout(resetTimer.current);
+      resetTimer.current = null;
+    }
+  };
+
+  const handleSlicePress = useCallback(
+    (key: BatteryActivityKey) => {
+      if (isEmpty) {
+        return;
+      }
+
+      const visibleKeys = ordered
+        .filter((slice) => slice.value > 0)
+        .map((slice) => slice.key);
+      const dataIndex = visibleKeys.indexOf(key);
+
+      if (dataIndex < 0) {
+        return;
+      }
+
+      clearResetTimer();
+      setSelectedKey(key);
+      setFocusedIndex(dataIndex);
+      resetTimer.current = setTimeout(() => {
+        setSelectedKey(null);
+        setFocusedIndex(null);
+        resetTimer.current = null;
+      }, SELECTION_RESET_MS);
+    },
+    [isEmpty, ordered],
+  );
+
+  useEffect(() => {
+    setSelectedKey(null);
+    setFocusedIndex(null);
+    clearResetTimer();
+
+    return clearResetTimer;
+  }, [slices, isEmpty]);
+
+  // Donut hole: solid disc in both themes (never removed).
+  // Light keeps the library's default white. Dark uses #252525,
+  // the opaque composite of glassDark.white (8% white) over
+  // background #121212, so the disc matches the card exactly.
+  const holeColor = colors.isDark ? "#252525" : "white";
+
+  const selectedSlice =
+    selectedKey != null
+      ? (ordered.find((slice) => slice.key === selectedKey) ?? null)
+      : null;
+  const selectedVisible =
+    selectedSlice != null && selectedSlice.value > 0 && !isEmpty;
+
+  // Explicit frozen mapping: green / yellow / red. No blue.
   const sliceColors = useMemo(
     () => ({
       charging: chartColors.green,
       discharging: chartColors.yellow,
-      idle: chartColors.muted,
+      idle: chartColors.red,
     }),
     [chartColors],
   );
@@ -214,29 +234,25 @@ export default function BatteryActivityChart({
       .map((slice) => ({
         value: slice.value,
         color: sliceColors[slice.key],
+        onPress: () => handleSlicePress(slice.key),
       }));
   }, [
     ordered,
     isEmpty,
     sliceColors,
     chartColors,
+    handleSlicePress,
   ]);
 
   const charging = ordered[0];
   const discharging = ordered[1];
+  const idle = ordered[2];
 
   return (
     <View style={styles.container}>
-      {/* Stats: text labels, not color only. */}
+      {/* Stats: one % per slice. Total count lives only in
+          the donut center, so nothing repeats. */}
       <View style={styles.statsRow}>
-        <Stat
-          label="Total"
-          value={
-            isEmpty ? "-" : `${total}`
-          }
-          color={colors.text}
-        />
-
         <Stat
           label="Charging"
           value={
@@ -256,25 +272,60 @@ export default function BatteryActivityChart({
           }
           color={colors.text}
         />
+
+        <Stat
+          label="Idle"
+          value={
+            isEmpty
+              ? "-"
+              : `${idle.percent}%`
+          }
+          color={colors.text}
+        />
       </View>
 
-      {/* Donut: center shows total, slices carry no inner text
-          so yellow never hosts unreadable white labels. */}
+      {/* Donut: center shows total, or the tapped slice count
+          for 5s. Slices carry no inner text so yellow never hosts
+          unreadable white labels. Tapping a slice expands it
+          (focus animation) and reveals its samples in the center. */}
       <View style={styles.donutWrap}>
         <PieChart
+          // Stable across taps: focus is driven live via
+          // focusedPieIndex (the library reacts to it in place),
+          // so slice-to-slice switches never tear down the chart.
+          // Remounts only when the data itself changes.
+          key={`activity-${pieData.length}`}
           data={pieData}
           donut
           radius={DONUT_RADIUS}
           innerRadius={DONUT_INNER_RADIUS}
           strokeWidth={2}
           strokeColor={colors.background}
+          backgroundColor="transparent"
+          innerCircleColor={holeColor}
           showText={false}
           focusOnPress={!isEmpty}
           sectionAutoFocus={!isEmpty}
+          focusedPieIndex={focusedIndex ?? -1}
+          extraRadius={FOCUS_EXPAND_RADIUS}
+          isAnimated
           centerLabelComponent={() => (
             <View
               style={styles.centerLabel}
+              pointerEvents="none"
             >
+              {selectedVisible ? (
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.centerCaption,
+                    { color: colors.text },
+                  ]}
+                >
+                  {selectedSlice!.label}
+                </AppText>
+              ) : null}
+
               <AppText
                 variant="heading"
                 style={[
@@ -284,12 +335,17 @@ export default function BatteryActivityChart({
               >
                 {isEmpty
                   ? "-"
-                  : `${total}`}
+                  : selectedVisible
+                    ? `${selectedSlice!.value}`
+                    : `${total}`}
               </AppText>
 
               <AppText
                 variant="caption"
-                style={styles.centerCaption}
+                style={[
+                  styles.centerCaption,
+                  { color: colors.text },
+                ]}
               >
                 samples
               </AppText>
@@ -297,6 +353,28 @@ export default function BatteryActivityChart({
           )}
         />
       </View>
+
+      {/* Fixed hint slot: always mounted so the legend never
+          shifts when the hint appears. Fades via opacity. */}
+      {!isEmpty ? (
+        <AppText
+          variant="caption"
+          style={[
+            styles.emptyNote,
+            { opacity: selectedVisible ? 1 : 0 },
+          ]}
+          accessibilityElementsHidden={
+            !selectedVisible
+          }
+          importantForAccessibility={
+            selectedVisible
+              ? "yes"
+              : "no-hide-descendants"
+          }
+        >
+          Tap another slice to inspect it
+        </AppText>
+      ) : null}
 
       {isEmpty ? (
         <AppText
@@ -307,29 +385,14 @@ export default function BatteryActivityChart({
           connect the device to record
           battery status.
         </AppText>
-      ) : (
-        <View style={styles.breakdown}>
-          {ordered.map((slice) => (
-            <BreakdownRow
-              key={slice.key}
-              swatchColor={
-                sliceColors[slice.key]
-              }
-              label={slice.label}
-              detail={`${slice.value} • ${slice.percent}%`}
-              percent={slice.percent}
-              trackColor={colors.scrimFaint}
-            />
-          ))}
-        </View>
-      )}
+      ) : null}
 
       {/* Legend: color + text so meaning never depends
           on color alone. Font family follows Preferences. */}
       <View
         style={styles.legend}
         accessibilityRole="text"
-        accessibilityLabel="Legend: green charging, yellow discharging, gray idle"
+        accessibilityLabel="Legend: green charging, yellow discharging, red idle"
       >
         {ordered.map((slice) => (
           <View
@@ -414,51 +477,6 @@ const styles = StyleSheet.create({
 
   centerCaption: {
     fontSize: 11,
-  },
-
-  breakdown: {
-    width: "100%",
-    gap: 10,
-    marginTop: 12,
-  },
-
-  row: {
-    width: "100%",
-    gap: 6,
-  },
-
-  rowHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  rowSwatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-  },
-
-  rowLabel: {
-    fontSize: 12,
-    flex: 1,
-  },
-
-  rowDetail: {
-    fontSize: 12,
-    fontVariant: ["tabular-nums"],
-  },
-
-  track: {
-    width: "100%",
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-
-  fill: {
-    height: 8,
-    borderRadius: 4,
   },
 
   emptyNote: {

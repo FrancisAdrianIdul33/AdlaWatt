@@ -456,7 +456,7 @@ export default function AnalyticsScreen() {
         ====================================================== */}
         <AnalyticsChartCard
           title="Battery Level Over Time"
-          subtitle="Average and peak battery level per period, with the 20% safety floor marked."
+          subtitle="Average battery level per period, with the unsafe zone below the 20% safety floor marked."
           icon="battery-half-outline"
           frequency={batteryFrequency}
           onFrequencyChange={
@@ -485,7 +485,7 @@ export default function AnalyticsScreen() {
         <AnalyticsChartCard
           title="Battery Activity"
           subtitle="How often it charges vs drains."
-          icon="pie-chart-outline"
+          icon="battery-half-outline"
         >
           <BatteryActivityChart
             slices={activitySlices}

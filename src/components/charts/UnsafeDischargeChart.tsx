@@ -29,7 +29,7 @@ import type {
    ============================================================ */
 
 const DEFAULT_BAR_WIDTH = 22;
-const Y_AXIS_W = 46; // width reserved for the fixed count labels
+const Y_AXIS_W = 38; // width reserved for the fixed count labels
 
 /* ============================================================
    SMALL UI PIECES
@@ -137,7 +137,9 @@ export default function UnsafeDischargeChart({
 
   // Layout numbers: visible plot width only, so the plot
   // scrolls inside and the count labels stay in place.
-  const chartW = Math.max(boxW - Y_AXIS_W - 4, 120);
+  // chartWrap bleeds left toward the card border (-10), so boxW
+  // already includes the shift and labels + grid move together.
+  const chartW = Math.max(boxW - Y_AXIS_W - 2, 120);
   const spacing = isEmpty
     ? Math.max(chartW - barWidth - 36, 28)
     : Math.max(28, (chartW - barWidth - 36) / (real.length - 1));
@@ -327,6 +329,7 @@ const styles = StyleSheet.create({
 
   chartWrap: {
     width: "100%",
+    marginLeft: -10,
   },
 
   emptyNote: {
