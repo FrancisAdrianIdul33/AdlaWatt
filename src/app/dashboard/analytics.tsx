@@ -9,6 +9,22 @@ import BatteryLevelChart, {
 } from "@/components/charts/BatteryLevelChart";
 import UnsafeDischargeChart from "@/components/charts/UnsafeDischargeChart";
 import BatteryActivityChart from "@/components/charts/BatteryActivityChart";
+import SolarVsLoadChart from "@/components/charts/SolarVsLoadChart";
+import BestSunDaysChart from "@/components/charts/BestSunDaysChart";
+import SunHoursChart from "@/components/charts/SunHoursChart";
+import SolarCurveByHourChart from "@/components/charts/SolarCurveByHourChart";
+import EnergyInOutChart from "@/components/charts/EnergyInOutChart";
+import NetEnergyChart from "@/components/charts/NetEnergyChart";
+import RunningBalanceChart from "@/components/charts/RunningBalanceChart";
+import SolarCoverageChart from "@/components/charts/SolarCoverageChart";
+import TemperaturesChart from "@/components/charts/TemperaturesChart";
+import TemperatureAlertsChart from "@/components/charts/TemperatureAlertsChart";
+import UptimeChart from "@/components/charts/UptimeChart";
+import OnlineOfflineChart from "@/components/charts/OnlineOfflineChart";
+import AvgPeakLoadChart from "@/components/charts/AvgPeakLoadChart";
+import PowerByHourChart from "@/components/charts/PowerByHourChart";
+import ApplianceEnergyChart from "@/components/charts/ApplianceEnergyChart";
+import ApplianceRuntimeChart from "@/components/charts/ApplianceRuntimeChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -32,7 +48,25 @@ import {
   generateAdlaWattPdf,
   getBatteryChartRangeData,
   getBatteryActivityData,
+  getBatteryTemperatureData,
+  getBestSunDaysData,
   getDefaultRange,
+  getApplianceEnergyShare,
+  getEnergyInputChartData,
+  getEnergyOutputChartData,
+  getInteriorTemperatureData,
+  getLoadVsPeakData,
+  getNetEnergyData,
+  getOnlineShareData,
+  getPowerByHourData,
+  getRunningBalanceData,
+  getSolarCoverageData,
+  getSolarCurveByHourData,
+  getSolarTemperatureData,
+  getSolarVsLoadData,
+  getSunHoursData,
+  getTemperatureAlertsData,
+  getUptimeData,
   getUnsafeDischargeChartData,
   groupMonitoringHistory,
   loadAnalyticsData,
@@ -110,6 +144,83 @@ export default function AnalyticsScreen() {
     "Daily",
   );
 
+  const [
+    solarLoadFrequency,
+    setSolarLoadFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    bestSunFrequency,
+    setBestSunFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    sunHoursFrequency,
+    setSunHoursFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    energyFrequency,
+    setEnergyFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    netFrequency,
+    setNetFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    balanceFrequency,
+    setBalanceFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    coverageFrequency,
+    setCoverageFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    tempFrequency,
+    setTempFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    alertsFrequency,
+    setAlertsFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    uptimeFrequency,
+    setUptimeFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const [
+    loadFrequency,
+    setLoadFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
   const batteryPoints =
     useMemo<BatteryLevelPoint[]>(() => {
       const buckets =
@@ -159,6 +270,266 @@ export default function AnalyticsScreen() {
         buckets,
       );
     }, [monitoringHistory]);
+
+  const solarLoadPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        solarLoadFrequency,
+      );
+
+    return getSolarVsLoadData(
+      buckets,
+      solarLoadFrequency,
+    );
+  }, [
+    monitoringHistory,
+    solarLoadFrequency,
+  ]);
+
+  const bestSunPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        bestSunFrequency,
+      );
+
+    return getBestSunDaysData(
+      buckets,
+      bestSunFrequency,
+    );
+  }, [
+    monitoringHistory,
+    bestSunFrequency,
+  ]);
+
+  const sunHoursPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        sunHoursFrequency,
+      );
+
+    return getSunHoursData(
+      buckets,
+      sunHoursFrequency,
+    );
+  }, [
+    monitoringHistory,
+    sunHoursFrequency,
+  ]);
+
+  // Hour-of-day cuts across dates, so the curve reads raw rows
+  // directly and always yields the fixed 24 hourly buckets.
+  // No frequency toggle: the curve shape is the point.
+  const solarCurvePoints = useMemo(
+    () => getSolarCurveByHourData(monitoringHistory),
+    [monitoringHistory],
+  );
+
+  const energyInPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        energyFrequency,
+      );
+
+    return getEnergyInputChartData(
+      buckets,
+      energyFrequency,
+    );
+  }, [
+    monitoringHistory,
+    energyFrequency,
+  ]);
+
+  const energyOutPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        energyFrequency,
+      );
+
+    return getEnergyOutputChartData(
+      buckets,
+      energyFrequency,
+    );
+  }, [
+    monitoringHistory,
+    energyFrequency,
+  ]);
+
+  const netPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        netFrequency,
+      );
+
+    return getNetEnergyData(
+      buckets,
+      netFrequency,
+    );
+  }, [
+    monitoringHistory,
+    netFrequency,
+  ]);
+
+  const balancePoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        balanceFrequency,
+      );
+
+    return getRunningBalanceData(
+      buckets,
+      balanceFrequency,
+    );
+  }, [
+    monitoringHistory,
+    balanceFrequency,
+  ]);
+
+  const coveragePoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        coverageFrequency,
+      );
+
+    return getSolarCoverageData(
+      buckets,
+      coverageFrequency,
+    );
+  }, [
+    monitoringHistory,
+    coverageFrequency,
+  ]);
+
+  const battTempPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        tempFrequency,
+      );
+
+    return getBatteryTemperatureData(
+      buckets,
+      tempFrequency,
+    );
+  }, [
+    monitoringHistory,
+    tempFrequency,
+  ]);
+
+  const solarTempPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        tempFrequency,
+      );
+
+    return getSolarTemperatureData(
+      buckets,
+      tempFrequency,
+    );
+  }, [
+    monitoringHistory,
+    tempFrequency,
+  ]);
+
+  const interiorTempPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        tempFrequency,
+      );
+
+    return getInteriorTemperatureData(
+      buckets,
+      tempFrequency,
+    );
+  }, [
+    monitoringHistory,
+    tempFrequency,
+  ]);
+
+  const tempAlertsPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        alertsFrequency,
+      );
+
+    return getTemperatureAlertsData(
+      buckets,
+      alertsFrequency,
+    );
+  }, [
+    monitoringHistory,
+    alertsFrequency,
+  ]);
+
+  const uptimePoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        uptimeFrequency,
+      );
+
+    return getUptimeData(
+      buckets,
+      uptimeFrequency,
+    );
+  }, [
+    monitoringHistory,
+    uptimeFrequency,
+  ]);
+
+  // Range total: grouping is invariant (sum across buckets
+  // equals sum across rows), so a fixed bucketing is used
+  // and no frequency toggle is shown for this card.
+  const onlineShare = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        "Daily",
+      );
+
+    return getOnlineShareData(buckets);
+  }, [monitoringHistory]);
+
+  const loadVsPeakPoints = useMemo(() => {
+    const buckets =
+      groupMonitoringHistory(
+        monitoringHistory,
+        loadFrequency,
+      );
+
+    return getLoadVsPeakData(
+      buckets,
+      loadFrequency,
+    );
+  }, [
+    monitoringHistory,
+    loadFrequency,
+  ]);
+
+  // Hour-of-day cuts across dates: raw rows straight to the
+  // fixed 24 hourly buckets. No frequency toggle.
+  const powerByHourPoints = useMemo(
+    () => getPowerByHourData(monitoringHistory),
+    [monitoringHistory],
+  );
+
+  // Appliance cards share one range-total grouping (usage rows
+  // are sparse; bucketing them would scatter single events).
+  // No frequency toggle on either card.
+  const applianceShare = useMemo(
+    () => getApplianceEnergyShare(applianceUsageHistory),
+    [applianceUsageHistory],
+  );
 
   const loadAnalytics =
     useCallback(
@@ -452,8 +823,15 @@ export default function AnalyticsScreen() {
         </View>
 
         {/* ======================================================
-            ANALYTICS CHARTS
+            BATTERY SECTION
         ====================================================== */}
+        <AppText
+          variant="heading"
+          style={styles.sectionTitle}
+        >
+          Battery
+        </AppText>
+
         <AnalyticsChartCard
           title="Battery Level Over Time"
           subtitle="Average battery level per period, with the unsafe zone below the 20% safety floor marked."
@@ -489,6 +867,253 @@ export default function AnalyticsScreen() {
         >
           <BatteryActivityChart
             slices={activitySlices}
+          />
+        </AnalyticsChartCard>
+
+        {/* ======================================================
+            SOLAR SECTION
+        ====================================================== */}
+        <AppText
+          variant="heading"
+          style={styles.sectionTitle}
+        >
+          Solar
+        </AppText>
+
+        <AnalyticsChartCard
+          title="Solar vs Load"
+          subtitle="Whether the sun covers demand."
+          icon="sunny-outline"
+          frequency={solarLoadFrequency}
+          onFrequencyChange={
+            setSolarLoadFrequency
+          }
+        >
+          <SolarVsLoadChart
+            points={solarLoadPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Best Sun Days"
+          subtitle="Peak panel output per day."
+          icon="sunny-outline"
+          frequency={bestSunFrequency}
+          onFrequencyChange={
+            setBestSunFrequency
+          }
+        >
+          <BestSunDaysChart
+            points={bestSunPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Sun Hours"
+          subtitle="How long the panel produced."
+          icon="sunny-outline"
+          frequency={sunHoursFrequency}
+          onFrequencyChange={
+            setSunHoursFrequency
+          }
+        >
+          <SunHoursChart
+            points={sunHoursPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Solar Curve by Hour"
+          subtitle="Best time of day for the sun."
+          icon="sunny-outline"
+        >
+          <SolarCurveByHourChart
+            points={solarCurvePoints}
+          />
+        </AnalyticsChartCard>
+
+        {/* ======================================================
+            ENERGY SECTION
+        ====================================================== */}
+        <AppText
+          variant="heading"
+          style={styles.sectionTitle}
+        >
+          Energy
+        </AppText>
+
+        <AnalyticsChartCard
+          title="Energy In and Out"
+          subtitle="Daily balance."
+          icon="flash-outline"
+          frequency={energyFrequency}
+          onFrequencyChange={
+            setEnergyFrequency
+          }
+        >
+          <EnergyInOutChart
+            inPoints={energyInPoints}
+            outPoints={energyOutPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Net Energy"
+          subtitle="Surplus and deficit days."
+          icon="flash-outline"
+          frequency={netFrequency}
+          onFrequencyChange={
+            setNetFrequency
+          }
+        >
+          <NetEnergyChart
+            points={netPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Running Balance"
+          subtitle="Whether stored energy grows or shrinks."
+          icon="flash-outline"
+          frequency={balanceFrequency}
+          onFrequencyChange={
+            setBalanceFrequency
+          }
+        >
+          <RunningBalanceChart
+            points={balancePoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Solar Coverage"
+          subtitle="Percent of your use the sun covered."
+          icon="flash-outline"
+          frequency={coverageFrequency}
+          onFrequencyChange={
+            setCoverageFrequency
+          }
+        >
+          <SolarCoverageChart
+            points={coveragePoints}
+          />
+        </AnalyticsChartCard>
+
+        {/* ======================================================
+            HEALTH SECTION
+        ====================================================== */}
+        <AppText
+          variant="heading"
+          style={styles.sectionTitle}
+        >
+          Health
+        </AppText>
+
+        <AnalyticsChartCard
+          title="Temperatures"
+          subtitle="Heat trends."
+          icon="pulse-outline"
+          frequency={tempFrequency}
+          onFrequencyChange={
+            setTempFrequency
+          }
+        >
+          <TemperaturesChart
+            battPoints={battTempPoints}
+            solarPoints={solarTempPoints}
+            interiorPoints={interiorTempPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Temperature Alerts"
+          subtitle="Days with high or critical heat."
+          icon="pulse-outline"
+          frequency={alertsFrequency}
+          onFrequencyChange={
+            setAlertsFrequency
+          }
+        >
+          <TemperatureAlertsChart
+            points={tempAlertsPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Device Uptime"
+          subtitle="How reliable the ESP32 link is."
+          icon="pulse-outline"
+          frequency={uptimeFrequency}
+          onFrequencyChange={
+            setUptimeFrequency
+          }
+        >
+          <UptimeChart
+            points={uptimePoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Online vs Offline"
+          subtitle="Share of time connected."
+          icon="pulse-outline"
+        >
+          <OnlineOfflineChart
+            share={onlineShare}
+          />
+        </AnalyticsChartCard>
+
+        {/* ======================================================
+            USAGE SECTION
+        ====================================================== */}
+        <AppText
+          variant="heading"
+          style={styles.sectionTitle}
+        >
+          Usage
+        </AppText>
+
+        <AnalyticsChartCard
+          title="Average vs Peak Load"
+          subtitle="Typical and worst-case demand."
+          icon="bulb-outline"
+          frequency={loadFrequency}
+          onFrequencyChange={
+            setLoadFrequency
+          }
+        >
+          <AvgPeakLoadChart
+            points={loadVsPeakPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Power Use by Hour"
+          subtitle="When to avoid heavy appliances."
+          icon="bulb-outline"
+        >
+          <PowerByHourChart
+            points={powerByHourPoints}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Energy by Appliance"
+          subtitle="What uses the most power."
+          icon="bulb-outline"
+        >
+          <ApplianceEnergyChart
+            slices={applianceShare}
+          />
+        </AnalyticsChartCard>
+
+        <AnalyticsChartCard
+          title="Appliance Run Time"
+          subtitle="What runs the longest."
+          icon="bulb-outline"
+        >
+          <ApplianceRuntimeChart
+            slices={applianceShare}
           />
         </AnalyticsChartCard>
 
@@ -625,5 +1250,15 @@ const getStyles = (colors: AppColors) =>
         colors.textSecondary,
       marginTop: 6,
       lineHeight: 20,
+    },
+
+    /* Plain section header: medium, readable, no caption. */
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: "700",
+      paddingHorizontal: 4,
+      marginTop: 4,
+      marginBottom: 12,
     },
   });
