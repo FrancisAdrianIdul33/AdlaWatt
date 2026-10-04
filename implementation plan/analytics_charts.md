@@ -94,6 +94,42 @@ Related docs: `monitoring_history.md` (snapshot source), `activity_logging.md`, 
 
 ---
 
+## Chart standard (locked Oct 2026 — copy for every new chart card)
+
+Reference implementations: `src/components/charts/BatteryLevelChart.tsx`
+(axis chart), `src/components/charts/BatteryActivityChart.tsx` (donut),
+`src/components/charts/UnsafeDischargeChart.tsx` (bar).
+
+### Card shell (`AnalyticsChartCard`)
+
+- Green 3px border, body `padding: 16`, header panel with family icon
+  (battery charts share `battery-half-outline`), subtitle, optional
+  frequency toggle, centered text + swatch legend, stats row on top,
+  always-render empty state.
+
+### Axis charts (line / bar)
+
+- `Y_AXIS_W = 38`, `chartW = boxW - Y_AXIS_W - 2`,
+  `chartWrap marginLeft: -10` (labels sit ~9px from the card border;
+  labels + grid shift together).
+- `yAxisThickness={0}`, 12px axis labels, fixed Y rails, internal
+  scroll + `scrollToEnd`. Theme colors via `useChartColors()`,
+  fills softened in dark mode.
+
+### Principle — no redundant data
+
+- Every value appears as text in exactly one place per card
+  (stats `%`, center counts, breakdown numbers; bars encode share).
+
+### Donut interaction pattern
+
+- Tap-to-reveal in the center, 5s auto-revert that also closes focus,
+  fixed-slot hint (opacity, always mounted so the legend never jumps),
+  `focusedPieIndex` driven live on a stable key (never remount per tap),
+  readable themed center disc.
+
+---
+
 ## Next step
 
 Do you want me to write the code for the full analytics screen with the tabs, starting with these five charts?
