@@ -19,6 +19,7 @@ import AppButton from "@/components/ui/AppButton";
 import AppText from "@/components/ui/AppText";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
+import { EMAIL_PATTERN } from "@/services/auth";
 import {
   useAppColors,
   type AppColors,
@@ -39,7 +40,8 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [warning] = useState("");
+  const [warning, setWarning] = useState("");
+  const [updateWarning, setUpdateWarning] = useState("");
   const [sent, setSent] = useState(false);
 
   const { verified: verifiedParam } = useLocalSearchParams<{
@@ -61,8 +63,22 @@ export default function ForgotPasswordScreen() {
     [],
   );
 
-  // ── UI-only placeholders (no auth wiring yet) ──
+  // ── UI-only validation (mirrors login/register guards) ──
   const handleSend = () => {
+    setWarning("");
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      setWarning("Please enter your email address.");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(cleanEmail)) {
+      setWarning("Please enter a valid email address.");
+      return;
+    }
+
     setSent(true);
     // TODO Forgot Password (function phase): requestPasswordReset(email).
   };
@@ -72,6 +88,25 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleUpdate = () => {
+    setUpdateWarning("");
+
+    if (!newPassword || newPassword.trim().length < 8) {
+      setUpdateWarning("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword.length > 72) {
+      setUpdateWarning("Password must not exceed 72 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setUpdateWarning(
+        "Passwords do not match. Please check both password fields.",
+      );
+      return;
+    }
+
     // TODO Forgot Password (function phase): updateRecoveryPassword().
   };
 
@@ -94,7 +129,10 @@ export default function ForgotPasswordScreen() {
           <AppInput
             label="Email Address"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              setWarning("");
+            }}
             placeholder="Enter your email"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -181,7 +219,10 @@ export default function ForgotPasswordScreen() {
           <PasswordInput
             label="New Password"
             value={newPassword}
-            onChangeText={setNewPassword}
+            onChangeText={(text) => {
+              setNewPassword(text);
+              setUpdateWarning("");
+            }}
             placeholder="Create a new password"
             autoComplete="password-new"
             returnKeyType="next"
@@ -194,7 +235,10 @@ export default function ForgotPasswordScreen() {
           <PasswordInput
             label="Confirm New Password"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              setUpdateWarning("");
+            }}
             placeholder="Confirm your new password"
             autoComplete="password-new"
             returnKeyType="done"
@@ -202,6 +246,8 @@ export default function ForgotPasswordScreen() {
             inputRef={confirmPasswordRef}
             bottomGap={0}
           />
+
+          <AuthWarning message={updateWarning} />
 
           <AppButton
             title="Update Password"
