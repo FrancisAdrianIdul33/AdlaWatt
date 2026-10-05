@@ -25,6 +25,11 @@ import { Bar, Touch } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
+import {
+  subscribeResilientChannel,
+  type ResilientSubscription,
+} from "@/services/realtimeResubscribe";
+
 import AppText from "@/components/ui/AppText";
 
 import type { DeviceStatus } from "@/services/monitoringService";
@@ -109,15 +114,15 @@ export default function NavBar({
     // Stable channel per user (no Date.now) so StrictMode
     // remounts reuse instead of leaking duplicates on the
     // shared websocket (previously socket 1006 on login).
-    // Transient CHANNEL_ERROR/TIMED_OUT (e.g. 1006 on
-    // localhost) warns + retries with backoff, max 3.
+    // Drops recover on capped backoff via the shared helper —
+    // no attempt cap, so the badge never strands dead.
     let channel:
       | ReturnType<typeof supabase.channel>
       | null = null;
 
-    let retryCount = 0;
-    let retryTimer: ReturnType<typeof setTimeout> | null =
-      null;
+    let navbarSubscription:
+      | ResilientSubscription
+      | null = null;
 
     const subscribeNavbar = (
       userId: string,
@@ -126,85 +131,34 @@ export default function NavBar({
         return;
       }
 
-      // Reuse an already-subscribed channel for this user.
-      const existing = supabase
-        .getChannels()
-        .find(
-          (c) =>
-            (c as unknown as { topic?: string }).topic ===
-            `realtime:navbar-notifications-${userId}`,
-        );
-
-      if (existing) {
-        channel =
-          existing as unknown as typeof channel;
-        return;
+      if (navbarSubscription) {
+        navbarSubscription.stop();
+        navbarSubscription = null;
       }
 
-      const nextChannel = supabase
-        .channel(`navbar-notifications-${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${userId}`,
-          },
-          () => {
-            if (mounted) {
-              checkUnreadNotifications();
-            }
-          },
-        )
-        .subscribe((status, error) => {
-          if (!mounted) {
-            return;
-          }
-
-          if (
-            status === "CHANNEL_ERROR" ||
-            status === "TIMED_OUT"
-          ) {
-            console.warn(
-              "Navbar notifications channel issue, retrying:",
-              status,
-              error instanceof Error
-                ? error.message
-                : error,
-            );
-
-            if (retryCount < 3) {
-              const delay =
-                [1000, 2000, 5000][retryCount] ?? 5000;
-              retryCount += 1;
-
-              retryTimer = setTimeout(() => {
-                if (!mounted) {
-                  return;
-                }
-
-                supabase
-                  .removeChannel(nextChannel)
-                  .catch(() => {});
-
-                if (channel === nextChannel) {
-                  channel = null;
-                }
-
-                subscribeNavbar(userId);
-              }, delay);
-            }
-
-            return;
-          }
-
-          if (status === "SUBSCRIBED") {
-            retryCount = 0;
-          }
-        });
-
-      channel = nextChannel;
+      navbarSubscription = subscribeResilientChannel({
+        topic: `navbar-notifications-${userId}`,
+        label: "Navbar notifications",
+        build: (base) =>
+          base.on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${userId}`,
+            },
+            () => {
+              if (mounted) {
+                checkUnreadNotifications();
+              }
+            },
+          ),
+        isAlive: () => mounted,
+        onChannel: (next) => {
+          channel = next;
+        },
+      });
     };
 
     getAuthenticatedUserSafe()
@@ -220,8 +174,9 @@ export default function NavBar({
     return () => {
       mounted = false;
 
-      if (retryTimer) {
-        clearTimeout(retryTimer);
+      if (navbarSubscription) {
+        navbarSubscription.stop();
+        navbarSubscription = null;
       }
 
       // Covers channels assigned after cleanup started:

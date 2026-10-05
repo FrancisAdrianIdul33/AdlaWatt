@@ -54,6 +54,7 @@ export interface MonitoringHistoryRow {
   battery_temperature_status: string | null;
   solar_temperature: number | null;
   solar_temperature_status: string | null;
+  interior_temp: number | null;
   voltage: number | null;
   watt_hours: number | null;
   cumulative_energy_input_wh: number | null;
@@ -215,6 +216,10 @@ export interface AnalyticsReportData {
    ============================================================ */
 
 export const DEFAULT_DAYS = 366;
+
+// PostgREST caps a single response (default 1000 rows), so
+// long history ranges must be walked page by page.
+export const ANALYTICS_PAGE_SIZE = 1000;
 
 export const FREQUENCIES: ChartFrequency[] = [
   "Daily",
@@ -1518,124 +1523,178 @@ export async function loadAnalyticsData(
       };
     }
 
-    const {
-      data:
-        monitoringRows,
-      error:
-        monitoringError,
-    } =
-      await supabase
-        .from(
-          "monitoring_history",
-        )
-        .select(
-          [
+    // Paginated fetch: without paging, the server caps a
+    // single response and the chart silently truncates to the
+    // oldest rows. Pages walk forward until a short page.
+    const monitoringRows: unknown[] = [];
+
+    for (
+      let pageStart = 0;
+      ;
+      pageStart += ANALYTICS_PAGE_SIZE
+    ) {
+      const {
+        data:
+          monitoringPage,
+        error:
+          monitoringError,
+      } =
+        await supabase
+          .from(
+            "monitoring_history",
+          )
+          .select(
+            [
+              "recorded_at",
+              "battery_level",
+              "battery_status",
+              "time_remaining",
+              "solar_input",
+              "solar_status",
+              "solar_timer",
+              "solar_voltage",
+              "solar_current",
+              "total_energy",
+              "current_load",
+              "device_status",
+              "last_seen",
+              "battery_temperature",
+              "battery_temperature_status",
+              "solar_temperature",
+              "solar_temperature_status",
+              "interior_temp",
+              "voltage",
+              "watt_hours",
+              "cumulative_energy_input_wh",
+              "cumulative_energy_output_wh",
+              "energy_input_wh",
+              "energy_output_wh",
+            ].join(","),
+          )
+          .eq(
+            "user_id",
+            user.id,
+          )
+          .gte(
             "recorded_at",
-            "battery_level",
-            "battery_status",
-            "time_remaining",
-            "solar_input",
-            "solar_status",
-            "solar_timer",
-            "solar_voltage",
-            "solar_current",
-            "total_energy",
-            "current_load",
-            "device_status",
-            "last_seen",
-            "battery_temperature",
-            "battery_temperature_status",
-            "solar_temperature",
-            "solar_temperature_status",
-            "voltage",
-            "watt_hours",
-            "cumulative_energy_input_wh",
-            "cumulative_energy_output_wh",
-            "energy_input_wh",
-            "energy_output_wh",
-          ].join(","),
-        )
-        .eq(
-          "user_id",
-          user.id,
-        )
-        .gte(
-          "recorded_at",
-          range.start.toISOString(),
-        )
-        .lte(
-          "recorded_at",
-          getInclusiveRangeEnd(
-            range,
-          ).toISOString(),
-        )
-        .order(
-          "recorded_at",
-          {
-            ascending: true,
-          },
+            range.start.toISOString(),
+          )
+          .lte(
+            "recorded_at",
+            getInclusiveRangeEnd(
+              range,
+            ).toISOString(),
+          )
+          .order(
+            "recorded_at",
+            {
+              ascending: true,
+            },
+          )
+          .range(
+            pageStart,
+            pageStart + ANALYTICS_PAGE_SIZE - 1,
+          );
+
+      if (
+        monitoringError
+      ) {
+        console.error(
+          "Analytics monitoring history error:",
+          monitoringError.message,
         );
 
-    if (
-      monitoringError
-    ) {
-      console.error(
-        "Analytics monitoring history error:",
-        monitoringError.message,
+        break;
+      }
+
+      monitoringRows.push(
+        ...(monitoringPage ?? []),
       );
+
+      if (
+        !monitoringPage ||
+        monitoringPage.length < ANALYTICS_PAGE_SIZE
+      ) {
+        break;
+      }
     }
 
-    const {
-      data:
-        applianceRows,
-      error:
-        applianceError,
-    } =
-      await supabase
-        .from(
-          "appliance_usage_history",
-        )
-        .select(
-          [
-            "usage_id",
+    const applianceRows: unknown[] = [];
+
+    for (
+      let pageStart = 0;
+      ;
+      pageStart += ANALYTICS_PAGE_SIZE
+    ) {
+      const {
+        data:
+          appliancePage,
+        error:
+          applianceError,
+      } =
+        await supabase
+          .from(
+            "appliance_usage_history",
+          )
+          .select(
+            [
+              "usage_id",
+              "user_id",
+              "app_id",
+              "appliance_name",
+              "recorded_at",
+              "status",
+              "wattage",
+              "duration_seconds",
+              "energy_wh",
+            ].join(","),
+          )
+          .eq(
             "user_id",
-            "app_id",
-            "appliance_name",
+            user.id,
+          )
+          .gte(
             "recorded_at",
-            "status",
-            "wattage",
-            "duration_seconds",
-            "energy_wh",
-          ].join(","),
-        )
-        .eq(
-          "user_id",
-          user.id,
-        )
-        .gte(
-          "recorded_at",
-          range.start.toISOString(),
-        )
-        .lte(
-          "recorded_at",
-          getInclusiveRangeEnd(
-            range,
-          ).toISOString(),
-        )
-        .order(
-          "recorded_at",
-          {
-            ascending: true,
-          },
+            range.start.toISOString(),
+          )
+          .lte(
+            "recorded_at",
+            getInclusiveRangeEnd(
+              range,
+            ).toISOString(),
+          )
+          .order(
+            "recorded_at",
+            {
+              ascending: true,
+            },
+          )
+          .range(
+            pageStart,
+            pageStart + ANALYTICS_PAGE_SIZE - 1,
+          );
+
+      if (
+        applianceError
+      ) {
+        console.error(
+          "Analytics appliance history error:",
+          applianceError.message,
         );
 
-    if (
-      applianceError
-    ) {
-      console.error(
-        "Analytics appliance history error:",
-        applianceError.message,
+        break;
+      }
+
+      applianceRows.push(
+        ...(appliancePage ?? []),
       );
+
+      if (
+        !appliancePage ||
+        appliancePage.length < ANALYTICS_PAGE_SIZE
+      ) {
+        break;
+      }
     }
 
     return {
@@ -1751,6 +1810,101 @@ export interface BatteryRangePoint {
   label?: string;
 }
 
+export interface UnsafeBarPoint {
+  value: number;
+  label: string;
+}
+
+export type BatteryActivityKey =
+  | "charging"
+  | "discharging"
+  | "idle";
+
+export interface BatteryActivitySlice {
+  key: BatteryActivityKey;
+  label: string;
+  value: number;
+  percent: number;
+}
+
+export function getBatteryActivityData(
+  groupedMonitoring: MonitoringBucket[],
+): BatteryActivitySlice[] {
+  let charging = 0;
+  let discharging = 0;
+  let idle = 0;
+
+  groupedMonitoring.forEach(
+    (bucket) => {
+      bucket.rows.forEach(
+        (row) => {
+          const status =
+            String(
+              row.battery_status ??
+                "",
+            )
+              .trim()
+              .toLowerCase();
+
+          if (
+            status === "charging"
+          ) {
+            charging += 1;
+          } else if (
+            status ===
+            "discharging"
+          ) {
+            discharging += 1;
+          } else if (
+            status === "idle"
+          ) {
+            idle += 1;
+          }
+        },
+      );
+    },
+  );
+
+  const total =
+    charging +
+    discharging +
+    idle;
+
+  const toPercent = (
+    count: number,
+  ): number =>
+    total > 0
+      ? Math.round(
+          (count / total) *
+            100,
+        )
+      : 0;
+
+  return [
+    {
+      key: "charging",
+      label: "Charging",
+      value: charging,
+      percent:
+        toPercent(charging),
+    },
+    {
+      key: "discharging",
+      label: "Discharging",
+      value: discharging,
+      percent: toPercent(
+        discharging,
+      ),
+    },
+    {
+      key: "idle",
+      label: "Idle",
+      value: idle,
+      percent: toPercent(idle),
+    },
+  ];
+}
+
 export function getBatteryChartRangeData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
@@ -1781,6 +1935,32 @@ export function getBatteryChartRangeData(
           0,
           100,
         ),
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+export function getUnsafeDischargeChartData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): UnsafeBarPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const unsafeCount =
+        bucket.rows.filter(
+          (row) =>
+            getDoDStatus(
+              toNumber(row.battery_level),
+            ) === "Unsafe",
+        ).length;
+
+      return {
+        value: unsafeCount,
         label:
           formatDateLabel(
             bucket.date,
@@ -1878,6 +2058,119 @@ export function getEnergyOutputChartData(
   );
 }
 
+/* ============================================================
+   ENERGY SECTION CHART DATA
+   Pure app-side math over the per-bucket energy sums.
+   No SQL changes.
+   ============================================================ */
+
+/*
+ * Net energy: input minus output per bucket (signed —
+ * positive is surplus, negative is deficit).
+ */
+export function getNetEnergyData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const input = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_input_wh),
+        0,
+      );
+
+      const output = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_output_wh),
+        0,
+      );
+
+      return {
+        value: input - output,
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+/*
+ * Running balance: cumulative net energy across buckets in
+ * range order — whether stored energy grows or shrinks.
+ */
+export function getRunningBalanceData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  let running = 0;
+
+  return groupedMonitoring.map(
+    (bucket) => {
+      const input = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_input_wh),
+        0,
+      );
+
+      const output = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_output_wh),
+        0,
+      );
+
+      running += input - output;
+
+      return {
+        value: running,
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+/*
+ * Solar coverage: input / output x 100 per bucket — percent of
+ * use the sun covered. Zero-output buckets yield 0 (never
+ * divide by zero); over-100 values are kept (surplus shows).
+ */
+export function getSolarCoverageData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const input = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_input_wh),
+        0,
+      );
+
+      const output = bucket.rows.reduce(
+        (sum, row) => sum + toNumber(row.energy_output_wh),
+        0,
+      );
+
+      return {
+        value:
+          output > 0
+            ? Math.max(0, (input / output) * 100)
+            : 0,
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
 export function getBatteryTemperatureData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
@@ -1925,6 +2218,42 @@ export function getSolarTemperatureData(
           chartFrequency,
         ),
     }),
+  );
+}
+
+/*
+ * Interior temperature: per-bucket average of interior_temp.
+ * Rows predate the v8 column as NULL — toNumber maps those to 0,
+ * so callers must check finiteness against the raw field, not
+ * this average. See TemperaturesChart for the gap discipline.
+ */
+export function getInteriorTemperatureData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const samples = bucket.rows
+        .map((row) => row.interior_temp)
+        .filter(
+          (value): value is number =>
+            typeof value === "number" &&
+            Number.isFinite(value),
+        );
+
+      return {
+        value:
+          samples.length > 0
+            ? average(samples)
+            : Number.NaN,
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
   );
 }
 
@@ -1981,6 +2310,243 @@ export function getVoltageChartData(
         ),
     }),
   );
+}
+
+/* ============================================================
+   SOLAR SECTION CHART DATA
+   No SQL changes: everything derives from monitoring_history
+   rows already loaded for the range.
+   ============================================================ */
+
+export interface SolarVsLoadPoint {
+  solar: number;
+  load: number;
+  label?: string;
+}
+
+/*
+ * Solar vs load: paired per-bucket averages in one pass so the
+ * two series can never misalign.
+ */
+export function getSolarVsLoadData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): SolarVsLoadPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => ({
+      solar: Math.max(
+        0,
+        average(
+          bucket.rows.map(
+            (row) =>
+              toNumber(
+                row.solar_input,
+              ),
+          ),
+        ),
+      ),
+
+      load: Math.max(
+        0,
+        average(
+          bucket.rows.map(
+            (row) =>
+              toNumber(
+                row.current_load,
+              ),
+          ),
+        ),
+      ),
+
+      label:
+        formatDateLabel(
+          bucket.date,
+          chartFrequency,
+        ),
+    }),
+  );
+}
+
+/*
+ * Best sun days: peak panel output per bucket.
+ */
+export function getBestSunDaysData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => ({
+      value: Math.max(
+        0,
+        maximum(
+          bucket.rows.map(
+            (row) =>
+              toNumber(
+                row.solar_input,
+              ),
+          ),
+        ),
+      ),
+
+      label:
+        formatDateLabel(
+          bucket.date,
+          chartFrequency,
+        ),
+    }),
+  );
+}
+
+/*
+ * Parse the device-reported solar_timer interval
+ * (Postgres format: HH:MM:SS, H:MM:SS, or "N days HH:MM:SS")
+ * into hours. Unparseable values contribute 0.
+ */
+export function parseSolarTimerHours(
+  value: unknown,
+): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0
+      ? value / 3600
+      : 0;
+  }
+
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return 0;
+  }
+
+  const dayMatch = text.match(/(-?\d+)\s+days?/i);
+  const days = dayMatch ? Math.max(0, Number(dayMatch[1])) : 0;
+
+  const timeMatch = text.match(/(\d{1,3}):(\d{2}):(\d{2})/);
+
+  if (!timeMatch) {
+    return days * 24;
+  }
+
+  const hours =
+    days * 24 +
+    Number(timeMatch[1]) +
+    Number(timeMatch[2]) / 60 +
+    Number(timeMatch[3]) / 3600;
+
+  return Number.isFinite(hours) && hours > 0 ? hours : 0;
+}
+
+/*
+ * Sun hours: the device reports elapsed producing time in
+ * solar_timer. Take the per-day max inside each bucket and sum,
+ * so Daily reads the day's timer while Weekly/Monthly totals
+ * stay correct. Assumption: solar_timer counts up while the
+ * panel produces. If the device ever reports it as a countdown,
+ * only this helper changes.
+ */
+export function getSunHoursData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const byDay = new Map<string, number>();
+
+      bucket.rows.forEach((row) => {
+        const dayKey = String(
+          row.recorded_at ?? "",
+        ).slice(0, 10);
+
+        if (!dayKey) {
+          return;
+        }
+
+        const hours = parseSolarTimerHours(row.solar_timer);
+
+        byDay.set(
+          dayKey,
+          Math.max(byDay.get(dayKey) ?? 0, hours),
+        );
+      });
+
+      let total = 0;
+
+      byDay.forEach((hours) => {
+        total += hours;
+      });
+
+      return {
+        value: Math.max(0, total),
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+const HOUR_LABELS = [
+  "12AM",
+  "1AM",
+  "2AM",
+  "3AM",
+  "4AM",
+  "5AM",
+  "6AM",
+  "7AM",
+  "8AM",
+  "9AM",
+  "10AM",
+  "11AM",
+  "12PM",
+  "1PM",
+  "2PM",
+  "3PM",
+  "4PM",
+  "5PM",
+  "6PM",
+  "7PM",
+  "8PM",
+  "9PM",
+  "10PM",
+  "11PM",
+];
+
+/*
+ * Solar curve by hour: average solar_input per hour of day (0-23)
+ * across the whole range. Takes raw rows (not buckets) because
+ * hour-of-day cuts across dates. Always 24 points; the chart
+ * shows a fixed subset of x-labels.
+ */
+export function getSolarCurveByHourData(
+  rows: MonitoringHistoryRow[],
+): ChartPoint[] {
+  const sums = new Array<number>(24).fill(0);
+  const counts = new Array<number>(24).fill(0);
+
+  rows.forEach((row) => {
+    const date = new Date(String(row.recorded_at ?? ""));
+
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const hour = date.getHours();
+
+    sums[hour] += toNumber(row.solar_input);
+    counts[hour] += 1;
+  });
+
+  return sums.map((sum, hour) => ({
+    value:
+      counts[hour] > 0
+        ? Math.max(0, sum / counts[hour])
+        : 0,
+
+    label: HOUR_LABELS[hour],
+  }));
 }
 
 const TEMPERATURE_STATUS_RANK: Record<
@@ -2046,6 +2612,235 @@ export function getDoDStatus(
     CAUTION_SOC
     ? "Unsafe"
     : "Safe";
+}
+
+/* ============================================================
+   HEALTH SECTION CHART DATA
+   Pure app-side math over monitoring_history rows.
+   No SQL changes.
+   ============================================================ */
+
+/*
+ * Alert-level temperature statuses. Nominal and Elevated are
+ * routine; only High and Critical count as alert days.
+ */
+const ALERT_TEMPERATURE_STATUSES = new Set([
+  "High",
+  "Critical",
+]);
+
+/*
+ * Temperature alerts: per-bucket count of rows where the
+ * battery OR solar temperature status is High/Critical.
+ */
+export function getTemperatureAlertsData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => ({
+      value: bucket.rows.filter(
+        (row) =>
+          ALERT_TEMPERATURE_STATUSES.has(
+            String(row.battery_temperature_status ?? ""),
+          ) ||
+          ALERT_TEMPERATURE_STATUSES.has(
+            String(row.solar_temperature_status ?? ""),
+          ),
+      ).length,
+
+      label:
+        formatDateLabel(
+          bucket.date,
+          chartFrequency,
+        ),
+    }),
+  );
+}
+
+/*
+ * Device uptime: per-bucket share of rows reporting
+ * device_status "Online", as a percent. Buckets with no rows
+ * cannot occur here (grouping only creates non-empty buckets);
+ * rows with other statuses count as offline time.
+ */
+export function getUptimeData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const online = bucket.rows.filter(
+        (row) => row.device_status === "Online",
+      ).length;
+
+      return {
+        value:
+          bucket.rows.length > 0
+            ? (online / bucket.rows.length) * 100
+            : 0,
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+export interface OnlineShare {
+  online: number;
+  offline: number;
+}
+
+/*
+ * Online share: range-total online vs offline sample counts.
+ * Grouping-invariant (sums are order-free), so the donut takes
+ * a fixed bucketing and shows no frequency toggle.
+ */
+export function getOnlineShareData(
+  groupedMonitoring: MonitoringBucket[],
+): OnlineShare {
+  let online = 0;
+  let offline = 0;
+
+  groupedMonitoring.forEach((bucket) => {
+    bucket.rows.forEach((row) => {
+      if (row.device_status === "Online") {
+        online += 1;
+      } else {
+        offline += 1;
+      }
+    });
+  });
+
+  return { online, offline };
+}
+
+/* ============================================================
+   USAGE SECTION CHART DATA
+   Pure app-side math. No SQL changes.
+   ============================================================ */
+
+export interface LoadVsPeakPoint {
+  avg: number;
+  peak: number;
+  label?: string;
+}
+
+/*
+ * Average vs peak load: paired per-bucket avg + max in one pass
+ * so the two series can never misalign.
+ */
+export function getLoadVsPeakData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): LoadVsPeakPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const loads = bucket.rows.map(
+        (row) => toNumber(row.current_load),
+      );
+
+      return {
+        avg: Math.max(0, average(loads)),
+        peak: Math.max(0, maximum(loads)),
+
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
+/*
+ * Power use by hour: average energy_output_wh per hour of day
+ * (0-23) across the whole range. Takes raw rows (not buckets)
+ * because hour-of-day cuts across dates. Always 24 points.
+ */
+export function getPowerByHourData(
+  rows: MonitoringHistoryRow[],
+): ChartPoint[] {
+  const sums = new Array<number>(24).fill(0);
+  const counts = new Array<number>(24).fill(0);
+
+  rows.forEach((row) => {
+    const date = new Date(String(row.recorded_at ?? ""));
+
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const hour = date.getHours();
+
+    sums[hour] += toNumber(row.energy_output_wh);
+    counts[hour] += 1;
+  });
+
+  return sums.map((sum, hour) => ({
+    value:
+      counts[hour] > 0
+        ? Math.max(0, sum / counts[hour])
+        : 0,
+
+    label: HOUR_LABELS[hour],
+  }));
+}
+
+export interface ApplianceShareSlice {
+  name: string;
+  energyWh: number;
+  durationSeconds: number;
+}
+
+/*
+ * Appliance energy share: top 5 appliances by energy plus an
+ * "Other" aggregate of the rest, from getApplianceChartData.
+ * Range-total (grouping would scatter sparse usage events
+ * meaninglessly), so cards 3-4 share one memo with no toggle.
+ * Empty until the app records appliance usage — callers render
+ * an honest empty state, never placeholder data.
+ */
+export function getApplianceEnergyShare(
+  applianceUsageHistory: ApplianceUsageHistoryRow[],
+): ApplianceShareSlice[] {
+  const ranked = getApplianceChartData(applianceUsageHistory);
+
+  if (ranked.length <= 5) {
+    return ranked.map((item) => ({
+      name: item.name,
+      energyWh: item.energyWh,
+      durationSeconds: item.durationSeconds,
+    }));
+  }
+
+  const top = ranked.slice(0, 5).map((item) => ({
+    name: item.name,
+    energyWh: item.energyWh,
+    durationSeconds: item.durationSeconds,
+  }));
+
+  const rest = ranked.slice(5);
+  let otherEnergy = 0;
+  let otherDuration = 0;
+
+  rest.forEach((item) => {
+    otherEnergy += item.energyWh;
+    otherDuration += item.durationSeconds;
+  });
+
+  top.push({
+    name: "Other",
+    energyWh: otherEnergy,
+    durationSeconds: otherDuration,
+  });
+
+  return top;
 }
 
 /* ============================================================

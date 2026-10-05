@@ -10,6 +10,10 @@ import {
   classifyBatteryState,
   computeWattCap,
 } from "@/services/recommendation";
+import {
+  subscribeResilientChannel,
+  type ResilientSubscription,
+} from "@/services/realtimeResubscribe";
 import { sendAlertEmail } from "@/services/alertEmailService";
 
 // ============================================================
@@ -108,6 +112,12 @@ let monitoringChannel:
 let componentsChannel:
   | ReturnType<typeof supabase.channel>
   | null = null;
+
+let monitoringSubscription:
+  ResilientSubscription | null = null;
+
+let componentsSubscription:
+  ResilientSubscription | null = null;
 
 let staleMonitoringTimer:
   | ReturnType<typeof setInterval>
@@ -3222,6 +3232,11 @@ const resetNotificationState =
 export const unsubscribeFromNotificationMonitoring =
   async () => {
 
+    if (monitoringSubscription) {
+      monitoringSubscription.stop();
+      monitoringSubscription = null;
+    }
+
     if (
       monitoringChannel
     ) {
@@ -3308,38 +3323,21 @@ const startComponentsNotificationWatcher =
     userId: string,
   ): Promise<void> => {
 
-    // Reuse stable per-user channel (no Date.now) so login
-    // bursts and StrictMode remounts don't stack duplicates
-    // on the shared websocket (previously socket 1006).
+    // Tear down any previous generation first (user change /
+    // restart): the helper removes the channel and cancels
+    // pending retries, so generations never overlap.
+    if (componentsSubscription) {
+      componentsSubscription.stop();
+      componentsSubscription = null;
+    }
+
     const topic = `notification-components-${userId}`;
 
-    const reused = supabase
-      .getChannels()
-      .find(
-        (c) =>
-          (c as unknown as { topic?: string }).topic ===
-          `realtime:${topic}`,
-      );
-
-    if (reused && componentsChannel) {
-      return;
-    }
-
-    if (componentsChannel) {
-      await supabase.removeChannel(
-        componentsChannel,
-      );
-
-      componentsChannel =
-        null;
-    }
-
-    componentsChannel =
-      supabase
-        .channel(
-          topic,
-        )
-        .on(
+    componentsSubscription = subscribeResilientChannel({
+      topic,
+      label: "Notification service components",
+      build: (base) =>
+        base.on(
           "postgres_changes",
           {
             event: "UPDATE",
@@ -3366,43 +3364,26 @@ const startComponentsNotificationWatcher =
               current,
             );
           },
-        )
-        .subscribe(
-          (status) => {
-
-            if (
-              status ===
-                "SUBSCRIBED"
-            ) {
-
-              console.log(
-                "Notification service components watcher subscribed.",
-              );
-            }
-
-            if (
-              status ===
-                "CHANNEL_ERROR" ||
-              status ===
-                "TIMED_OUT"
-            ) {
-
-              console.warn(
-                "Notification service components channel issue:",
-                status,
-              );
-            }
-
-            // CLOSED after explicit removeChannel (e.g. logout
-            // or screen unmount) is expected teardown — stay
-            // silent. Unexpected service-side closes still
-            // surface via CHANNEL_ERROR/TIMED_OUT.
-          },
+        ),
+      isAlive: () => currentUserId === userId,
+      onChannel: (channel) => {
+        componentsChannel = channel;
+      },
+      onSubscribed: () => {
+        console.log(
+          "Notification service components watcher subscribed.",
         );
+      },
+    });
   };
 
 const stopComponentsNotificationWatcher =
   async (): Promise<void> => {
+
+    if (componentsSubscription) {
+      componentsSubscription.stop();
+      componentsSubscription = null;
+    }
 
     if (
       componentsChannel
@@ -3449,42 +3430,15 @@ export const startMonitoringNotificationWatcher =
       return monitoringChannel;
     }
 
-    // Reuse a stable per-user channel if the socket already
-    // holds one (StrictMode remount / double SIGNED_IN).
-    const stableTopic = `notification-monitoring-${user.id}`;
+    // Stop any previous generation first (user change /
+    // restart): the helper removes its channel and cancels
+    // pending retries, so generations never overlap. Channel
+    // adoption for the same user happens inside the helper via
+    // getChannels, so StrictMode remounts still reuse.
 
-    const existingMonitoring = supabase
-      .getChannels()
-      .find(
-        (c) =>
-          (c as unknown as { topic?: string }).topic ===
-          `realtime:${stableTopic}`,
-      );
-
-    if (
-      existingMonitoring &&
-      currentUserId === user.id
-    ) {
-      monitoringChannel =
-        existingMonitoring as unknown as typeof monitoringChannel;
-
-      return monitoringChannel;
-    }
-
-    // ----------------------------------------------------------
-    // REMOVE PREVIOUS CHANNEL IF USER CHANGED
-    // ----------------------------------------------------------
-
-    if (
-      monitoringChannel
-    ) {
-
-      await supabase.removeChannel(
-        monitoringChannel,
-      );
-
-      monitoringChannel =
-        null;
+    if (monitoringSubscription) {
+      monitoringSubscription.stop();
+      monitoringSubscription = null;
     }
 
     stopStaleMonitoringCheck();
@@ -3493,6 +3447,10 @@ export const startMonitoringNotificationWatcher =
 
     currentUserId =
       user.id;
+
+    // Stable per-user topic (no Date.now) so login bursts and
+    // StrictMode remounts reuse instead of stacking duplicates.
+    const stableTopic = `notification-monitoring-${user.id}`;
 
     // ----------------------------------------------------------
     // GET INITIAL MONITORING DATA
@@ -3573,12 +3531,11 @@ export const startMonitoringNotificationWatcher =
     // SUBSCRIBE TO USER'S MONITORING ROW
     // ----------------------------------------------------------
 
-    monitoringChannel =
-      supabase
-        .channel(
-          stableTopic,
-        )
-        .on(
+    monitoringSubscription = subscribeResilientChannel({
+      topic: stableTopic,
+      label: "Notification service monitoring",
+      build: (base) =>
+        base.on(
           "postgres_changes",
           {
             event: "UPDATE",
@@ -3608,46 +3565,17 @@ export const startMonitoringNotificationWatcher =
               updatedData,
             );
           },
-        )
-        .subscribe(
-          (status) => {
-
-            if (
-              status ===
-              "SUBSCRIBED"
-            ) {
-
-              console.log(
-                "Notification service monitoring watcher subscribed.",
-              );
-            }
-
-            if (
-              status ===
-              "CHANNEL_ERROR"
-            ) {
-
-              console.warn(
-                "Notification service Realtime channel error.",
-              );
-            }
-
-            if (
-              status ===
-              "TIMED_OUT"
-            ) {
-
-              console.warn(
-                "Notification service Realtime connection timed out.",
-              );
-            }
-
-            // CLOSED after explicit removeChannel (e.g. logout
-            // or screen unmount) is expected teardown — stay
-            // silent. Unexpected service-side closes still
-            // surface via CHANNEL_ERROR/TIMED_OUT.
-          },
+        ),
+      isAlive: () => currentUserId === user.id,
+      onChannel: (channel) => {
+        monitoringChannel = channel;
+      },
+      onSubscribed: () => {
+        console.log(
+          "Notification service monitoring watcher subscribed.",
         );
+      },
+    });
 
     await startComponentsNotificationWatcher(
       user.id,

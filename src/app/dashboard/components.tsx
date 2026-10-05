@@ -31,6 +31,10 @@ import {
   SlidingToggle,
 } from "@/components/ui/SlidingToggle";
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import {
+  subscribeResilientChannel,
+  type ResilientSubscription,
+} from "@/services/realtimeResubscribe";
 
 // ============================================
 // COMPONENT IMAGE MAPPING
@@ -138,6 +142,14 @@ export default function ComponentsScreen() {
       | ReturnType<typeof supabase.channel>
       | null = null;
 
+    let componentsSubscription:
+      | ResilientSubscription
+      | null = null;
+
+    let monitoringSubscription:
+      | ResilientSubscription
+      | null = null;
+
     // ==========================================
     // LOAD COMPONENTS
     // ==========================================
@@ -227,97 +239,14 @@ export default function ComponentsScreen() {
       if (cancelled) return;
 
       // ========================================
-      // COMPONENTS REALTIME (stable topic, warn + retry)
+      // COMPONENTS REALTIME (shared resilient recovery:
+      // capped backoff, no attempt cap, warn-once logging)
       // ========================================
 
-      const subscribeWithRetry = (
-        topic: string,
-        build: (
-          channel: ReturnType<typeof supabase.channel>,
-        ) => ReturnType<typeof supabase.channel>,
-        onReplace: (
-          next: ReturnType<typeof supabase.channel>,
-        ) => void,
-      ): ReturnType<typeof supabase.channel> => {
-        const reused = supabase
-          .getChannels()
-          .find(
-            (c) =>
-              (c as unknown as { topic?: string }).topic ===
-              `realtime:${topic}`,
-          ) as
-          | ReturnType<typeof supabase.channel>
-          | undefined;
-
-        if (reused) {
-          return reused;
-        }
-
-        let attempts = 0;
-
-        const base = supabase.channel(topic);
-        const channel = build(base);
-
-        channel.subscribe((status, error) => {
-          console.log(
-            `${topic} Realtime status:`,
-            status,
-            error,
-          );
-
-          if (
-            !cancelled &&
-            (status === "CHANNEL_ERROR" ||
-              status === "TIMED_OUT")
-          ) {
-            console.warn(
-              `${topic} Realtime channel issue, retrying:`,
-              status,
-              error instanceof Error
-                ? error.message
-                : error,
-            );
-
-            if (attempts < 3) {
-              const delay =
-                [1000, 2000, 5000][attempts] ?? 5000;
-              attempts += 1;
-
-              setTimeout(() => {
-                if (cancelled) {
-                  return;
-                }
-
-                supabase
-                  .removeChannel(channel)
-                  .catch(() => {})
-                  .finally(() => {
-                    if (cancelled) {
-                      return;
-                    }
-
-                    const fresh = subscribeWithRetry(
-                      topic,
-                      build,
-                      onReplace,
-                    );
-                    onReplace(fresh);
-                  });
-              }, delay);
-            }
-          }
-
-          if (status === "SUBSCRIBED") {
-            attempts = 0;
-          }
-        });
-
-        return channel;
-      };
-
-      const newComponentsChannel = subscribeWithRetry(
-        `components-${user.id}`,
-        (ch) =>
+      componentsSubscription = subscribeResilientChannel({
+        topic: `components-${user.id}`,
+        label: `components-${user.id}`,
+        build: (ch) =>
           ch.on(
             "postgres_changes",
             {
@@ -332,20 +261,20 @@ export default function ComponentsScreen() {
               }
             },
           ),
-        (next) => {
+        isAlive: () => !cancelled,
+        onChannel: (next) => {
           componentsChannel = next;
         },
-      );
-
-      componentsChannel = newComponentsChannel;
+      });
 
       // ========================================
-      // MONITORING REALTIME (stable topic, warn + retry)
+      // MONITORING REALTIME (same shared recovery)
       // ========================================
 
-      const newMonitoringChannel = subscribeWithRetry(
-        `monitoring-${user.id}`,
-        (ch) =>
+      monitoringSubscription = subscribeResilientChannel({
+        topic: `monitoring-${user.id}`,
+        label: `monitoring-${user.id}`,
+        build: (ch) =>
           ch.on(
             "postgres_changes",
             {
@@ -365,12 +294,11 @@ export default function ComponentsScreen() {
               );
             },
           ),
-        (next) => {
+        isAlive: () => !cancelled,
+        onChannel: (next) => {
           monitoringChannel = next;
         },
-      );
-
-      monitoringChannel = newMonitoringChannel;
+      });
     };
 
     setup();
@@ -381,6 +309,16 @@ export default function ComponentsScreen() {
 
     return () => {
       cancelled = true;
+
+      if (componentsSubscription) {
+        componentsSubscription.stop();
+        componentsSubscription = null;
+      }
+
+      if (monitoringSubscription) {
+        monitoringSubscription.stop();
+        monitoringSubscription = null;
+      }
 
       if (componentsChannel) {
         supabase.removeChannel(

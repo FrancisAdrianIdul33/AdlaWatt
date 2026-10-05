@@ -16,12 +16,14 @@ import {
 } from "react-native-gifted-charts";
 import {
   CHART_HEIGHT,
-  clampPercent,
   useChartColors,
 } from "@/services/chartMath";
 import { useTypography } from "@/hooks/useTypography";
 import { useAppColors } from "@/hooks/useAppColors";
 import AppText from "@/components/ui/AppText";
+import type {
+  ChartPoint,
+} from "@/services/analyticsService";
 
 /* ============================================================
    CONSTANTS
@@ -29,18 +31,9 @@ import AppText from "@/components/ui/AppText";
 
 const DEFAULT_POINT_WIDTH = 60;
 const Y_AXIS_W = 38; // width reserved for the fixed % labels
-const DEFAULT_FLOOR = 20; // safety floor in %
-
-/* ============================================================
-   TYPES
-   ============================================================ */
-
-export interface BatteryLevelPoint {
-  value: number;
-  min?: number;
-  max?: number;
-  label?: string;
-}
+const SECTIONS = 5;
+const FLOOR = 0;
+const CEILING = 100; // online share is a true percent
 
 /* ============================================================
    SMALL UI PIECES
@@ -75,39 +68,27 @@ function Stat({
 }
 
 /* ============================================================
-   BATTERY LEVEL OVER TIME
-   Curved area chart (react-native-gifted-charts, SVG-based so it
+   DEVICE UPTIME
+   Thin green line of online share per period: how reliable the
+   ESP32 link is (react-native-gifted-charts, SVG-based so it
    works on native and web with no extra engine loading).
-   Average-only thin green line with green area fill. A flat
-   danger-zone series at the floor value renders a red gradient
-   wash over 0% up to the floor (service still returns min/max,
-   but max is intentionally ignored here).
-   The Y axis is always 0 to 100%. The chart is the VISIBLE
-   width only, so gifted-charts scrolls the plot inside and
-   the left % axis stays fixed while lines terminate at the
-   bare right edge. A 20px margin at each end keeps the
-   edge date labels fully readable. The chart remounts when changes so the
-   view opens at the newest data via scrollToEnd. Drag-scroll
-   works inside the plot on web and native. Dashed floor line
-   (legend explains it, no in-chart label), centered text
-   legend, and axes-always-render empty state are kept. Area
-   fills are softened in dark mode to avoid glow.
+   Fixed 0-100% scale — a share with a natural ceiling, same
+   justification as Battery Level. Buckets with no rows never
+   occur (grouping only creates non-empty buckets), so gaps in
+   the line always mean missing data, never fake 0% dips.
+   The Y axis labels stay fixed while the plot scrolls inside;
+   the chart opens at the newest data via scrollToEnd.
    Do NOT wrap this component in a horizontal ScrollView.
    ============================================================ */
 
-export default function BatteryLevelChart({
+export default function UptimeChart({
   points,
   pointWidth = DEFAULT_POINT_WIDTH,
-  floor = DEFAULT_FLOOR,
 }: {
-  points: BatteryLevelPoint[];
+  points: ChartPoint[];
   pointWidth?: number;
-  floor?: number;
 }) {
-  // Family-only: axis sizes stay 12 by design, only the
-  // typeface follows Preferences.
   const { family } = useTypography();
-  // Series colors frozen; grid/axis neutrals follow theme.
   const chartColors = useChartColors();
   const colors = useAppColors();
 
@@ -116,31 +97,19 @@ export default function BatteryLevelChart({
   const onLayout = (e: LayoutChangeEvent) =>
     setBoxW(e.nativeEvent.layout.width);
 
-  // Own the chart's scroll ref: the library scrolls to the end
-  // on content-size change, but on web that can fire before
-  // layout/fonts settle and stop short. These delayed passes
-  // re-assert the end position without remounting (no flash).
   const scrollRef = useRef<ScrollView | null>(null);
 
   // Skip non-finite values (periods with no data).
   const real = useMemo(
     () =>
       points.filter(
-        (p): p is BatteryLevelPoint & { value: number } =>
+        (p): p is ChartPoint & { value: number } =>
           Number.isFinite(p.value),
       ),
     [points],
   );
   const isEmpty = real.length < 2;
 
-  // Y range is always the full 0 to 100%.
-  const offset = 0;
-  const top = 100;
-  const range = top - offset;
-  const sections = 5;
-  const showFloor = floor >= offset && floor <= top;
-
-  // Chart data on the 0-100 scale.
   const data = useMemo(
     () =>
       isEmpty
@@ -149,27 +118,13 @@ export default function BatteryLevelChart({
             { value: 0, label: "" },
           ]
         : real.map((p) => ({
-            value: clampPercent(p.value),
+            value: Math.max(
+              FLOOR,
+              Math.min(CEILING, p.value),
+            ),
             label: p.label ?? "",
           })),
     [real, isEmpty],
-  );
-
-  // Danger-zone wash: flat series pinned at the floor value,
-  // same length/order as avg, no x-labels (labels stay on the
-  // primary series to avoid duplicates). Its red area fill shades
-  // 0% up to the floor and scrolls with the plot.
-  const dataFloor = useMemo(
-    () =>
-      isEmpty
-        ? [
-            { value: clampPercent(floor) },
-            { value: clampPercent(floor) },
-          ]
-        : real.map(() => ({
-            value: clampPercent(floor),
-          })),
-    [real, isEmpty, floor],
   );
 
   // Layout numbers: visible plot width only, so the plot
@@ -181,15 +136,14 @@ export default function BatteryLevelChart({
     ? Math.max(chartW - 36, 40)
     : Math.max(pointWidth, (chartW - 36) / (real.length - 1));
 
-  // Stats.
-  const latest = isEmpty ? null : real[real.length - 1].value;
-  const lowest = isEmpty
-    ? null
-    : Math.min(...real.map((p) => p.value));
+  // Stats: one value each, nothing repeats.
   const average = isEmpty
     ? null
     : real.reduce((sum, p) => sum + p.value, 0) / real.length;
-  const belowFloor = lowest != null && lowest < floor;
+  const worst = isEmpty
+    ? null
+    : real.reduce((low, p) => (p.value < low.value ? p : low), real[0]);
+  const belowFull = average != null && average < CEILING;
 
   useEffect(() => {
     if (isEmpty || boxW <= 0) {
@@ -219,14 +173,6 @@ export default function BatteryLevelChart({
       {/* Stats: text labels, not color only. */}
       <View style={styles.statsRow}>
         <Stat
-          label="Latest"
-          value={
-            latest != null ? `${Math.round(latest)}%` : "-"
-          }
-          color={colors.text}
-        />
-
-        <Stat
           label="Average"
           value={
             average != null ? `${Math.round(average)}%` : "-"
@@ -235,32 +181,24 @@ export default function BatteryLevelChart({
         />
 
         <Stat
-          label={
-            belowFloor ? "Lowest (below floor)" : "Lowest"
-          }
+          label="Worst period"
           value={
-            lowest != null ? `${Math.round(lowest)}%` : "-"
+            worst != null
+              ? `${Math.round(worst.value)}% (${worst.label})`
+              : "-"
           }
-          color={belowFloor ? chartColors.red : colors.text}
+          color={belowFull ? chartColors.yellow : colors.text}
         />
       </View>
 
-      {/* Chart row: plot (measured, flex-1) + plain right wall.
-          The row always renders so onLayout can measure; only
-          the LineChart waits for the real width (placeholder
-          keeps the height meanwhile). The plot scrolls inside
-          the chart on web and native; both % rails stay fixed.
-          The chart remounts when the point count changes so
-          scrollToEnd opens at the newest data. */}
       <View
         onLayout={onLayout}
         style={styles.chartWrap}
       >
         {boxW > 0 ? (
             <LineChart
-              key={`battery-${data.length}-${floor}`}
+              key={`uptime-${data.length}`}
               data={data}
-              data2={dataFloor}
               scrollRef={scrollRef}
               height={CHART_HEIGHT}
               width={chartW}
@@ -268,22 +206,16 @@ export default function BatteryLevelChart({
               curved
             areaChart
             color={chartColors.green}
-            color2="transparent"
             thickness={1.5}
-            thickness2={0}
             startFillColor={chartColors.green}
             endFillColor={chartColors.green}
             startOpacity={colors.isDark ? 0.22 : 0.32}
             endOpacity={0.02}
-            startFillColor2={chartColors.red}
-            endFillColor2={chartColors.red}
-            startOpacity2={colors.isDark ? 0.25 : 0.32}
-            endOpacity2={0.06}
-            maxValue={range}
-            noOfSections={sections}
+            maxValue={CEILING - FLOOR}
+            noOfSections={SECTIONS}
             yAxisLabelWidth={Y_AXIS_W}
             formatYLabel={(label: string) =>
-              `${Math.round(Number(label) + offset)}%`
+              `${Math.round(Number(label) + FLOOR)}%`
             }
             yAxisThickness={0}
             yAxisTextStyle={{
@@ -302,21 +234,11 @@ export default function BatteryLevelChart({
             rulesThickness={1}
             showVerticalLines={false}
             hideDataPoints={isEmpty || Platform.OS === "web"}
-            hideDataPoints2
             dataPointsColor={chartColors.green}
             dataPointsRadius={3}
             spacing={spacing}
             initialSpacing={20}
             endSpacing={0}
-            showReferenceLine1={showFloor}
-            referenceLine1Position={floor - offset}
-            referenceLine1Config={{
-              color: chartColors.red,
-              thickness: 1.5,
-              type: "dashed",
-              dashWidth: 4,
-              dashGap: 4,
-            }}
             showScrollIndicator={false}
             scrollToEnd
             scrollAnimation={false}
@@ -327,12 +249,11 @@ export default function BatteryLevelChart({
       </View>
 
       {/* Legend: line style + text so meaning never depends
-          on color alone (thin green = avg battery %, red wash +
-          dashed red = unsafe zone below safety floor). */}
+          on color alone. */}
       <View
         style={styles.legend}
         accessibilityRole="text"
-        accessibilityLabel="Legend: thin line average battery percent, red wash and dashed line unsafe zone below safety floor"
+        accessibilityLabel="Legend: green line online share percent"
       >
         <View style={styles.legendItem}>
           <View
@@ -346,41 +267,7 @@ export default function BatteryLevelChart({
             variant="caption"
             style={styles.legendText}
           >
-            Average
-          </AppText>
-        </View>
-
-        <View style={styles.legendItem}>
-          <View
-            style={[
-              styles.legendSwatch,
-              { backgroundColor: chartColors.red },
-            ]}
-          />
-
-          <AppText
-            variant="caption"
-            style={styles.legendText}
-          >
-            Unsafe zone
-          </AppText>
-        </View>
-
-        <View style={styles.legendItem}>
-          <View
-            style={[
-              styles.legendSwatchDashed,
-              { borderColor: chartColors.red },
-            ]}
-          />
-
-          <AppText
-            variant="caption"
-            style={styles.legendText}
-          >
-            {`${floor}% safety floor${
-              !showFloor && !isEmpty ? " (below this view)" : ""
-            }`}
+            Uptime
           </AppText>
         </View>
       </View>
@@ -440,24 +327,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  legendSwatch: {
-    width: 18,
-    height: 3,
-    borderRadius: 2,
-  },
-
   legendSwatchThin: {
     width: 18,
     height: 1.5,
     borderRadius: 1,
-    opacity: 0.7,
-  },
-
-  legendSwatchDashed: {
-    width: 18,
-    height: 0,
-    borderTopWidth: 2,
-    borderStyle: "dashed",
+    opacity: 0.9,
   },
 
   legendText: {
