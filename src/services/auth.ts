@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   getAuthenticatedUserSafe,
@@ -146,7 +147,42 @@ export async function resendConfirmation(email: string) {
 // Separate throttle bucket so recovery requests never eat
 // into the signup-confirmation resend budget (and vice
 // versa). Same 60s window, same service-side spirit.
+// The timestamp is mirrored to AsyncStorage so an app
+// reload cannot wipe the cooldown and hammer Supabase
+// into a 429 (the in-memory map alone resets on reload).
 const recoveryTimestamps = new Map<string, number>();
+
+const RECOVERY_STORE_PREFIX = "adlawatt.recovery.v1:";
+
+async function getPersistedRecoveryTimestamp(
+    email: string,
+): Promise<number> {
+    try {
+        const raw = await AsyncStorage.getItem(
+            RECOVERY_STORE_PREFIX + email,
+        );
+
+        const value = raw ? Number.parseInt(raw, 10) : 0;
+
+        return Number.isFinite(value) ? value : 0;
+    } catch {
+        return 0;
+    }
+}
+
+async function setPersistedRecoveryTimestamp(
+    email: string,
+    now: number,
+): Promise<void> {
+    try {
+        await AsyncStorage.setItem(
+            RECOVERY_STORE_PREFIX + email,
+            String(now),
+        );
+    } catch {
+        // Cache failure must never block a legitimate send.
+    }
+}
 
 // ============================================================
 // PASSWORD RECOVERY (Supabase built-in email flow)
@@ -182,7 +218,14 @@ export async function requestPasswordReset(email: string) {
     }
 
     const now = Date.now();
-    const lastSent = recoveryTimestamps.get(cleanEmail) ?? 0;
+    const lastSentMemory =
+        recoveryTimestamps.get(cleanEmail) ?? 0;
+    const lastSentPersisted =
+        await getPersistedRecoveryTimestamp(cleanEmail);
+    const lastSent = Math.max(
+        lastSentMemory,
+        lastSentPersisted,
+    );
 
     if (now - lastSent < RESEND_COOLDOWN_MS) {
         return {
@@ -193,6 +236,7 @@ export async function requestPasswordReset(email: string) {
     }
 
     recoveryTimestamps.set(cleanEmail, now);
+    await setPersistedRecoveryTimestamp(cleanEmail, now);
 
     const { error } = await supabase.auth.resetPasswordForEmail(
         cleanEmail,
