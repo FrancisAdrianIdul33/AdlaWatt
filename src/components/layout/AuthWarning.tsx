@@ -11,9 +11,11 @@ import {
 // ============================================================
 // AUTH WARNING
 //
-// Single shared error row for login + register. Left-aligned
-// icon + text so both screens present identical states.
-// Returns null when there is no message.
+// Single shared error row for login + register + forgot-
+// password. Left-aligned icon + text so all screens present
+// identical states. The slot is always reserved (fixed
+// min-height) so primary buttons never shift when an error
+// appears; the gap to the button stays tight.
 // ============================================================
 
 interface AuthWarningProps {
@@ -31,7 +33,13 @@ export default function AuthWarning({
   );
 
   if (!message) {
-    return null;
+    return (
+      <View
+        style={styles.container}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      />
+    );
   }
 
   return (
@@ -62,7 +70,8 @@ const getStyles = (colors: AppColors) =>
   container: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    minHeight: 40,
+    marginBottom: 6,
   },
 
   icon: {
