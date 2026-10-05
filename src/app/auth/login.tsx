@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Pressable,
   StyleSheet,
   TextInput,
   View,
@@ -19,6 +20,7 @@ import AppButton from "@/components/ui/AppButton";
 import AppText from "@/components/ui/AppText";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
 import {
   useAppColors,
   type AppColors,
@@ -41,6 +43,10 @@ export default function LoginScreen() {
 
   const colors = useAppColors();
   const noticeStyles = noticeCardStyles(colors);
+  const extraStyles = useMemo(
+    () => loginExtraStyles(colors),
+    [colors],
+  );
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -176,6 +182,15 @@ export default function LoginScreen() {
     router.push(Routes.REGISTER);
   };
 
+  // ── UI-only placeholders (Option B, no auth wiring yet) ──
+  const handleForgotPassword = () => {
+    // TODO Login: wire password-reset route.
+  };
+
+  const handleGoogleSignIn = () => {
+    // TODO Login: wire Continue with Google / OAuth.
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -210,7 +225,23 @@ export default function LoginScreen() {
             returnKeyType="done"
             onSubmitEditing={handleLogin}
             inputRef={passwordRef}
+            bottomGap={0}
           />
+
+          <View style={extraStyles.forgotRow}>
+            <Pressable
+              onPress={handleForgotPassword}
+              style={extraStyles.forgotHit}
+              accessibilityRole="link"
+              accessibilityLabel="Forgot password"
+              accessibilityHint="Password recovery coming soon"
+              hitSlop={12}
+            >
+              <AppText style={extraStyles.forgotLink}>
+                Forgot Password?
+              </AppText>
+            </Pressable>
+          </View>
 
           <AuthWarning message={warning} />
 
@@ -219,6 +250,35 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
           />
+
+          <View
+            style={extraStyles.dividerRow}
+            accessibilityRole="none"
+          >
+            <View style={extraStyles.dividerLine} />
+            <AppText style={extraStyles.dividerText}>OR</AppText>
+            <View style={extraStyles.dividerLine} />
+          </View>
+
+          <Pressable
+            onPress={handleGoogleSignIn}
+            style={({ pressed }) => [
+              extraStyles.googleButton,
+              pressed && extraStyles.googlePressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+            accessibilityHint="Google sign-in coming soon"
+          >
+            <Ionicons
+              name="logo-google"
+              size={20}
+              color={colors.text}
+            />
+            <AppText style={extraStyles.googleLabel}>
+              Continue with Google
+            </AppText>
+          </Pressable>
 
           {unconfirmedEmail ? (
             <View
@@ -332,5 +392,74 @@ const noticeCardStyles = (colors: AppColors) =>
 
     status: {
       marginBottom: Spacing.sm,
+    },
+  });
+
+// ── Option B UI-only extras: Forgot Password + OR + Google ──
+const loginExtraStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    forgotRow: {
+      width: "100%",
+      alignItems: "flex-end",
+      marginTop: 2,
+      marginBottom: 14,
+    },
+
+    forgotHit: {
+      minHeight: 32,
+      justifyContent: "flex-start",
+      paddingHorizontal: 4,
+    },
+
+    forgotLink: {
+      color: colors.linkText,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+    },
+
+    dividerRow: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: Spacing.lg,
+      marginBottom: Spacing.xs,
+    },
+
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+
+    dividerText: {
+      marginHorizontal: Spacing.sm,
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+
+    googleButton: {
+      width: "100%",
+      minHeight: Control.button,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: Control.buttonPadding,
+      marginTop: Control.buttonGap,
+      gap: 10,
+    },
+
+    googlePressed: {
+      opacity: 0.7,
+    },
+
+    googleLabel: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "600",
     },
   });
