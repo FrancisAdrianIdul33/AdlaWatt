@@ -72,6 +72,27 @@ export default function AuthCallbackScreen() {
     params.error_description,
   );
 
+  // Recovery links sign the user in with a PASSWORD_RECOVERY
+  // event (both PKCE-code and token-hash flows). Catch it and
+  // hand the flow to /auth/forgot-password instead of the
+  // dashboard — the AuthContext flag exempts that screen
+  // from the signed-in bounce in the auth layout.
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.replace(
+          `${Routes.FORGOT_PASSWORD}?verified=1`,
+        );
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -140,6 +161,13 @@ export default function AuthCallbackScreen() {
             setStatus("error");
             setMessage(
               "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
+            );
+          } else if (verifiedType === "recovery") {
+            // The PASSWORD_RECOVERY listener above usually
+            // beats us here; this covers the case where the
+            // event was already consumed before we mounted.
+            router.replace(
+              `${Routes.FORGOT_PASSWORD}?verified=1`,
             );
           } else {
             setStatus("success");

@@ -1,4 +1,4 @@
-import { Slot, router } from "expo-router";
+import { Slot, router, useSegments } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
@@ -41,14 +41,35 @@ export default function AuthLayout() {
 function ThemedAuth() {
   const fontsLoaded = useAppFonts();
   const colors = useAppColors();
-  const { isLoaded, isSignedIn } = useAuth();
+  const {
+    isLoaded,
+    isSignedIn,
+    isRecoverySession,
+  } = useAuth();
+  const segments = useSegments();
 
   // Signed-in users have no business on login/register.
+  // Exception: a recovery session must stay on
+  // /auth/forgot-password until the new password is set —
+  // bouncing it to the dashboard would strand the flow.
+  const onForgotPassword =
+    segments[segments.length - 1] ===
+    "forgot-password";
+
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    if (
+      isLoaded &&
+      isSignedIn &&
+      !(isRecoverySession && onForgotPassword)
+    ) {
       router.replace("/dashboard");
     }
-  }, [isLoaded, isSignedIn]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    isRecoverySession,
+    onForgotPassword,
+  ]);
 
   const styles = useMemo(
     () => getStyles(colors),

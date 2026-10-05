@@ -143,6 +143,153 @@ export async function resendConfirmation(email: string) {
     return { success: true, throttled: false };
 }
 
+// Separate throttle bucket so recovery requests never eat
+// into the signup-confirmation resend budget (and vice
+// versa). Same 60s window, same service-side spirit.
+const recoveryTimestamps = new Map<string, number>();
+
+// ============================================================
+// PASSWORD RECOVERY (Supabase built-in email flow)
+// ============================================================
+//
+// Step 1: requestPasswordReset() sends the recovery link to
+// the account email. Step 2 happens in /auth/callback, which
+// verifies the link and routes to /auth/forgot-password.
+// Step 3: updateRecoveryPassword() sets the new password on
+// the recovery session.
+//
+// Anti-enumeration: send failures that could reveal whether
+// an address is registered map to one generic message, and
+// the screen shows the same "check your inbox" card either
+// way (mirrors the signup/resend contract above).
+// ============================================================
+
+export async function requestPasswordReset(email: string) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+        return {
+            success: false,
+            error: "Please enter your email address.",
+        };
+    }
+
+    if (!EMAIL_PATTERN.test(cleanEmail)) {
+        return {
+            success: false,
+            error: "Please enter a valid email address.",
+        };
+    }
+
+    const now = Date.now();
+    const lastSent = recoveryTimestamps.get(cleanEmail) ?? 0;
+
+    if (now - lastSent < RESEND_COOLDOWN_MS) {
+        return {
+            success: false,
+            throttled: true,
+            error: "A recovery email was sent recently. Please wait before requesting another.",
+        };
+    }
+
+    recoveryTimestamps.set(cleanEmail, now);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+        cleanEmail,
+        { redirectTo: getEmailRedirectTo() },
+    );
+
+    if (error) {
+        if (isRateLimitMessage(error.message)) {
+            return {
+                success: false,
+                throttled: true,
+                error: "Too many requests. Please wait a moment and try again.",
+            };
+        }
+
+        if (isNetworkMessage(error.message)) {
+            return {
+                success: false,
+                error: "No connection. Check your internet and try again.",
+            };
+        }
+
+        // Generic on purpose: never reveal whether the
+        // address is registered (see contract above).
+        return {
+            success: false,
+            error: "Unable to send a recovery email right now. Please try again.",
+        };
+    }
+
+    return { success: true, throttled: false };
+}
+
+export async function updateRecoveryPassword(password: string) {
+    if (!password || password.trim().length < 8) {
+        return {
+            success: false,
+            error: "Password must be at least 8 characters.",
+        };
+    }
+
+    if (password.length > 72) {
+        return {
+            success: false,
+            error: "Password must not exceed 72 characters.",
+        };
+    }
+
+    try {
+        const { error } =
+            await supabase.auth.updateUser({ password });
+
+        if (error) {
+            if (isAuthSessionMissingError(error)) {
+                return {
+                    success: false,
+                    expired: true,
+                    error: "This recovery link is invalid or has expired. Request a new one.",
+                };
+            }
+
+            if (isRateLimitMessage(error.message)) {
+                return {
+                    success: false,
+                    error: "Too many requests. Please wait a moment and try again.",
+                };
+            }
+
+            return {
+                success: false,
+                error: "Unable to update your password right now. Please try again.",
+            };
+        }
+
+        // Fire-and-forget: a slow insert must never freeze
+        // the password update (same rule as loginUser).
+        logProfile.passwordChanged();
+
+        return { success: true };
+    } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+            return {
+                success: false,
+                expired: true,
+                error: "This recovery link is invalid or has expired. Request a new one.",
+            };
+        }
+
+        console.error("Recovery password update error:", error);
+
+        return {
+            success: false,
+            error: "Unable to update your password right now. Please try again.",
+        };
+    }
+}
+
 export async function registerUser(
     username: string,
     email: string,

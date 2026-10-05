@@ -1,6 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   StyleSheet,
   TextInput,
@@ -19,7 +24,12 @@ import AppButton from "@/components/ui/AppButton";
 import AppText from "@/components/ui/AppText";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
-import { EMAIL_PATTERN } from "@/services/auth";
+import { useAuth } from "@/context/AuthContext";
+import {
+  EMAIL_PATTERN,
+  requestPasswordReset,
+  updateRecoveryPassword,
+} from "@/services/auth";
 import {
   useAppColors,
   type AppColors,
@@ -43,12 +53,33 @@ export default function ForgotPasswordScreen() {
   const [warning, setWarning] = useState("");
   const [updateWarning, setUpdateWarning] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const { verified: verifiedParam } = useLocalSearchParams<{
     verified?: string;
   }>();
-  const isVerified = verifiedParam === "1";
+  // Preview (?verified=1) or a live recovery session both
+  // reveal the set-new-password section.
+  const { isRecoverySession, clearRecoverySession } =
+    useAuth();
+  const isVerified =
+    verifiedParam === "1" || isRecoverySession;
   const showCard = sent || isVerified;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setResendCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const newPasswordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
@@ -63,8 +94,13 @@ export default function ForgotPasswordScreen() {
     [],
   );
 
-  // ── UI-only validation (mirrors login/register guards) ──
-  const handleSend = () => {
+  // ── Validation mirrors login/register guards; the
+  // service re-validates so direct callers get the same ──
+  const handleSend = async () => {
+    if (sending) {
+      return;
+    }
+
     setWarning("");
 
     const cleanEmail = email.trim().toLowerCase();
@@ -79,15 +115,67 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    setSent(true);
-    // TODO Forgot Password (function phase): requestPasswordReset(email).
+    try {
+      setSending(true);
+
+      const result = await requestPasswordReset(cleanEmail);
+
+      if (!result.success) {
+        setWarning(
+          result.error ??
+            "Unable to send a recovery email right now. Please try again.",
+        );
+        return;
+      }
+
+      setSent(true);
+      setResendCooldown(60);
+    } catch {
+      setWarning(
+        "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleResend = () => {
-    // TODO Forgot Password (function phase): resend with 60s cooldown.
+  const handleResend = async () => {
+    if (resending || resendCooldown > 0) {
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !EMAIL_PATTERN.test(cleanEmail)) {
+      return;
+    }
+
+    try {
+      setResending(true);
+
+      const result =
+        await requestPasswordReset(cleanEmail);
+
+      if (result.throttled) {
+        setResendCooldown(60);
+      } else if (result.success) {
+        setResendCooldown(60);
+      } else {
+        setWarning(
+          result.error ??
+            "Unable to send a recovery email right now. Please try again.",
+        );
+      }
+    } finally {
+      setResending(false);
+    }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
+    if (updating) {
+      return;
+    }
+
     setUpdateWarning("");
 
     if (!newPassword || newPassword.trim().length < 8) {
@@ -107,7 +195,29 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // TODO Forgot Password (function phase): updateRecoveryPassword().
+    try {
+      setUpdating(true);
+
+      const result =
+        await updateRecoveryPassword(newPassword);
+
+      if (!result.success) {
+        setUpdateWarning(
+          result.error ??
+            "Unable to update your password right now. Please try again.",
+        );
+        return;
+      }
+
+      clearRecoverySession();
+      router.replace(Routes.DASHBOARD);
+    } catch {
+      setUpdateWarning(
+        "Something went wrong. Please try again.",
+      );
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleBackToSignIn = () => {
@@ -144,8 +254,9 @@ export default function ForgotPasswordScreen() {
           />
 
           <AppButton
-            title="Send Recovery Link"
+            title={sending ? "Sending..." : "Send Recovery Link"}
             onPress={handleSend}
+            disabled={sending}
           />
 
           <AuthWarning message={warning} />
@@ -200,9 +311,15 @@ export default function ForgotPasswordScreen() {
               </AppText>
 
               <AppButton
-                title="Resend in 60s"
+                title={
+                  resending
+                    ? "Resending..."
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : "Resend recovery email"
+                }
                 onPress={handleResend}
-                disabled
+                disabled={resending || resendCooldown > 0}
               />
 
               <AppText style={mailStyles.status}>
@@ -248,8 +365,9 @@ export default function ForgotPasswordScreen() {
           />
 
           <AppButton
-            title="Update Password"
+            title={updating ? "Updating..." : "Update Password"}
             onPress={handleUpdate}
+            disabled={updating}
           />
 
           <AuthWarning message={updateWarning} />
