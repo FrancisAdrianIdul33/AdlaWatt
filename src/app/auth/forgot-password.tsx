@@ -143,12 +143,12 @@ export default function ForgotPasswordScreen() {
             bottomGap={0}
           />
 
-          <AuthWarning message={warning} />
-
           <AppButton
             title="Send Recovery Link"
             onPress={handleSend}
           />
+
+          <AuthWarning message={warning} />
 
           {/* ── STATE B: check-email card, appears after Send ── */}
           {showCard ? (
@@ -247,12 +247,12 @@ export default function ForgotPasswordScreen() {
             bottomGap={0}
           />
 
-          <AuthWarning message={updateWarning} />
-
           <AppButton
             title="Update Password"
             onPress={handleUpdate}
           />
+
+          <AuthWarning message={updateWarning} />
           </View>
           ) : null}
         </View>

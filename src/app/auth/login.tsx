@@ -246,13 +246,13 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <AuthWarning message={warning} />
-
           <AppButton
             title={loading ? "Signing In..." : "Sign In"}
             onPress={handleLogin}
             disabled={loading}
           />
+
+          <AuthWarning message={warning} />
 
           <View
             style={extraStyles.dividerRow}

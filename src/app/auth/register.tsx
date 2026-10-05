@@ -401,8 +401,6 @@ export default function RegisterScreen() {
             </AppText>
           </View>
 
-          <AuthWarning message={warning} />
-
           <AppButton
             title={
               loading
@@ -413,6 +411,8 @@ export default function RegisterScreen() {
             disabled={loading}
             style={styles.createButton}
           />
+
+          <AuthWarning message={warning} />
 
           <DropdownModal
             visible={confirmationPending}
