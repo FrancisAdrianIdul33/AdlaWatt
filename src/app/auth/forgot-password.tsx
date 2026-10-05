@@ -69,22 +69,6 @@ export default function ForgotPasswordScreen() {
     verifiedParam === "1" || isRecoverySession;
   const showCard = sent || isVerified;
 
-  // Supabase rate-limits /auth/v1/recover far beyond our
-  // 60s send throttle — a 429 means back off hard instead
-  // of inviting a retry loop. 30 minutes, persisted.
-  const RECOVERY_LOCKOUT_S = 30 * 60;
-
-  const formatCooldown = (totalSeconds: number): string => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-
-    if (minutes <= 0) {
-      return `${seconds}s`;
-    }
-
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
-  };
-
   useEffect(() => {
     if (resendCooldown <= 0) {
       return;
@@ -137,15 +121,6 @@ export default function ForgotPasswordScreen() {
       const result = await requestPasswordReset(cleanEmail);
 
       if (!result.success) {
-        if (result.throttled) {
-          setWarning(
-            "Supabase is rate-limiting recovery emails right now. Please wait about 30 minutes before trying again.",
-          );
-          setSent(true);
-          setResendCooldown(RECOVERY_LOCKOUT_S);
-          return;
-        }
-
         setWarning(
           result.error ??
             "Unable to send a recovery email right now. Please try again.",
@@ -182,10 +157,7 @@ export default function ForgotPasswordScreen() {
         await requestPasswordReset(cleanEmail);
 
       if (result.throttled) {
-        setWarning(
-          "Supabase is rate-limiting recovery emails right now. Please wait about 30 minutes before trying again.",
-        );
-        setResendCooldown(RECOVERY_LOCKOUT_S);
+        setResendCooldown(60);
       } else if (result.success) {
         setResendCooldown(60);
       } else {
@@ -343,7 +315,7 @@ export default function ForgotPasswordScreen() {
                   resending
                     ? "Resending..."
                     : resendCooldown > 0
-                      ? `Resend in ${formatCooldown(resendCooldown)}`
+                      ? `Resend in ${resendCooldown}s`
                       : "Resend recovery email"
                 }
                 onPress={handleResend}
