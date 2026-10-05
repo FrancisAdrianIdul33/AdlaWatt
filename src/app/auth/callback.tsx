@@ -40,6 +40,10 @@ export default function AuthCallbackScreen() {
 
   const [status, setStatus] = useState<Status>("working");
   const [message, setMessage] = useState("");
+  // True when the link carried no code at all (wrong/old
+  // email, or params lost in transit). Offers a direct
+  // recovery shortcut instead of a dead end.
+  const [isMissingCode, setIsMissingCode] = useState(false);
 
   const firstParam = (
     value: string | string[] | undefined,
@@ -181,8 +185,9 @@ export default function AuthCallbackScreen() {
 
       if (!cancelled) {
         setStatus("error");
+        setIsMissingCode(true);
         setMessage(
-          "This confirmation link is missing its code. Please request a new confirmation email.",
+          "This link arrived without its verification code. If you were resetting your password, request a fresh recovery link — otherwise request a new confirmation email.",
         );
       }
     };
@@ -237,6 +242,15 @@ export default function AuthCallbackScreen() {
                 )
               }
             />
+
+            {status === "error" && isMissingCode && (
+              <AppButton
+                title="Go to Reset Password"
+                onPress={() =>
+                  router.replace(Routes.FORGOT_PASSWORD)
+                }
+              />
+            )}
           </View>
         )}
 
