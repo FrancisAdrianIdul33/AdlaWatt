@@ -2,6 +2,7 @@ export const Routes = {
   // Authentication
   LOGIN: "/auth/login",
   REGISTER: "/auth/register",
+  FORGOT_PASSWORD: "/auth/forgot-password",
   AUTH_CALLBACK: "/auth/callback",
 
   // Dashboard

@@ -42,7 +42,10 @@ export default function LoginScreen() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const colors = useAppColors();
-  const noticeStyles = noticeCardStyles(colors);
+  const noticeStyles = useMemo(
+    () => mailCardStyles(colors),
+    [colors],
+  );
   const extraStyles = useMemo(
     () => loginExtraStyles(colors),
     [colors],
@@ -184,7 +187,7 @@ export default function LoginScreen() {
 
   // ── UI-only placeholders (Option B, no auth wiring yet) ──
   const handleForgotPassword = () => {
-    // TODO Login: wire password-reset route.
+    router.push(Routes.FORGOT_PASSWORD);
   };
 
   const handleGoogleSignIn = () => {
@@ -287,47 +290,71 @@ export default function LoginScreen() {
               accessibilityLiveRegion="polite"
               accessibilityLabel="Email confirmation required"
             >
-              <View style={noticeStyles.headerRow}>
-                <Ionicons
-                  name="mail-unread-outline"
-                  size={20}
-                  color={colors.primary}
-                  style={noticeStyles.icon}
-                />
+              <View style={noticeStyles.headerPanel}>
+                <View style={noticeStyles.headerLeft}>
+                  <Ionicons
+                    name="mail-unread-outline"
+                    size={22}
+                    color={colors.headerContent}
+                  />
 
-                <AppText style={noticeStyles.title}>
-                  Check your email
-                </AppText>
+                  <AppText
+                    style={noticeStyles.headerTitle}
+                  >
+                    Verify Your Email
+                  </AppText>
+                </View>
+
+                <View style={noticeStyles.sentPill}>
+                  <AppText
+                    style={noticeStyles.sentPillText}
+                  >
+                    • Sent
+                  </AppText>
+                </View>
               </View>
 
-              <AppText style={noticeStyles.body}>
-                Your account{" "}
-                <AppText style={noticeStyles.email}>
-                  {unconfirmedEmail}
-                </AppText>{" "}
-                needs verification before you can sign
-                in.
-              </AppText>
+              <View style={noticeStyles.body}>
+                <View style={noticeStyles.toRow}>
+                  <AppText style={noticeStyles.toLabel}>
+                    To:
+                  </AppText>
 
-              <AppText style={noticeStyles.status}>
-                {confirmationResent === "sent"
-                  ? "We've just sent a fresh confirmation link. Check your inbox."
-                  : confirmationResent === "rate-limited"
-                    ? "A link was sent recently. Tap resend below if it hasn't arrived."
-                    : "Tap resend below for a new confirmation link."}
-              </AppText>
+                  <View style={noticeStyles.emailChip}>
+                    <AppText
+                      style={noticeStyles.emailChipText}
+                      numberOfLines={1}
+                    >
+                      {unconfirmedEmail}
+                    </AppText>
+                  </View>
+                </View>
 
-              <AppButton
-                title={
-                  resending
-                    ? "Resending..."
-                    : resendCooldown > 0
-                      ? `Resend in ${resendCooldown}s`
-                      : "Resend confirmation email"
-                }
-                onPress={handleResend}
-                disabled={resending || resendCooldown > 0}
-              />
+                <AppText style={noticeStyles.bodyText}>
+                  Your account needs verification
+                  before you can sign in.
+                </AppText>
+
+                <AppText style={noticeStyles.status}>
+                  {confirmationResent === "sent"
+                    ? "We've just sent a fresh confirmation link. Check your inbox."
+                    : confirmationResent === "rate-limited"
+                      ? "A link was sent recently. Tap resend below if it hasn't arrived."
+                      : "Tap resend below for a new confirmation link."}
+                </AppText>
+
+                <AppButton
+                  title={
+                    resending
+                      ? "Resending..."
+                      : resendCooldown > 0
+                        ? `Resend in ${resendCooldown}s`
+                        : "Resend confirmation email"
+                  }
+                  onPress={handleResend}
+                  disabled={resending || resendCooldown > 0}
+                />
+              </View>
             </View>
           ) : null}
         </View>
@@ -356,42 +383,95 @@ const styles = StyleSheet.create({
   },
 });
 
-const noticeCardStyles = (colors: AppColors) =>
+const mailCardStyles = (colors: AppColors) =>
   StyleSheet.create({
     card: {
       width: "100%",
-      backgroundColor: colors.primaryWash,
-      borderWidth: 1,
+      backgroundColor: colors.glass.white,
+      borderWidth: 3,
       borderColor: colors.cardBorder,
-      borderRadius: 12,
-      padding: Spacing.md,
+      borderRadius: 15,
+      overflow: "hidden",
       marginTop: Spacing.md,
     },
 
-    headerRow: {
+    headerPanel: {
+      width: "100%",
+      backgroundColor: colors.headerBackground,
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: Spacing.xs,
+      justifyContent: "space-between",
+      paddingHorizontal: 14,
+      paddingVertical: 9,
     },
 
-    icon: {
-      marginRight: Spacing.sm,
+    headerLeft: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 0,
     },
 
-    title: {
+    headerTitle: {
+      color: colors.headerContent,
+      fontSize: 16,
+      fontWeight: "600",
+      marginLeft: 8,
+      flexShrink: 1,
+    },
+
+    sentPill: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.headerContent,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      marginLeft: 8,
+    },
+
+    sentPillText: {
+      color: colors.headerContent,
+      fontSize: 12,
       fontWeight: "700",
     },
 
     body: {
-      marginBottom: Spacing.xs,
+      padding: 14,
     },
 
-    email: {
+    toRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+
+    toLabel: {
+      color: colors.textSecondary,
+    },
+
+    emailChip: {
+      flex: 1,
+      minWidth: 0,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+
+    emailChipText: {
       fontWeight: "700",
+    },
+
+    bodyText: {
+      marginBottom: Spacing.xs,
     },
 
     status: {
       marginBottom: Spacing.sm,
+      color: colors.textSecondary,
     },
   });
 

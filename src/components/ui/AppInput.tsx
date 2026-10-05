@@ -18,6 +18,7 @@ interface AppInputProps extends TextInputProps {
   label?: string;
   error?: string;
   inputRef?: Ref<TextInput>;
+  bottomGap?: number;
 }
 
 export default function AppInput({
@@ -25,6 +26,7 @@ export default function AppInput({
   error,
   style,
   inputRef,
+  bottomGap,
   ...props
 }: AppInputProps) {
   const { scaledSize, family, weight } =
@@ -33,8 +35,8 @@ export default function AppInput({
   const colors = useAppColors();
 
   const styles = useMemo(
-    () => getStyles(colors),
-    [colors],
+    () => getStyles(colors, bottomGap),
+    [colors, bottomGap],
   );
 
   return (
@@ -71,10 +73,10 @@ export default function AppInput({
   );
 }
 
-const getStyles = (colors: AppColors) =>
+const getStyles = (colors: AppColors, bottomGap?: number) =>
   StyleSheet.create({
   container: {
-    marginBottom: Field.fieldGap,
+    marginBottom: bottomGap ?? Field.fieldGap,
   },
 
   label: {
