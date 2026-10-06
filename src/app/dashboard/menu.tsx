@@ -46,6 +46,7 @@ import {
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import type { ThemeOption } from "@/constants/colors";
 import { useTypography } from "@/hooks/useTypography";
@@ -194,6 +195,9 @@ export default function SettingsScreen() {
   } = useTypography();
 
   const colors = useAppColors();
+  // Pushes renames into the AuthContext session cache so
+  // the Navbar username updates without any navigation.
+  const { refreshProfile } = useAuth();
   const styles = useMemo(
     () => getStyles(colors),
     [colors],
@@ -654,6 +658,11 @@ export default function SettingsScreen() {
 
       setUsername(updatedUsername);
       setEmail(updatedEmail);
+
+      // Fire-and-forget: the Navbar reads the session
+      // cache, so push the rename there without blocking
+      // the confirmation alert on a slow fetch.
+      void refreshProfile().catch(() => {});
 
       setEditUsername(updatedUsername);
       setEditEmail(updatedEmail);

@@ -24,7 +24,7 @@ import { Routes } from "@/constants/routes";
 import { Bar, Touch } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
-import { getCurrentUserProfile } from "@/services/auth";
+import { useAuth } from "@/context/AuthContext";
 
 import {
   subscribeResilientChannel,
@@ -57,41 +57,19 @@ export default function NavBar({
     setHasUnreadNotifications,
   ] = useState(false);
 
-  // Signed-in username for the upper bar. Fetched once per
-  // mount (every dashboard navigation remounts Navbar, so
-  // renames propagate on next navigation). Nothing renders
-  // while loading so the status capsule and bell never move.
-  const [username, setUsername] =
-    useState<string | null>(null);
+  // Signed-in username, served synchronously from the
+  // AuthContext session cache — no per-mount fetch, so the
+  // name never blinks on navigation. Falls back to the
+  // session email prefix (identical to the auto-derived
+  // username in almost all cases) so the slot is never
+  // empty while signed in, even on first load.
+  const { profileUsername, user: authUser } =
+    useAuth();
 
-  useEffect(() => {
-    let mounted = true;
+  const fallbackName =
+    authUser?.email?.split("@")[0] || null;
 
-    getCurrentUserProfile()
-      .then((profile) => {
-        if (!mounted) {
-          return;
-        }
-
-        if (profile.success) {
-          const name =
-            ("username" in profile &&
-              typeof profile.username === "string" &&
-              profile.username) ||
-            ("email" in profile &&
-              typeof profile.email === "string" &&
-              profile.email.split("@")[0]) ||
-            null;
-
-          setUsername(name || null);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const username = profileUsername || fallbackName;
 
   // ==========================================================
   // CHECK FOR UNREAD NOTIFICATIONS
