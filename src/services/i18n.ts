@@ -67,6 +67,7 @@ async function initI18n(): Promise<void> {
       saved = "en";
     }
 
+    // eslint-disable-next-line import/no-named-as-default-member -- use() is the documented i18next plugin API, not the React hook
     await i18n.use(initReactI18next).init({
       resources: {
         en: { translation: en },
@@ -94,6 +95,7 @@ export async function setAppLanguage(
   code: AppLanguage,
 ): Promise<void> {
   await initI18n();
+  // eslint-disable-next-line import/no-named-as-default-member -- changeLanguage() is the documented instance method, not a bare named export
   await i18n.changeLanguage(code);
   await saveLanguageSetting(code);
 }
