@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 
 import {
+  Image,
   Pressable,
   StyleSheet,
   TextInput,
@@ -43,7 +44,19 @@ type CustomApplianceModalProps = {
   onCancel: () => void;
   onAdd: () => void;
   onSave?: () => void;
+  // Photo preview to display: a freshly picked local uri or
+  // the stored uploaded url. Null renders the bundled
+  // adlawatt icon — the default for every custom appliance.
+  photoPreview: string | null;
+  // True while a photo upload is in flight: the confirm
+  // button dims into a Saving state.
+  photoBusy: boolean;
+  onPhotoPress: () => void;
 };
+
+const defaultPhoto = require(
+  "@/assets/images/adlawatt-icon.png",
+);
 
 export default function CustomApplianceModal({
   visible,
@@ -56,6 +69,9 @@ export default function CustomApplianceModal({
   onCancel,
   onAdd,
   onSave,
+  photoPreview,
+  photoBusy,
+  onPhotoPress,
 }: CustomApplianceModalProps) {
   const colors = useAppColors();
 
@@ -95,6 +111,51 @@ export default function CustomApplianceModal({
         Check the appliance wattage first, for
         example, soldering wire may use 15-25W.
       </AppText>
+
+      <View style={styles.photoRow}>
+        <View style={styles.photoFrame}>
+          <Image
+            source={
+              photoPreview
+                ? { uri: photoPreview }
+                : defaultPhoto
+            }
+            style={styles.photoImage}
+            resizeMode="cover"
+            accessibilityLabel={
+              photoPreview
+                ? "Custom appliance photo"
+                : "Default appliance icon"
+            }
+          />
+        </View>
+
+        <Pressable
+          onPress={onPhotoPress}
+          disabled={photoBusy}
+          style={({ pressed }) => [
+            styles.photoButton,
+            pressed && !photoBusy && styles.pressed,
+            photoBusy && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            photoPreview
+              ? "Change appliance photo"
+              : "Add appliance photo"
+          }
+          accessibilityHint="Opens the photo picker"
+        >
+          <AppText
+            variant="caption"
+            style={styles.photoButtonText}
+          >
+            {photoPreview
+              ? "Change Photo"
+              : "Add Photo"}
+          </AppText>
+        </Pressable>
+      </View>
 
       <TextInput
         value={name}
@@ -141,10 +202,11 @@ export default function CustomApplianceModal({
       <View style={styles.customActions}>
         <Pressable
           onPress={onCancel}
+          disabled={photoBusy}
           style={({ pressed }) => [
             styles.customAction,
             styles.cancelAction,
-            pressed && styles.pressed,
+            pressed && !photoBusy && styles.pressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel={
@@ -164,12 +226,13 @@ export default function CustomApplianceModal({
         <Pressable
           onPress={handleConfirm}
           disabled={
-            !name.trim() || !watts.trim()
+            !name.trim() || !watts.trim() || photoBusy
           }
           style={({ pressed }) => [
             styles.customAction,
             styles.addAction,
-            pressed && styles.pressed,
+            pressed && !photoBusy && styles.pressed,
+            photoBusy && styles.pressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel={
@@ -182,7 +245,7 @@ export default function CustomApplianceModal({
             variant="caption"
             style={styles.addText}
           >
-            {confirmLabel}
+            {photoBusy ? "Saving…" : confirmLabel}
           </AppText>
         </Pressable>
       </View>
@@ -197,6 +260,46 @@ const getStyles = (colors: AppColors) =>
       fontSize: 12,
       lineHeight: 17,
       marginBottom: 10,
+    },
+
+    photoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 8,
+    },
+
+    photoFrame: {
+      width: 96,
+      height: 96,
+      borderRadius: Radius.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    photoImage: {
+      width: "100%",
+      height: "100%",
+    },
+
+    photoButton: {
+      flex: 1,
+      minHeight: Control.button,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+    },
+
+    photoButtonText: {
+      color: colors.text,
+      fontWeight: "700",
     },
 
     input: {
