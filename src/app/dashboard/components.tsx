@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -126,6 +127,86 @@ export default function ComponentsScreen() {
   // ESP32 status from monitoring table
   const [deviceStatus, setDeviceStatus] =
     useState<DeviceStatus>(null);
+
+  // ============================================
+  // CONTENT-AWARE STATUS SEGMENTS
+  //
+  // Only segments holding components render; Active is
+  // the default and Inactive the fallback. ESP32 follows
+  // monitoring.device_status, other rows use their flag —
+  // one shared rule feeds both the counts and the list.
+  // ============================================
+
+  const isComponentActive = useCallback(
+    (component: ComponentData): boolean => {
+      if (component.component_name === "ESP32") {
+        return (
+          String(deviceStatus).toLowerCase() ===
+          "online"
+        );
+      }
+
+      return component.status;
+    },
+    [deviceStatus],
+  );
+
+  const componentCounts = useMemo(() => {
+    let active = 0;
+    let inactive = 0;
+
+    for (const component of components) {
+      if (isComponentActive(component)) {
+        active += 1;
+      } else {
+        inactive += 1;
+      }
+    }
+
+    return { active, inactive };
+  }, [components, isComponentActive]);
+
+  const visibleComponentFilters = useMemo<
+    ("Active" | "Inactive")[]
+  >(() => {
+    if (components.length === 0) {
+      return ["Active", "Inactive"];
+    }
+
+    const visible: ("Active" | "Inactive")[] = [];
+
+    if (componentCounts.active > 0) {
+      visible.push("Active");
+    }
+
+    if (componentCounts.inactive > 0) {
+      visible.push("Inactive");
+    }
+
+    // Unreachable, but a zero-option toggle would break
+    // the pill math.
+    return visible.length > 0
+      ? visible
+      : (["Active", "Inactive"] as (
+          | "Active"
+          | "Inactive"
+        )[]);
+  }, [components.length, componentCounts]);
+
+  const effectiveStatusFilter =
+    visibleComponentFilters.includes(statusFilter)
+      ? statusFilter
+      : (visibleComponentFilters[0] ?? "Active");
+
+  useEffect(() => {
+    if (
+      !visibleComponentFilters.includes(statusFilter)
+    ) {
+      setStatusFilter(
+        visibleComponentFilters[0] ?? "Active",
+      );
+    }
+  }, [visibleComponentFilters, statusFilter]);
 
   // ============================================
   // LOAD COMPONENTS + ESP32 STATUS + REALTIME
@@ -364,27 +445,39 @@ export default function ComponentsScreen() {
           </AppText>
         </View>
 
-        {/* STATUS FILTER */}
+        {/* STATUS FILTER (only segments with content) */}
 
         <SlidingToggle
-          value={statusFilter}
+          value={effectiveStatusFilter}
           onChange={setStatusFilter}
           style={styles.statusToggleColors}
           options={[
-            {
-              value: "Active",
-              label: "Active",
-              activeColor: colors.primary,
-              accessibilityLabel:
-                "Show active components",
-            },
-            {
-              value: "Inactive",
-              label: "Inactive",
-              activeColor: colors.error,
-              accessibilityLabel:
-                "Show inactive components",
-            },
+            ...(visibleComponentFilters.includes(
+              "Active",
+            )
+              ? [
+                  {
+                    value: "Active" as const,
+                    label: "Active",
+                    activeColor: colors.primary,
+                    accessibilityLabel:
+                      "Show active components",
+                  },
+                ]
+              : []),
+            ...(visibleComponentFilters.includes(
+              "Inactive",
+            )
+              ? [
+                  {
+                    value: "Inactive" as const,
+                    label: "Inactive",
+                    activeColor: colors.error,
+                    accessibilityLabel:
+                      "Show inactive components",
+                  },
+                ]
+              : []),
           ]}
         />
 
@@ -402,31 +495,10 @@ export default function ComponentsScreen() {
                   ),
                 )
                 .filter((component) => {
-                  // ==================================
-                  // CHECK IF COMPONENT IS ESP32
-                  // ==================================
+                  const isActive =
+                    isComponentActive(component);
 
-                  const isESP32 =
-                    component.component_name ===
-                    "ESP32";
-
-                  // ==================================
-                  // ESP32 STATUS COMES FROM
-                  // MONITORING.DEVICE_STATUS
-                  // ==================================
-
-                  const isActive = isESP32
-                    ? String(
-                        deviceStatus,
-                      ).toLowerCase() ===
-                      "online"
-                    : component.status;
-
-                  // ==================================
-                  // ACTIVE / INACTIVE FILTER
-                  // ==================================
-
-                  return statusFilter ===
+                  return effectiveStatusFilter ===
                     "Active"
                     ? isActive
                     : !isActive;
@@ -442,12 +514,12 @@ export default function ComponentsScreen() {
               return (
                 <EmptyState
                   title={
-                    statusFilter === "Active"
+                    effectiveStatusFilter === "Active"
                       ? "No Active Components"
                       : "No Inactive Components"
                   }
                   description={
-                    statusFilter === "Active"
+                    effectiveStatusFilter === "Active"
                       ? "No components are currently active."
                       : "No components are currently inactive."
                   }
