@@ -1695,9 +1695,7 @@ export default function ApplianceModal({
           ellipsizeMode="tail"
           style={styles.archiveRowButtonText}
         >
-          {archivedCount > 0
-            ? `Archived (${archivedCount})`
-            : "Archived"}
+          Archived
         </AppText>
       </Pressable>
     </View>
