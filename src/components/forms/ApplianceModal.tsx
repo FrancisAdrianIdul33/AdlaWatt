@@ -199,6 +199,25 @@ export default function ApplianceModal({
   const [customWatts, setCustomWatts] =
     useState("");
 
+  // Live interval validity: the strict twin inputs admit
+  // only well-formed sides, but an interval can still be
+  // incomplete ("12-") or reversed ("720-129"). The confirm
+  // button stays disabled until the whole interval passes
+  // the exact submit rules below.
+  const customWattsValid = useMemo(() => {
+    const text = customWatts.trim();
+
+    if (
+      !/^\d+(\.\d{1,2})?\s*-\s*\d+(\.\d{1,2})?$/.test(
+        text,
+      )
+    ) {
+      return false;
+    }
+
+    return parseWattInterval(text) !== null;
+  }, [customWatts]);
+
   const [customError, setCustomError] =
     useState("");
 
@@ -2386,6 +2405,7 @@ export default function ApplianceModal({
           }}
           onCancel={handleAddCancel}
           onAdd={handleCustomAdd}
+          wattsValid={customWattsValid}
           photoPreview={formPhotoPreview}
           photoBusy={photoBusy}
           onPhotoPress={() =>
@@ -2415,6 +2435,7 @@ export default function ApplianceModal({
           onCancel={handleEditCancel}
           onAdd={handleCustomAdd}
           onSave={handleCustomUpdate}
+          wattsValid={customWattsValid}
           photoPreview={formPhotoPreview}
           photoBusy={photoBusy}
           onPhotoPress={() =>
