@@ -286,7 +286,7 @@ export default function LoginScreen() {
               style={extraStyles.forgotHit}
               accessibilityRole="link"
               accessibilityLabel="Forgot password"
-              accessibilityHint="Password recovery coming soon"
+              accessibilityHint="Recover your password via email"
               hitSlop={12}
             >
               <AppText style={extraStyles.forgotLink}>

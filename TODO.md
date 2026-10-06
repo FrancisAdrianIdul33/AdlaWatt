@@ -3,8 +3,8 @@
 ## First Page
 
 - [x] Login: Add Continue with Google / OAuth
-- [ ] Login: Add Forgot Password
-- [ ] Login: Password visibility should only be available for 5 seconds
+- [x] Login: Add Forgot Password
+- [x] Login: Password visibility should only be available for 5 seconds
 - [ ] Overall: Display only the toggle that has content
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
 - [ ] Navbar Upper: Display username

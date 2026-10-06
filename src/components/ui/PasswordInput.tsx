@@ -59,8 +59,8 @@ export default function PasswordInput({
   bottomGap,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
-  // UI-only 5s visibility window (TODO Login): remaining seconds
-  // shown under the field while the password is visible.
+  // 5s visibility window: remaining seconds shown under
+  // the field while the password is visible.
   const [remaining, setRemaining] = useState(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
