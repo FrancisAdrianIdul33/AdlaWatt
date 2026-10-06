@@ -1201,6 +1201,7 @@ export default function SettingsScreen() {
                         secureTextEntry={
                           !showNewPassword
                         }
+                        underlineColorAndroid="transparent"
                       />
 
                       <Pressable
@@ -1263,6 +1264,7 @@ export default function SettingsScreen() {
                         secureTextEntry={
                           !showConfirmPassword
                         }
+                        underlineColorAndroid="transparent"
                       />
 
                       <Pressable
@@ -1901,6 +1903,7 @@ export default function SettingsScreen() {
                   editable={
                     !confirmingAccountUpdate
                   }
+                  underlineColorAndroid="transparent"
                 />
 
                 <Pressable
@@ -2169,7 +2172,7 @@ const getStyles = (colors: AppColors) =>
     minHeight: 48,
     backgroundColor: colors.glass.white,
     borderWidth: 2,
-    borderColor: colors.error,
+    borderColor: colors.cardBorder,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
