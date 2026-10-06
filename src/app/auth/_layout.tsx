@@ -1,4 +1,9 @@
-import { Slot, router, useSegments } from "expo-router";
+import {
+  Slot,
+  router,
+  useGlobalSearchParams,
+  useSegments,
+} from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
@@ -47,6 +52,10 @@ function ThemedAuth() {
     isRecoverySession,
   } = useAuth();
   const segments = useSegments();
+  const globalParams = useGlobalSearchParams<{
+    code?: string | string[];
+    token_hash?: string | string[];
+  }>();
 
   // Signed-in users have no business on login/register.
   // Exception: a recovery session must stay on
@@ -56,11 +65,36 @@ function ThemedAuth() {
     segments[segments.length - 1] ===
     "forgot-password";
 
+  // A signed-in user opening a fresh recovery link must
+  // also stay: the link hasn't been exchanged yet, so the
+  // recovery flag isn't set — the link params themselves
+  // are the signal. Without this, the bounce below fires
+  // before the screen can verify the code.
+  const firstParam = (
+    value: string | string[] | undefined,
+  ): string => {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      return value[0] ?? "";
+    }
+
+    return "";
+  };
+
+  const arrivingWithRecoveryLink =
+    onForgotPassword &&
+    (firstParam(globalParams.code) !== "" ||
+      firstParam(globalParams.token_hash) !== "");
+
   useEffect(() => {
     if (
       isLoaded &&
       isSignedIn &&
-      !(isRecoverySession && onForgotPassword)
+      !(isRecoverySession && onForgotPassword) &&
+      !arrivingWithRecoveryLink
     ) {
       router.replace("/dashboard");
     }
@@ -69,6 +103,7 @@ function ThemedAuth() {
     isSignedIn,
     isRecoverySession,
     onForgotPassword,
+    arrivingWithRecoveryLink,
   ]);
 
   const styles = useMemo(
