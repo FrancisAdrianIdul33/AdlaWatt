@@ -249,6 +249,76 @@ export default function AppRecCard({
     }, [appliances, battery, colors]);
 
   // ============================================
+  // CONTENT-AWARE STATUS SEGMENTS
+  //
+  // Only segments holding appliances render; the mode
+  // follows the first non-empty status in
+  // Caution → Advisable → Not Advisable order — the same
+  // contract as the Appliances screen, which reads the
+  // same selection through the same engine (parent/child
+  // stay consistent by construction).
+  // ============================================
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<Status, number> = {
+      advisable: 0,
+      care: 0,
+      notAdvisable: 0,
+    };
+
+    for (const item of decoratedAppliances) {
+      counts[item.status] += 1;
+    }
+
+    return counts;
+  }, [decoratedAppliances]);
+
+  const visibleModes = useMemo<Status[]>(() => {
+    const ordered: Status[] = [
+      "care",
+      "advisable",
+      "notAdvisable",
+    ];
+
+    const visible = ordered.filter(
+      (status) => statusCounts[status] > 0,
+    );
+
+    // Unreachable (every item has a status, and MODE 1
+    // returns early on an empty list), but a zero-option
+    // toggle would break the pill math.
+    return visible.length > 0
+      ? visible
+      : ([
+          "advisable",
+          "care",
+          "notAdvisable",
+        ] as Status[]);
+  }, [statusCounts]);
+
+  // Effective mode for this render (covers first paint
+  // before the canonical sync below commits).
+  const effectiveMode = visibleModes.includes(mode)
+    ? mode
+    : (visibleModes[0] ?? "advisable");
+
+  // Keep the stored mode canonical: when counts shift and
+  // empty the active segment, glide to the next visible one.
+  useEffect(() => {
+    if (!visibleModes.includes(mode)) {
+      setMode(visibleModes[0] ?? "advisable");
+    }
+  }, [visibleModes, mode]);
+
+  const visibleToggleMeta = useMemo(
+    () =>
+      TOGGLE_META.filter((meta) =>
+        visibleModes.includes(meta.mode),
+      ),
+    [visibleModes],
+  );
+
+  // ============================================
   // FILTER APPLIANCES BY STATUS
   // ============================================
 
@@ -256,9 +326,9 @@ export default function AppRecCard({
     () =>
       decoratedAppliances.filter(
         (item) =>
-          item.status === mode,
+          item.status === effectiveMode,
       ),
-    [decoratedAppliances, mode],
+    [decoratedAppliances, effectiveMode],
   );
 
   // ============================================
@@ -523,12 +593,13 @@ export default function AppRecCard({
         />
 
         <View style={styles.recBody}>
-          {/* Status Toggle (top — this card's signature order) */}
+          {/* Status Toggle (top — this card's signature order).
+              Only segments with content render. */}
           <SlidingToggle<Status>
-            value={mode}
+            value={effectiveMode}
             onChange={setMode}
             style={styles.toggleColors}
-            options={TOGGLE_META.map(
+            options={visibleToggleMeta.map(
               ({
                 mode: segmentMode,
                 label,
@@ -696,7 +767,7 @@ export default function AppRecCard({
               style={styles.emptyTitle}
             >
               {
-                EMPTY_STATE_META[mode]
+                EMPTY_STATE_META[effectiveMode]
                   .title
               }
             </AppText>
@@ -706,7 +777,7 @@ export default function AppRecCard({
               style={styles.emptyText}
             >
               {
-                EMPTY_STATE_META[mode]
+                EMPTY_STATE_META[effectiveMode]
                   .description
               }
             </AppText>
