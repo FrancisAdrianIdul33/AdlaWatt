@@ -11,7 +11,8 @@
   - Recovery links land directly on `/auth/forgot-password` and verify in-screen (no callback UI)
   - Verified card morphs: success message + Continue to Account, opt-in password-change expander
   - Signed-in bounce exemption while a recovery link verifies
-- [x] Login: Password visibility should only be available for 5 seconds
+- [x] Login: Password visibility should only be available for 5 seconds — **Resolved**
+  - `PasswordInput` eye toggle with 5s auto-hide, live countdown, timer bar, screen-reader labels
 - [ ] Overall: Display only the toggle that has content
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
 - [ ] Navbar Upper: Display username
