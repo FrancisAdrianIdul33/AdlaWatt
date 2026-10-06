@@ -1,0 +1,296 @@
+import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
+
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+
+import AppText from "@/components/ui/AppText";
+import {
+  DropdownModal,
+} from "@/components/ui/DropdownModal";
+
+import {
+  useAppColors,
+  type AppColors,
+} from "@/hooks/useAppColors";
+import { Radius } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
+import { MAX_PHOTO_BYTES } from "@/services/appliancePhotoService";
+
+// ============================================================
+// MEDIA PICKER MODAL (LIBRARY ONLY)
+// ============================================================
+//
+// DropdownModal shell like the rest of the system dialogs.
+// Owns the whole pick flow — permission request, square-crop
+// editor, size/type validation — and hands the caller a local
+// uri. Uploading stays with the caller (it owns the row the
+// photo belongs to).
+//
+// No camera path by design: library-only keeps permissions to
+// photo access and skips device-camera testing entirely.
+// ============================================================
+
+export type PickedPhoto = {
+  uri: string;
+  mimeType?: string;
+};
+
+type MediaPickerModalProps = {
+  visible: boolean;
+  // Shows Remove when an uploaded photo already exists.
+  hasPhoto: boolean;
+  onSelect: (photo: PickedPhoto) => void;
+  onRemove: () => void;
+  onClose: () => void;
+};
+
+export default function MediaPickerModal({
+  visible,
+  hasPhoto,
+  onSelect,
+  onRemove,
+  onClose,
+}: MediaPickerModalProps) {
+  const colors = useAppColors();
+
+  const styles = useMemo(
+    () => getStyles(colors),
+    [colors],
+  );
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // Fresh state on every open: a denied-permission error
+  // from last time must not greet the next attempt.
+  useEffect(() => {
+    if (visible) {
+      setBusy(false);
+      setError("");
+    }
+  }, [visible]);
+
+  const handleLibrary = async () => {
+    if (busy) {
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        setError(
+          "AdlaWatt needs photo access to attach a picture. Allow access in your device Settings, then try again.",
+        );
+        return;
+      }
+
+      const result =
+        await ImagePicker.launchImageLibraryAsync({
+          mediaTypes:
+            ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets?.[0];
+
+      if (!asset?.uri) {
+        setError(
+          "Could not read that photo. Try another one.",
+        );
+        return;
+      }
+
+      if (
+        typeof asset.fileSize === "number" &&
+        asset.fileSize > MAX_PHOTO_BYTES
+      ) {
+        setError(
+          "That photo is over 5 MB. Choose a smaller one.",
+        );
+        return;
+      }
+
+      onSelect({
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? undefined,
+      });
+    } catch {
+      setError(
+        "Could not open your photo library. Try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <DropdownModal
+      visible={visible}
+      title="Choose Photo"
+      onClose={onClose}
+    >
+      <Pressable
+        onPress={handleLibrary}
+        disabled={busy}
+        style={({ pressed }) => [
+          styles.optionButton,
+          pressed && !busy && styles.pressed,
+          busy && styles.disabled,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Choose from library"
+        accessibilityHint="Opens your photo library"
+      >
+        {busy ? (
+          <ActivityIndicator
+            size="small"
+            color={colors.accentContent}
+          />
+        ) : (
+          <Ionicons
+            name="images-outline"
+            size={22}
+            color={colors.accentContent}
+          />
+        )}
+
+        <AppText
+          variant="caption"
+          style={styles.optionText}
+        >
+          {busy ? "Opening…" : "Choose from Library"}
+        </AppText>
+      </Pressable>
+
+      {hasPhoto ? (
+        <Pressable
+          onPress={onRemove}
+          disabled={busy}
+          style={({ pressed }) => [
+            styles.optionButton,
+            styles.removeButton,
+            pressed && !busy && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Remove photo"
+          accessibilityHint="Removes the current photo and restores the default icon"
+        >
+          <Ionicons
+            name="trash-outline"
+            size={22}
+            color={colors.error}
+          />
+
+          <AppText
+            variant="caption"
+            style={styles.removeText}
+          >
+            Remove Photo
+          </AppText>
+        </Pressable>
+      ) : null}
+
+      {error ? (
+        <AppText
+          variant="caption"
+          style={styles.error}
+        >
+          {error}
+        </AppText>
+      ) : null}
+
+      <View style={styles.cancelRow}>
+        <Pressable
+          onPress={onClose}
+          disabled={busy}
+          style={({ pressed }) => [
+            styles.optionButton,
+            pressed && !busy && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel photo choice"
+        >
+          <AppText
+            variant="caption"
+            style={styles.cancelText}
+          >
+            Cancel
+          </AppText>
+        </Pressable>
+      </View>
+    </DropdownModal>
+  );
+}
+
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    optionButton: {
+      width: "100%",
+      minHeight: Control.button,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+      marginBottom: 8,
+    },
+
+    removeButton: {
+      borderColor: colors.error,
+    },
+
+    optionText: {
+      color: colors.text,
+      fontWeight: "700",
+    },
+
+    removeText: {
+      color: colors.error,
+      fontWeight: "700",
+    },
+
+    pressed: {
+      opacity: 0.7,
+    },
+
+    disabled: {
+      opacity: 0.6,
+    },
+
+    error: {
+      color: colors.error,
+      fontSize: 12,
+      fontWeight: "600",
+      marginBottom: 2,
+    },
+
+    cancelRow: {
+      width: "100%",
+      marginTop: 2,
+    },
+
+    cancelText: {
+      color: colors.textSecondary,
+      fontWeight: "700",
+    },
+  });
