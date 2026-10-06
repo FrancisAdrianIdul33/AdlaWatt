@@ -634,39 +634,11 @@ export default function ApplianceModal({
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
-    // Catalog picks are deleted; Layer 1 customs move to Layer 2
-    // (archive = true through RPC/trigger). Hide prop-merged
-    // customs too, otherwise the prop fallback would resurrect
-    // them after reset.
-    const resetVisibleCustomIds = [
-      ...new Set([
-        ...appliances.map((item) => item.id),
-        ...selectedAppliances
-          .filter((item) => item.area === CUSTOM_AREA)
-          .map((item) => item.id),
-      ]),
-    ];
-    setDismissedCustomIds((current) => [
-      ...new Set([...current, ...resetVisibleCustomIds]),
-    ]);
-    const movedToArchive = appliances;
-    setAppliances([]);
-    setArchivedAppliances((current) => {
-      const byId = new Map(
-        current.map((item) => [item.id, item]),
-      );
-      for (const item of movedToArchive) {
-        if (!byId.has(item.id)) {
-          byId.set(item.id, item);
-        }
-      }
-      return [...byId.values()].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-    });
-    setArchivedCount(
-      (current) => current + movedToArchive.length,
-    );
+    // Selection-only reset (RPC clears given rows and flips
+    // customs to selection=false without touching archive):
+    // Layer 1 customs stay visible unticked, the archived
+    // list is untouched, so there is nothing to move or
+    // dismiss here.
 
     logAppliance.selectionReset();
   };
