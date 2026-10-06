@@ -1739,7 +1739,7 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Header: Layer 1 = Add, Layer 2 = Archived viewer.
+          {/* Header: Layer 1 = Select, Layer 2 = Archived viewer.
               Layer 2 has no back arrow; the title sits left and
               return uses the row/footer Back buttons. */}
           <View style={styles.header}>
@@ -1749,7 +1749,7 @@ export default function ApplianceModal({
             >
               {layer === 2
                 ? "Archived Appliances"
-                : "Add Appliances"}
+                : "Select Appliances"}
             </AppText>
 
             <Pressable
@@ -1759,7 +1759,7 @@ export default function ApplianceModal({
               accessibilityLabel={
                 layer === 2
                   ? "Close Archived Appliances"
-                  : "Close Add Appliances"
+                  : "Close Select Appliances"
               }
             >
               <Ionicons
