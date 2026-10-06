@@ -30,13 +30,14 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control, Touch } from "@/constants/sizing";
+import { Control } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 import {
   getCurrentUserProfile,
   updateAccount,
 } from "@/services/auth";
+import PasswordInput from "@/components/ui/PasswordInput";
 import {
   logAuth,
   logProfile,
@@ -100,15 +101,6 @@ export default function SettingsScreen() {
 
   const [currentPassword, setCurrentPassword] =
     useState("");
-
-  const [showCurrentPassword, setShowCurrentPassword] =
-    useState(false);
-
-  const [showNewPassword, setShowNewPassword] =
-    useState(false);
-
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
 
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
@@ -399,10 +391,6 @@ export default function SettingsScreen() {
     setWarning("");
     setConfirmationWarning("");
 
-    setShowCurrentPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
-
     setIsEditingAccount(true);
   };
 
@@ -420,10 +408,6 @@ export default function SettingsScreen() {
 
     setWarning("");
     setConfirmationWarning("");
-
-    setShowCurrentPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
 
     setConfirmationVisible(false);
     setIsEditingAccount(false);
@@ -673,10 +657,6 @@ export default function SettingsScreen() {
 
       setWarning("");
       setConfirmationWarning("");
-
-      setShowCurrentPassword(false);
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
 
       setConfirmationVisible(false);
       setIsEditingAccount(false);
@@ -1179,126 +1159,28 @@ export default function SettingsScreen() {
                   </View>
 
                   {/* New Password */}
-                  <View style={styles.inputGroup}>
-                    <AppText
-                      variant="caption"
-                      style={styles.inputLabel}
-                    >
-                      New Password
-                    </AppText>
-
-                    <View
-                      style={
-                        styles.passwordInputContainer
-                      }
-                    >
-                      <TextInput
-                        value={newPassword}
-                        onChangeText={(text) => {
-                          setNewPassword(text);
-                          setWarning("");
-                        }}
-                        allowFontScaling={false}
-                        style={[
-                          styles.passwordInput,
-                          inputFontStyle,
-                        ]}
-                        placeholder="Leave blank to keep current"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        secureTextEntry={
-                          !showNewPassword
-                        }
-                        underlineColorAndroid="transparent"
-                      />
-
-                      <Pressable
-                        onPress={() =>
-                          setShowNewPassword(
-                            (current) =>
-                              !current,
-                          )
-                        }
-                        style={
-                          styles.eyeButton
-                        }
-                      >
-                        <Ionicons
-                          name={
-                            showNewPassword
-                              ? "eye-outline"
-                              : "eye-off-outline"
-                          }
-                          size={22}
-                          color={colors.text}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+                  <PasswordInput
+                    label="New Password"
+                    value={newPassword}
+                    onChangeText={(text) => {
+                      setNewPassword(text);
+                      setWarning("");
+                    }}
+                    placeholder="Leave blank to keep current"
+                    autoComplete="password-new"
+                  />
 
                   {/* Confirm New Password */}
-                  <View style={styles.inputGroup}>
-                    <AppText
-                      variant="caption"
-                      style={styles.inputLabel}
-                    >
-                      Confirm New Password
-                    </AppText>
-
-                    <View
-                      style={
-                        styles.passwordInputContainer
-                      }
-                    >
-                      <TextInput
-                        value={
-                          confirmNewPassword
-                        }
-                        onChangeText={(text) => {
-                          setConfirmNewPassword(
-                            text,
-                          );
-                          setWarning("");
-                        }}
-                        allowFontScaling={false}
-                        style={[
-                          styles.passwordInput,
-                          inputFontStyle,
-                        ]}
-                        placeholder="Confirm new password"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        secureTextEntry={
-                          !showConfirmPassword
-                        }
-                        underlineColorAndroid="transparent"
-                      />
-
-                      <Pressable
-                        onPress={() =>
-                          setShowConfirmPassword(
-                            (current) =>
-                              !current,
-                          )
-                        }
-                        style={
-                          styles.eyeButton
-                        }
-                      >
-                        <Ionicons
-                          name={
-                            showConfirmPassword
-                              ? "eye-outline"
-                              : "eye-off-outline"
-                          }
-                          size={22}
-                          color={colors.text}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+                  <PasswordInput
+                    label="Confirm New Password"
+                    value={confirmNewPassword}
+                    onChangeText={(text) => {
+                      setConfirmNewPassword(text);
+                      setWarning("");
+                    }}
+                    placeholder="Confirm new password"
+                    autoComplete="password-new"
+                  />
 
                   {/* Warning */}
                   {warning ? (
@@ -1878,69 +1760,17 @@ export default function SettingsScreen() {
               </View>
             ) : null}
 
-            <View style={styles.inputGroup}>
-              <AppText
-                variant="caption"
-                style={styles.inputLabel}
-              >
-                Current Password
-              </AppText>
-
-              <View
-                style={
-                  styles.passwordInputContainer
-                }
-              >
-                <TextInput
-                  value={currentPassword}
-                  onChangeText={(text) => {
-                    setCurrentPassword(text);
-                    setConfirmationWarning("");
-                  }}
-                  allowFontScaling={false}
-                  style={[
-                    styles.passwordInput,
-                    inputFontStyle,
-                  ]}
-                  placeholder="Enter current password"
-                  placeholderTextColor={
-                    colors.textSecondary
-                  }
-                  secureTextEntry={
-                    !showCurrentPassword
-                  }
-                  editable={
-                    !confirmingAccountUpdate
-                  }
-                  underlineColorAndroid="transparent"
-                />
-
-                <Pressable
-                  onPress={() =>
-                    setShowCurrentPassword(
-                      (current) =>
-                        !current,
-                    )
-                  }
-                  style={
-                    styles.eyeButton
-                  }
-                  disabled={
-                    confirmingAccountUpdate
-                  }
-                >
-                  <Ionicons
-                    name={
-                      showCurrentPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
-                    }
-                    size={22}
-                    color={colors.text}
-                  />
-                </Pressable>
-              </View>
-            </View>
+            <PasswordInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={(text) => {
+                setCurrentPassword(text);
+                setConfirmationWarning("");
+              }}
+              placeholder="Enter current password"
+              autoComplete="current-password"
+              editable={!confirmingAccountUpdate}
+            />
 
             <View style={styles.actionRow}>
               <Pressable
@@ -2175,31 +2005,6 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 14,
     color: colors.text,
     fontSize: 15,
-  },
-
-  passwordInputContainer: {
-    minHeight: 48,
-    backgroundColor: colors.glass.white,
-    borderWidth: 2,
-    borderColor: colors.cardBorder,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  passwordInput: {
-    flex: 1,
-    minHeight: Control.button,
-    paddingHorizontal: 14,
-    color: colors.text,
-    fontSize: 15,
-  },
-
-  eyeButton: {
-    width: Touch.target,
-    height: Touch.target,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   /* ================= PREFERENCES ================= */

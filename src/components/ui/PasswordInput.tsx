@@ -33,6 +33,7 @@ interface PasswordInputProps {
   autoComplete?: TextInputProps["autoComplete"];
   inputRef?: Ref<TextInput>;
   bottomGap?: number;
+  editable?: boolean;
 }
 
 // ============================================================
@@ -57,6 +58,7 @@ export default function PasswordInput({
   autoComplete,
   inputRef,
   bottomGap,
+  editable = true,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
   // 5s visibility window: remaining seconds shown under
@@ -127,6 +129,7 @@ export default function PasswordInput({
           autoCapitalize="none"
           autoCorrect={false}
           allowFontScaling={false}
+          editable={editable}
           placeholderTextColor={colors.textSecondary}
           autoComplete={autoComplete}
           returnKeyType={returnKeyType}
