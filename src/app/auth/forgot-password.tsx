@@ -33,6 +33,7 @@ import {
   requestPasswordReset,
   updateRecoveryPassword,
 } from "@/services/auth";
+import { useTranslation } from "react-i18next";
 import {
   useAppColors,
   type AppColors,
@@ -59,6 +60,7 @@ import {
 // ============================================================
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -162,7 +164,7 @@ export default function ForgotPasswordScreen() {
           setLinkWarning(
             linkErrorDescription
               ? decodeLinkParam(linkErrorDescription)
-              : "This recovery link is invalid or has expired. Request a new one below.",
+              : t("auth.forgot.recoveryLinkBad"),
           );
         }
         return;
@@ -171,7 +173,7 @@ export default function ForgotPasswordScreen() {
       if (tokenHash && otpType && otpType !== "recovery") {
         if (!cancelled) {
           setLinkWarning(
-            "This link is not a password recovery link. Request a new recovery email below.",
+            t("auth.forgot.recoveryLinkWrong"),
           );
         }
         return;
@@ -189,7 +191,7 @@ export default function ForgotPasswordScreen() {
 
           if (error) {
             setLinkWarning(
-              "This recovery link is invalid or has expired. Request a new one below.",
+              t("auth.forgot.recoveryExpired"),
             );
           }
           // Success path needs no local state: the
@@ -210,7 +212,7 @@ export default function ForgotPasswordScreen() {
 
         if (error) {
           setLinkWarning(
-            "This recovery link is invalid or has expired. Request a new one below.",
+            t("auth.forgot.recoveryExpired"),
           );
         }
       }
@@ -222,6 +224,7 @@ export default function ForgotPasswordScreen() {
       cancelled = true;
     };
   }, [
+    t,
     params.code,
     params.token_hash,
     params.type,
@@ -250,12 +253,12 @@ export default function ForgotPasswordScreen() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setWarning("Please enter your email address.");
+      setWarning(t("validation.emailRequired"));
       return;
     }
 
     if (!EMAIL_PATTERN.test(cleanEmail)) {
-      setWarning("Please enter a valid email address.");
+      setWarning(t("validation.emailInvalid"));
       return;
     }
 
@@ -267,7 +270,7 @@ export default function ForgotPasswordScreen() {
       if (!result.success) {
         setWarning(
           result.error ??
-            "Unable to send a recovery email right now. Please try again.",
+            t("auth.forgot.sendFailed"),
         );
         return;
       }
@@ -276,7 +279,7 @@ export default function ForgotPasswordScreen() {
       setResendCooldown(60);
     } catch {
       setWarning(
-        "Something went wrong. Please try again.",
+        t("common.wentWrong"),
       );
     } finally {
       setSending(false);
@@ -307,7 +310,7 @@ export default function ForgotPasswordScreen() {
       } else {
         setWarning(
           result.error ??
-            "Unable to send a recovery email right now. Please try again.",
+            t("auth.forgot.sendFailed"),
         );
       }
     } finally {
@@ -323,18 +326,18 @@ export default function ForgotPasswordScreen() {
     setUpdateWarning("");
 
     if (!newPassword || newPassword.trim().length < 8) {
-      setUpdateWarning("Password must be at least 8 characters.");
+      setUpdateWarning(t("validation.passwordShort"));
       return;
     }
 
     if (newPassword.length > 72) {
-      setUpdateWarning("Password must not exceed 72 characters.");
+      setUpdateWarning(t("validation.passwordLong"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
       setUpdateWarning(
-        "Passwords do not match. Please check both password fields.",
+        t("validation.passwordsMismatch"),
       );
       return;
     }
@@ -348,7 +351,7 @@ export default function ForgotPasswordScreen() {
       if (!result.success) {
         setUpdateWarning(
           result.error ??
-            "Unable to update your password right now. Please try again.",
+            t("auth.forgot.recoveryUpdateFailed"),
         );
         return;
       }
@@ -357,7 +360,7 @@ export default function ForgotPasswordScreen() {
       router.replace(Routes.DASHBOARD);
     } catch {
       setUpdateWarning(
-        "Something went wrong. Please try again.",
+        t("common.wentWrong"),
       );
     } finally {
       setUpdating(false);
@@ -382,11 +385,11 @@ export default function ForgotPasswordScreen() {
         <AuthLogo />
 
         <AuthHeader
-          title="Reset Password"
+          title={t("auth.forgot.title")}
           subtitle={
             isVerified
-              ? "Your email is confirmed. Continue to your account or set a new password."
-              : "Enter your account email. We'll send you a recovery link."
+              ? t("auth.forgot.subtitleVerified")
+              : t("auth.forgot.subtitleRequest")
           }
         />
 
@@ -395,13 +398,13 @@ export default function ForgotPasswordScreen() {
           {!isVerified ? (
           <>
           <AppInput
-            label="Email Address"
+            label={t("auth.forgot.emailLabel")}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
               setWarning("");
             }}
-            placeholder="Enter your email"
+            placeholder={t("auth.forgot.emailPlaceholder")}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -412,7 +415,7 @@ export default function ForgotPasswordScreen() {
           />
 
           <AppButton
-            title={sending ? "Sending..." : "Send Recovery Link"}
+            title={sending ? t("auth.forgot.sending") : t("auth.forgot.sendLink")}
             onPress={handleSend}
             disabled={sending}
           />
@@ -429,10 +432,10 @@ export default function ForgotPasswordScreen() {
             accessibilityLiveRegion="polite"
             accessibilityLabel={
               isVerified
-                ? "Email confirmed"
+                ? t("auth.forgot.emailConfirmed")
                 : verifying
-                  ? "Verifying recovery link"
-                  : "Recovery email sent"
+                  ? t("auth.forgot.verifyingLink")
+                  : t("auth.forgot.recoveryEmailSent")
             }
           >
             <View style={mailStyles.headerPanel}>
@@ -451,10 +454,10 @@ export default function ForgotPasswordScreen() {
 
                 <AppText style={mailStyles.headerTitle}>
                   {verifying
-                    ? "Verifying Link"
+                    ? t("auth.forgot.verifyingTitle")
                     : isVerified
-                      ? "Email Confirmed"
-                      : "Check Your Email"}
+                      ? t("auth.forgot.verifiedTitle")
+                      : t("auth.forgot.checkEmailTitle")}
                 </AppText>
               </View>
 
@@ -478,18 +481,17 @@ export default function ForgotPasswordScreen() {
                   />
 
                   <AppText style={mailStyles.status}>
-                    Verifying your recovery link…
+                    {t("auth.forgot.verifyingBody")}
                   </AppText>
                 </>
               ) : isVerified ? (
                 <>
                   <AppText style={mailStyles.bodyText}>
-                    You have successfully confirmed
-                    your email.
+                    {t("auth.forgot.verifiedBody")}
                   </AppText>
 
                   <AppButton
-                    title="Continue to Account"
+                    title={t("auth.forgot.continueToAccount")}
                     onPress={handleContinue}
                   />
 
@@ -503,10 +505,12 @@ export default function ForgotPasswordScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={
                       showChangeForm
-                        ? "Hide password change form"
-                        : "Show password change form"
+                        ? t("auth.forgot.hideChangeFormA11y")
+                        : t("auth.forgot.showChangeFormA11y")
                     }
-                    accessibilityHint="Reveals the new password fields"
+                    accessibilityHint={t(
+                      "auth.forgot.changeFormHint",
+                    )}
                     hitSlop={8}
                   >
                     <AppText
@@ -515,8 +519,8 @@ export default function ForgotPasswordScreen() {
                       }
                     >
                       {showChangeForm
-                        ? "Hide password fields"
-                        : "Or you want to change your password?"}
+                        ? t("auth.forgot.hideChangeForm")
+                        : t("auth.forgot.showChangeForm")}
                     </AppText>
                   </Pressable>
 
@@ -525,13 +529,13 @@ export default function ForgotPasswordScreen() {
                       style={mailStyles.changeSection}
                     >
                       <PasswordInput
-                        label="New Password"
+                        label={t("passwordInput.labelNewPassword")}
                         value={newPassword}
                         onChangeText={(text) => {
                           setNewPassword(text);
                           setUpdateWarning("");
                         }}
-                        placeholder="Create a new password"
+                        placeholder={t("passwordInput.placeholderCreateNew")}
                         autoComplete="password-new"
                         returnKeyType="next"
                         onSubmitEditing={() =>
@@ -541,13 +545,13 @@ export default function ForgotPasswordScreen() {
                       />
 
                       <PasswordInput
-                        label="Confirm New Password"
+                        label={t("passwordInput.labelConfirmNewPassword")}
                         value={confirmPassword}
                         onChangeText={(text) => {
                           setConfirmPassword(text);
                           setUpdateWarning("");
                         }}
-                        placeholder="Confirm your new password"
+                        placeholder={t("passwordInput.placeholderConfirmNew")}
                         autoComplete="password-new"
                         returnKeyType="done"
                         onSubmitEditing={handleUpdate}
@@ -558,8 +562,8 @@ export default function ForgotPasswordScreen() {
                       <AppButton
                         title={
                           updating
-                            ? "Updating..."
-                            : "Update Password"
+                            ? t("auth.forgot.updating")
+                            : t("auth.forgot.updatePassword")
                         }
                         onPress={handleUpdate}
                         disabled={updating}
@@ -575,7 +579,7 @@ export default function ForgotPasswordScreen() {
                 <>
                   <View style={mailStyles.toRow}>
                     <AppText style={mailStyles.toLabel}>
-                      To:
+                      {t("auth.forgot.checkEmailTo")}
                     </AppText>
 
                     <View style={mailStyles.emailChip}>
@@ -583,14 +587,13 @@ export default function ForgotPasswordScreen() {
                         style={mailStyles.emailChipText}
                         numberOfLines={1}
                       >
-                        {email || "your inbox"}
+                        {email || t("auth.forgot.checkEmailInbox")}
                       </AppText>
                     </View>
                   </View>
 
                   <AppText style={mailStyles.bodyText}>
-                    We sent a recovery link. Tap it,
-                    then set a new password.
+                    {t("auth.forgot.checkEmailBody")}
                   </AppText>
 
                   {linkWarning ? (
@@ -602,18 +605,19 @@ export default function ForgotPasswordScreen() {
                   <AppButton
                     title={
                       resending
-                        ? "Resending..."
+                        ? t("common.resending")
                         : resendCooldown > 0
-                          ? `Resend in ${resendCooldown}s`
-                          : "Resend recovery email"
+                          ? t("common.resendIn", {
+                              seconds: resendCooldown,
+                            })
+                          : t("auth.forgot.resendRecovery")
                     }
                     onPress={handleResend}
                     disabled={resending || resendCooldown > 0}
                   />
 
                   <AppText style={mailStyles.status}>
-                    Didn&apos;t get it? Check spam or
-                    try a different address.
+                    {t("auth.forgot.checkEmailHint")}
                   </AppText>
                 </>
               )}
@@ -623,8 +627,8 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <AuthFooter
-          prompt="Remembered your password?"
-          actionLabel="Back to Sign In"
+          prompt={t("auth.forgot.footerPrompt")}
+          actionLabel={t("auth.forgot.footerAction")}
           onAction={handleBackToSignIn}
         />
 

@@ -30,12 +30,14 @@ import {
 } from "@/hooks/useAppColors";
 
 import { loginUser, resendConfirmation, signInWithGoogle } from "@/services/auth";
+import { useTranslation } from "react-i18next";
 
 // Completes the pending auth session on Android when the
 // in-app browser redirects back to adlawatt://auth/callback.
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState("");
@@ -108,12 +110,12 @@ export default function LoginScreen() {
   const cleanPassword = password;
 
   if (!identifier) {
-    setWarning("Please enter your username or email.");
+    setWarning(t("validation.identifierEmpty"));
     return;
   }
 
   if (!cleanPassword) {
-    setWarning("Please enter your password.");
+    setWarning(t("validation.passwordEmpty"));
     return;
   }
 
@@ -122,16 +124,16 @@ export default function LoginScreen() {
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailPattern.test(identifier)) {
-      setWarning("Please enter a valid email address.");
+      setWarning(t("validation.emailInvalid"));
       return;
     }
   } else if (identifier.length < 3) {
-    setWarning("Username must be at least 3 characters.");
+    setWarning(t("validation.usernameShort"));
     return;
   }
 
   if (cleanPassword.length < 8) {
-    setWarning("Password must be at least 8 characters.");
+    setWarning(t("validation.passwordShort"));
     return;
   }
 
@@ -171,7 +173,7 @@ export default function LoginScreen() {
 
   setWarning(
     result.error ??
-      "We could not sign you in. Please check your information and try again.",
+      t("auth.login.signInFailed"),
   );
   return;
 }
@@ -182,7 +184,7 @@ export default function LoginScreen() {
     router.replace(Routes.DASHBOARD);
   } catch {
     setWarning(
-      "Something went wrong. Please try again.",
+      t("common.wentWrong"),
     );
   } finally {
     setLoading(false);
@@ -233,11 +235,11 @@ export default function LoginScreen() {
 
       setWarning(
         ("error" in result && typeof result.error === "string" && result.error) ||
-          "Google sign-in was not completed. Please try again.",
+          t("auth.login.googleIncomplete"),
       );
     } catch {
       setWarning(
-        "Google sign-in was not completed. Please try again.",
+        t("auth.login.googleIncomplete"),
       );
     } finally {
       setGoogleLoading(false);
@@ -250,16 +252,16 @@ export default function LoginScreen() {
         <AuthLogo />
 
         <AuthHeader
-          title="Welcome Back"
-          subtitle="Sign in to continue using AdlaWatt."
+          title={t("auth.login.title")}
+          subtitle={t("auth.login.subtitle")}
         />
 
         <View style={styles.form}>
           <AppInput
-            label="Username or Email"
+            label={t("auth.login.identifierLabel")}
             value={usernameOrEmail}
             onChangeText={setUsernameOrEmail}
-            placeholder="Enter your username or email"
+            placeholder={t("auth.login.identifierPlaceholder")}
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="username"
@@ -270,10 +272,10 @@ export default function LoginScreen() {
           />
 
           <PasswordInput
-            label="Password"
+            label={t("passwordInput.labelPassword")}
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
+            placeholder={t("passwordInput.placeholderPassword")}
             autoComplete="password"
             returnKeyType="done"
             onSubmitEditing={handleLogin}
@@ -286,18 +288,18 @@ export default function LoginScreen() {
               onPress={handleForgotPassword}
               style={extraStyles.forgotHit}
               accessibilityRole="link"
-              accessibilityLabel="Forgot password"
-              accessibilityHint="Recover your password via email"
+              accessibilityLabel={t("auth.login.forgotPasswordLabel")}
+              accessibilityHint={t("auth.login.forgotPasswordHint")}
               hitSlop={12}
             >
               <AppText style={extraStyles.forgotLink}>
-                Forgot Password?
+                {t("auth.login.forgotPassword")}
               </AppText>
             </Pressable>
           </View>
 
           <AppButton
-            title={loading ? "Signing In..." : "Sign In"}
+            title={loading ? t("auth.login.signingIn") : t("auth.login.signIn")}
             onPress={handleLogin}
             disabled={loading}
           />
@@ -309,7 +311,7 @@ export default function LoginScreen() {
             accessibilityRole="none"
           >
             <View style={extraStyles.dividerLine} />
-            <AppText style={extraStyles.dividerText}>OR</AppText>
+            <AppText style={extraStyles.dividerText}>{t("auth.login.dividerOr")}</AppText>
             <View style={extraStyles.dividerLine} />
           </View>
 
@@ -323,8 +325,8 @@ export default function LoginScreen() {
                 extraStyles.googleDisabled,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
-            accessibilityHint="Sign in with your Google account"
+            accessibilityLabel={t("auth.login.googleA11y")}
+            accessibilityHint={t("auth.login.googleHint")}
             accessibilityState={{
               disabled: loading || googleLoading,
               busy: googleLoading,
@@ -340,8 +342,8 @@ export default function LoginScreen() {
             )}
             <AppText style={extraStyles.googleLabel}>
               {googleLoading
-                ? "Connecting..."
-                : "Continue with Google"}
+                ? t("auth.login.connecting")
+                : t("auth.login.continueWithGoogle")}
             </AppText>
           </Pressable>
 
@@ -350,7 +352,7 @@ export default function LoginScreen() {
               style={noticeStyles.card}
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              accessibilityLabel="Email confirmation required"
+              accessibilityLabel={t("auth.login.verifyTitle")}
             >
               <View style={noticeStyles.headerPanel}>
                 <View style={noticeStyles.headerLeft}>
@@ -363,7 +365,7 @@ export default function LoginScreen() {
                   <AppText
                     style={noticeStyles.headerTitle}
                   >
-                    Verify Your Email
+                    {t("auth.login.verifyTitle")}
                   </AppText>
                 </View>
 
@@ -371,7 +373,7 @@ export default function LoginScreen() {
                   <AppText
                     style={noticeStyles.sentPillText}
                   >
-                    • Sent
+                    {t("auth.login.verifySent")}
                   </AppText>
                 </View>
               </View>
@@ -379,7 +381,7 @@ export default function LoginScreen() {
               <View style={noticeStyles.body}>
                 <View style={noticeStyles.toRow}>
                   <AppText style={noticeStyles.toLabel}>
-                    To:
+                    {t("auth.login.verifyTo")}
                   </AppText>
 
                   <View style={noticeStyles.emailChip}>
@@ -393,25 +395,26 @@ export default function LoginScreen() {
                 </View>
 
                 <AppText style={noticeStyles.bodyText}>
-                  Your account needs verification
-                  before you can sign in.
+                  {t("auth.login.verifyBody")}
                 </AppText>
 
                 <AppText style={noticeStyles.status}>
                   {confirmationResent === "sent"
-                    ? "We've just sent a fresh confirmation link. Check your inbox."
+                    ? t("auth.login.verifySentFresh")
                     : confirmationResent === "rate-limited"
-                      ? "A link was sent recently. Tap resend below if it hasn't arrived."
-                      : "Tap resend below for a new confirmation link."}
+                      ? t("auth.login.verifySentRecent")
+                      : t("auth.login.verifySendFresh")}
                 </AppText>
 
                 <AppButton
                   title={
                     resending
-                      ? "Resending..."
+                      ? t("common.resending")
                       : resendCooldown > 0
-                        ? `Resend in ${resendCooldown}s`
-                        : "Resend confirmation email"
+                        ? t("common.resendIn", {
+                            seconds: resendCooldown,
+                          })
+                        : t("auth.login.resendConfirmation")
                   }
                   onPress={handleResend}
                   disabled={resending || resendCooldown > 0}
@@ -422,8 +425,8 @@ export default function LoginScreen() {
         </View>
 
         <AuthFooter
-          prompt="Don't have an account?"
-          actionLabel="Create Account"
+          prompt={t("auth.login.footerPrompt")}
+          actionLabel={t("auth.login.footerAction")}
           onAction={handleRegister}
         />
 
