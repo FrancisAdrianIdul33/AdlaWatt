@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import {
   Image,
   Pressable,
@@ -112,50 +114,56 @@ export default function CustomApplianceModal({
         example, soldering wire may use 15-25W.
       </AppText>
 
-      <View style={styles.photoRow}>
-        <View style={styles.photoFrame}>
+      {/* Photo display on top, picker button below it. */}
+      <View style={styles.photoDisplay}>
+        {photoPreview ? (
           <Image
-            source={
-              photoPreview
-                ? { uri: photoPreview }
-                : defaultPhoto
-            }
-            style={styles.photoImage}
+            source={{ uri: photoPreview }}
+            style={styles.photoDisplayImage}
             resizeMode="cover"
-            accessibilityLabel={
-              photoPreview
-                ? "Custom appliance photo"
-                : "Default appliance icon"
-            }
+            accessibilityLabel="Custom appliance photo"
           />
-        </View>
-
-        <Pressable
-          onPress={onPhotoPress}
-          disabled={photoBusy}
-          style={({ pressed }) => [
-            styles.photoButton,
-            pressed && !photoBusy && styles.pressed,
-            photoBusy && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={
-            photoPreview
-              ? "Change appliance photo"
-              : "Add appliance photo"
-          }
-          accessibilityHint="Opens the photo picker"
-        >
-          <AppText
-            variant="caption"
-            style={styles.photoButtonText}
-          >
-            {photoPreview
-              ? "Change Photo"
-              : "Add Photo"}
-          </AppText>
-        </Pressable>
+        ) : (
+          <Image
+            source={defaultPhoto}
+            style={styles.photoDefaultIcon}
+            resizeMode="contain"
+            accessibilityLabel="Default appliance icon"
+          />
+        )}
       </View>
+
+      <Pressable
+        onPress={onPhotoPress}
+        disabled={photoBusy}
+        style={({ pressed }) => [
+          styles.photoButton,
+          pressed && !photoBusy && styles.pressed,
+          photoBusy && styles.pressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={
+          photoPreview
+            ? "Change appliance photo"
+            : "Add appliance photo"
+        }
+        accessibilityHint="Opens the photo picker"
+      >
+        <Ionicons
+          name="camera-outline"
+          size={20}
+          color={colors.text}
+        />
+
+        <AppText
+          variant="caption"
+          style={styles.photoButtonText}
+        >
+          {photoPreview
+            ? "Change Photo"
+            : "Add Photo"}
+        </AppText>
+      </Pressable>
 
       <TextInput
         value={name}
@@ -262,16 +270,9 @@ const getStyles = (colors: AppColors) =>
       marginBottom: 10,
     },
 
-    photoRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      marginBottom: 8,
-    },
-
-    photoFrame: {
-      width: 96,
-      height: 96,
+    photoDisplay: {
+      width: "100%",
+      height: 180,
       borderRadius: Radius.md,
       borderWidth: 2,
       borderColor: colors.border,
@@ -279,22 +280,31 @@ const getStyles = (colors: AppColors) =>
       overflow: "hidden",
       alignItems: "center",
       justifyContent: "center",
+      marginBottom: 8,
     },
 
-    photoImage: {
+    photoDisplayImage: {
       width: "100%",
       height: "100%",
     },
 
+    photoDefaultIcon: {
+      width: 96,
+      height: 96,
+    },
+
     photoButton: {
-      flex: 1,
+      width: "100%",
       minHeight: Control.button,
+      flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
+      gap: 8,
       backgroundColor: colors.surface,
       borderWidth: 2,
       borderColor: colors.border,
       borderRadius: Radius.md,
+      marginBottom: 8,
     },
 
     photoButtonText: {
