@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -25,6 +26,9 @@ import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import {
+  CATALOG_IMAGES,
+} from "@/constants/applianceCatalog";
 import {
   useAppColors,
   type AppColors,
@@ -66,6 +70,7 @@ type SelectedAppliance = {
   name: string;
   watts: string;
   area: string;
+  imageUrl?: string | null;
 };
 
 type StatusFilter =
@@ -227,6 +232,7 @@ export default function AppliancesScreen() {
           name: item.name,
           watts: item.display,
           area: item.area,
+          imageUrl: item.imageUrl ?? null,
         })),
       );
 
@@ -245,7 +251,7 @@ export default function AppliancesScreen() {
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, image_url",
       )
       .eq("user_id", user.id)
       .order("appliance_name");
@@ -303,6 +309,10 @@ export default function AppliancesScreen() {
             name: String(item.appliance_name),
             watts,
             area: "Custom Appliances",
+            imageUrl:
+              typeof item.image_url === "string"
+                ? item.image_url
+                : null,
           };
         }),
     );
@@ -336,9 +346,10 @@ export default function AppliancesScreen() {
   // keeps the prior behavior until data arrives.
   // ==========================================================
 
-  const getApplianceStatus = (
-    appliance: SelectedAppliance,
-  ): ApplianceStatus => {
+  const getApplianceStatus = useCallback(
+    (
+      appliance: SelectedAppliance,
+    ): ApplianceStatus => {
 
     if (
       !monitoring
@@ -394,7 +405,82 @@ export default function AppliancesScreen() {
     }
 
     return "advisable";
-  };
+    },
+    [monitoring],
+  );
+
+  // ==========================================================
+  // CONTENT-AWARE STATUS SEGMENTS
+  //
+  // Only segments holding appliances render; the selection
+  // follows the first non-empty segment in
+  // Caution → Advisable → Not Advisable order (Not Advisable
+  // is the last-resort fallback). An empty appliance list
+  // keeps all three segments on Advisable.
+  // ==========================================================
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<ApplianceStatus, number> = {
+      advisable: 0,
+      care: 0,
+      notAdvisable: 0,
+    };
+
+    for (const appliance of selectedAppliances) {
+      counts[getApplianceStatus(appliance)] += 1;
+    }
+
+    return counts;
+  }, [selectedAppliances, getApplianceStatus]);
+
+  const visibleStatusFilters = useMemo<StatusFilter[]>(() => {
+    if (selectedAppliances.length === 0) {
+      return ["Advisable", "Caution", "notAdvisable"];
+    }
+
+    const ordered: StatusFilter[] = [
+      "Caution",
+      "Advisable",
+      "notAdvisable",
+    ];
+
+    const visible = ordered.filter(
+      (filter) =>
+        statusCounts[STATUS_FOR_FILTER[filter]] > 0,
+    );
+
+    // Unreachable (every appliance has a status), but a
+    // zero-option toggle would break the pill math.
+    return visible.length > 0
+      ? visible
+      : (["Advisable", "Caution", "notAdvisable"] as StatusFilter[]);
+  }, [selectedAppliances.length, statusCounts]);
+
+  // Effective selection for this render (covers first paint
+  // before the canonical sync below commits).
+  const effectiveStatusFilter =
+    visibleStatusFilters.includes(statusFilter)
+      ? statusFilter
+      : (visibleStatusFilters[0] ?? "Advisable");
+
+  // Keep the stored selection canonical: when counts shift
+  // (add/archive/delete/battery verdict change) and empty
+  // the active segment, glide to the next visible one.
+  useEffect(() => {
+    if (!visibleStatusFilters.includes(statusFilter)) {
+      setStatusFilter(
+        visibleStatusFilters[0] ?? "Advisable",
+      );
+    }
+  }, [visibleStatusFilters, statusFilter]);
+
+  const visibleToggleMeta = useMemo(
+    () =>
+      TOGGLE_META_BASE.filter((meta) =>
+        visibleStatusFilters.includes(meta.filter),
+      ),
+    [visibleStatusFilters],
+  );
 
   const filteredAppliances =
     selectedAppliances.filter((appliance) => {
@@ -424,7 +510,7 @@ export default function AppliancesScreen() {
       const matchesStatus =
         status ===
         STATUS_FOR_FILTER[
-          statusFilter
+          effectiveStatusFilter
         ];
 
       return (
@@ -555,12 +641,12 @@ export default function AppliancesScreen() {
           </View>
         </View>
 
-        {/* Status Filter */}
+        {/* Status Filter (only segments with content) */}
         <SlidingToggle
-          value={statusFilter}
+          value={effectiveStatusFilter}
           onChange={setStatusFilter}
           style={styles.statusToggleColors}
-          options={TOGGLE_META_BASE.map(
+          options={visibleToggleMeta.map(
             ({
               filter,
               label,
@@ -589,10 +675,10 @@ export default function AppliancesScreen() {
               title={
                 selectedAppliances.length === 0
                   ? "No Appliances"
-                  : statusFilter ===
+                  : effectiveStatusFilter ===
                       "Advisable"
                     ? "No Advisable Appliances"
-                    : statusFilter ===
+                    : effectiveStatusFilter ===
                         "Caution"
                       ? "No Appliances to Use With Care"
                       : "No Not Advisable Appliances"
@@ -605,10 +691,10 @@ export default function AppliancesScreen() {
               icon={
                 selectedAppliances.length === 0
                   ? "cube-outline"
-                  : statusFilter ===
+                  : effectiveStatusFilter ===
                       "Advisable"
                     ? "checkmark-circle-outline"
-                    : statusFilter ===
+                    : effectiveStatusFilter ===
                         "Caution"
                       ? "warning-outline"
                       : "alert-circle-outline"
@@ -632,6 +718,13 @@ export default function AppliancesScreen() {
                   }
                   statusTone={
                     statusMapped.tone
+                  }
+                  imageSource={
+                    appliance.imageUrl
+                      ? { uri: appliance.imageUrl }
+                      : (CATALOG_IMAGES[
+                          appliance.id
+                        ] ?? undefined)
                   }
                 />
               );

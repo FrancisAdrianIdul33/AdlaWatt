@@ -24,6 +24,7 @@ import { Routes } from "@/constants/routes";
 import { Bar, Touch } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 import {
   subscribeResilientChannel,
@@ -55,6 +56,20 @@ export default function NavBar({
     hasUnreadNotifications,
     setHasUnreadNotifications,
   ] = useState(false);
+
+  // Signed-in username, served synchronously from the
+  // AuthContext session cache — no per-mount fetch, so the
+  // name never blinks on navigation. Falls back to the
+  // session email prefix (identical to the auto-derived
+  // username in almost all cases) so the slot is never
+  // empty while signed in, even on first load.
+  const { profileUsername, user: authUser } =
+    useAuth();
+
+  const fallbackName =
+    authUser?.email?.split("@")[0] || null;
+
+  const username = profileUsername || fallbackName;
 
   // ==========================================================
   // CHECK FOR UNREAD NOTIFICATIONS
@@ -302,6 +317,26 @@ export default function NavBar({
         </View>
 
         {/* ====================================================
+            SIGNED-IN USERNAME (center, truncated)
+            ==================================================== */}
+
+        {username ? (
+          <View
+            style={navBarStyles.usernameSlot}
+            accessibilityLabel={`Signed in as ${username}`}
+          >
+            <AppText
+              variant="body"
+              style={navBarStyles.usernameText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {username}
+            </AppText>
+          </View>
+        ) : null}
+
+        {/* ====================================================
             RIGHT-SIDE ACTIONS
             ==================================================== */}
 
@@ -396,6 +431,24 @@ const getNavBarStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+
+  // Center slot between the status capsule and the bell.
+  // space-between keeps both ends pinned, so this appearing
+  // late never moves them; the name itself truncates.
+  usernameSlot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    minWidth: 0,
+  },
+
+  usernameText: {
+    color: colors.bar.text,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   iconButton: {

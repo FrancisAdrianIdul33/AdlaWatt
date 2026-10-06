@@ -184,6 +184,14 @@ alter table public.appliances
 -- so those inserts fail with:
 --   null value in column "wattage" violates not-null constraint
 -- Dropping NOT NULL is safe to run again.
+--
+-- Tables predating the original DDL may lack the legacy
+-- wattage column entirely (app code only reads
+-- wattage_min/max). Add it nullable so the relaxations and
+-- the shape checks below resolve; it stays unused.
+
+alter table public.appliances
+    add column if not exists wattage numeric(6,2);
 
 alter table public.appliances
     alter column wattage drop not null;
@@ -480,18 +488,15 @@ alter table public.appliances
     not valid;
 
 
--- Custom appliance: no catalog key, exact wattage required.
+-- Custom appliance shape check is intentionally NOT created:
+-- app writes store the interval in wattage_min/max with
+-- wattage NULL, so requiring wattage NOT NULL would reject
+-- every custom insert/update going forward (and already broke
+-- the backfill below on live v5 rows). Drop it if any variant
+-- exists from a hand-applied schema.
 
 alter table public.appliances
-    add constraint appliances_custom_shape_check
-    check (
-        type <> 'custom'
-        or (
-            catalog_key is null
-            and wattage is not null
-        )
-    )
-    not valid;
+    drop constraint if exists appliances_custom_shape_check;
 
 
 -- ============================================================
@@ -530,7 +535,15 @@ for each row
 execute function public.set_appliance_archive();
 
 
--- Make existing rows match their selection value
+-- Make existing rows match their selection value.
+--
+-- Hand-applied variants of this database may carry an
+-- archive state check (v6 semantics) that this backfill
+-- would violate. The decoupled model needs no archive
+-- check at all, so drop any such constraint first.
+
+alter table public.appliances
+    drop constraint if exists appliances_archive_state_check;
 
 update public.appliances
 set archive = selection

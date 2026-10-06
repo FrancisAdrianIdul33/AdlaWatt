@@ -34,12 +34,14 @@ import {
   resendConfirmation,
   signInWithGoogle,
 } from "@/services/auth";
+import { useTranslation } from "react-i18next";
 
 // Completes the pending auth session on Android when the
 // in-app browser redirects back to adlawatt://auth/callback.
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -86,33 +88,33 @@ export default function RegisterScreen() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanUsername) {
-      showWarning("Please enter a username.");
+      showWarning(t("validation.usernameRequired"));
       return false;
     }
 
     if (cleanUsername.length < 3) {
       showWarning(
-        "Username must be at least 3 characters."
+        t("validation.usernameShort"),
       );
       return false;
     }
 
     if (cleanUsername.length > 30) {
       showWarning(
-        "Username must not exceed 30 characters."
+        t("validation.usernameLong"),
       );
       return false;
     }
 
     if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
       showWarning(
-        "Username can only contain letters, numbers, and underscores."
+        t("validation.usernameChars"),
       );
       return false;
     }
 
     if (!cleanEmail) {
-      showWarning("Please enter your email address.");
+      showWarning(t("validation.emailRequired"));
       return false;
     }
 
@@ -122,35 +124,35 @@ export default function RegisterScreen() {
       )
     ) {
       showWarning(
-        "Please enter a valid email address."
+        t("validation.emailInvalid"),
       );
       return false;
     }
 
     if (!password || password.trim().length < 8) {
       showWarning(
-        "Password must be at least 8 characters."
+        t("validation.passwordShort"),
       );
       return false;
     }
 
     if (password.length > 72) {
       showWarning(
-        "Password must not exceed 72 characters."
+        t("validation.passwordLong"),
       );
       return false;
     }
 
     if (password !== confirmPassword) {
       showWarning(
-        "Passwords do not match. Please check both password fields."
+        t("validation.passwordsMismatch"),
       );
       return false;
     }
 
     if (!termsAgreed) {
       showWarning(
-        "Please agree to the Terms and Conditions before creating your account."
+        t("validation.termsRequiredLong"),
       );
       return false;
     }
@@ -180,7 +182,7 @@ export default function RegisterScreen() {
       );
 
       if (!result.success) {
-        showWarning(result.error ?? "Unable to create your account.");
+        showWarning(result.error ?? t("auth.register.accountFailed"));
         return;
       }
 
@@ -200,7 +202,7 @@ export default function RegisterScreen() {
       showWarning(
         error instanceof Error
           ? error.message
-          : "Unable to create your account. Please try again."
+          : t("auth.register.accountFailedNow"),
       );
     } finally {
       setLoading(false);
@@ -247,11 +249,11 @@ export default function RegisterScreen() {
         ("error" in result &&
           typeof result.error === "string" &&
           result.error) ||
-          "Google sign-in was not completed. Please try again.",
+          t("auth.login.googleIncomplete"),
       );
     } catch {
       showWarning(
-        "Google sign-in was not completed. Please try again.",
+        t("auth.login.googleIncomplete"),
       );
     } finally {
       setGoogleLoading(false);
@@ -301,7 +303,7 @@ export default function RegisterScreen() {
       const result = await resendConfirmation(confirmationEmail);
 
       if (!result.success) {
-        showWarning(result.error ?? "Unable to resend confirmation email.");
+        showWarning(result.error ?? t("auth.register.resendFailed"));
 
         if (result.throttled) {
           setResendCooldown(60);
@@ -329,19 +331,19 @@ export default function RegisterScreen() {
         <AuthLogo />
 
         <AuthHeader
-          title="Create Account"
-          subtitle="Create your AdlaWatt account to start monitoring your energy."
+          title={t("auth.register.title")}
+          subtitle={t("auth.register.subtitle")}
         />
 
         <View style={styles.form}>
           <AppInput
-            label="Username"
+            label={t("auth.register.usernameLabel")}
             value={username}
             onChangeText={(text) => {
               setUsername(text);
               setWarning("");
             }}
-            placeholder="Enter your username"
+            placeholder={t("auth.register.usernamePlaceholder")}
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="username"
@@ -352,13 +354,13 @@ export default function RegisterScreen() {
           />
 
           <AppInput
-            label="Email Address"
+            label={t("auth.register.emailLabel")}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
               setWarning("");
             }}
-            placeholder="Enter your email"
+            placeholder={t("auth.register.emailPlaceholder")}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -371,13 +373,13 @@ export default function RegisterScreen() {
           />
 
           <PasswordInput
-            label="Password"
+            label={t("passwordInput.labelNewPassword")}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
               setWarning("");
             }}
-            placeholder="Create a password"
+            placeholder={t("passwordInput.placeholderNewPassword")}
             autoComplete="password-new"
             returnKeyType="next"
             onSubmitEditing={() =>
@@ -387,13 +389,13 @@ export default function RegisterScreen() {
           />
 
           <PasswordInput
-            label="Confirm Password"
+            label={t("passwordInput.labelConfirmNewPassword")}
             value={confirmPassword}
             onChangeText={(text) => {
               setConfirmPassword(text);
               setWarning("");
             }}
-            placeholder="Confirm your password"
+            placeholder={t("passwordInput.placeholderConfirmNewPassword")}
             autoComplete="password-new"
             returnKeyType="done"
             onSubmitEditing={handleRegister}
@@ -408,7 +410,7 @@ export default function RegisterScreen() {
               accessibilityState={{
                 checked: termsAgreed,
               }}
-              accessibilityLabel="Agree to Terms and Conditions"
+              accessibilityLabel={t("auth.register.agreeA11y")}
               hitSlop={8}
             >
               <View
@@ -442,7 +444,7 @@ export default function RegisterScreen() {
 
             <AppText style={styles.termsText}>
               <AppText onPress={toggleTerms}>
-                I agree to the{" "}
+                {t("auth.register.agreePrefix")}
               </AppText>
               <AppText
                 style={[
@@ -453,9 +455,9 @@ export default function RegisterScreen() {
                 ]}
                 onPress={openTerms}
                 accessibilityRole="link"
-                accessibilityLabel="Open Terms and Conditions"
+                accessibilityLabel={t("auth.register.openTermsA11y")}
               >
-                Terms and Conditions
+                {t("auth.register.termsLink")}
               </AppText>
             </AppText>
           </View>
@@ -463,8 +465,8 @@ export default function RegisterScreen() {
           <AppButton
             title={
               loading
-                ? "Creating Account..."
-                : "Create Account"
+                ? t("auth.register.creatingAccount")
+                : t("auth.register.createAccount")
             }
             onPress={handleRegister}
             disabled={loading || googleLoading}
@@ -494,7 +496,7 @@ export default function RegisterScreen() {
                 },
               ]}
             >
-              OR
+              {t("auth.login.dividerOr")}
             </AppText>
             <View
               style={[
@@ -522,8 +524,8 @@ export default function RegisterScreen() {
                 styles.googlePressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
-            accessibilityHint="Create your account with Google"
+            accessibilityLabel={t("auth.login.googleA11y")}
+            accessibilityHint={t("auth.register.googleHint")}
             accessibilityState={{
               disabled: loading || googleLoading,
               busy: googleLoading,
@@ -544,14 +546,14 @@ export default function RegisterScreen() {
               ]}
             >
               {googleLoading
-                ? "Connecting..."
-                : "Continue with Google"}
+                ? t("auth.login.connecting")
+                : t("auth.login.continueWithGoogle")}
             </AppText>
           </Pressable>
 
           <DropdownModal
             visible={confirmationPending}
-            title="Check your email"
+            title={t("auth.register.checkEmailTitle")}
             showCloseButton={false}
             dismissOnOverlayPress={false}
             onClose={() => {}}
@@ -570,18 +572,20 @@ export default function RegisterScreen() {
               <AppText
                 style={styles.confirmationText}
               >
-                We sent a confirmation link to{" "}
-                {confirmationEmail}. Click the link to
-                verify your account, then sign in.
+                {t("auth.register.confirmationSent", {
+                  email: confirmationEmail,
+                })}
               </AppText>
 
               <AppButton
                 title={
                   resending
-                    ? "Resending..."
+                    ? t("common.resending")
                     : resendCooldown > 0
-                      ? `Resend in ${resendCooldown}s`
-                      : "Resend confirmation email"
+                      ? t("common.resendIn", {
+                          seconds: resendCooldown,
+                        })
+                      : t("auth.register.resendConfirmation")
                 }
                 onPress={handleResend}
                 disabled={resending || resendCooldown > 0}
@@ -589,7 +593,7 @@ export default function RegisterScreen() {
               />
 
               <AppButton
-                title="Continue to Sign In"
+                title={t("auth.register.continueToSignIn")}
                 onPress={handleLogin}
                 style={styles.createButton}
               />
@@ -598,7 +602,9 @@ export default function RegisterScreen() {
                 onPress={handleEditEmail}
                 style={styles.editEmailButton}
                 accessibilityRole="button"
-                accessibilityLabel="Use a different email address"
+                accessibilityLabel={t(
+                  "auth.register.useDifferentEmailA11y",
+                )}
               >
                 <AppText
                   style={[
@@ -608,7 +614,7 @@ export default function RegisterScreen() {
                     },
                   ]}
                 >
-                  Use a different email address
+                  {t("auth.register.useDifferentEmail")}
                 </AppText>
               </Pressable>
             </View>
@@ -616,8 +622,8 @@ export default function RegisterScreen() {
         </View>
 
         <AuthFooter
-          prompt="Already have an account?"
-          actionLabel="Sign In"
+          prompt={t("auth.register.footerPrompt")}
+          actionLabel={t("auth.register.footerAction")}
           onAction={handleLogin}
         />
 

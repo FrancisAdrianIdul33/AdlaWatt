@@ -97,6 +97,7 @@ export type ApplianceRow = {
   selection?: boolean | null;
   archive?: boolean | null;
   user_id?: string | null;
+  image_url?: string | null;
 };
 
 // One shape for every reader.
@@ -111,6 +112,9 @@ export type ResolvedAppliance = {
   level: ApplianceLevel;
   selected: boolean;
   appId?: string | null;
+  // Stored public photo URL (custom rows only). Absent =
+  // bundled adlawatt icon, the default everywhere.
+  imageUrl?: string | null;
 };
 
 // Turns a DB row into a ResolvedAppliance. Returns null
@@ -182,5 +186,28 @@ export function resolveRow(
     level: levelFromWatts(colMax),
     selected: row.selection ?? false,
     appId: row.app_id ?? null,
+    imageUrl:
+      typeof row.image_url === "string"
+        ? row.image_url
+        : null,
   };
 }
+
+// ============================================================
+// BUNDLED CATALOG PHOTOS (Living Area batch)
+// ============================================================
+//
+// Keys match GIVEN_CATALOG keys; require() paths must be
+// static for the bundler. Items without an entry render the
+// default adlawatt icon. Resolved items carry the catalog
+// key as id, so every surface looks photos up the same way:
+// custom uploads first, then this map, then the default.
+
+export const CATALOG_IMAGES: Record<string, number> = {
+  "catalog:living:stand-fan": require("@/assets/images/appliances/stand-fan.png"),
+  "catalog:living:led-tv": require("@/assets/images/appliances/led-tv.png"),
+  "catalog:living:router": require("@/assets/images/appliances/router.png"),
+  "catalog:living:tv-box": require("@/assets/images/appliances/tv-box.png"),
+  "catalog:living:speaker": require("@/assets/images/appliances/speaker.png"),
+  "catalog:living:bulb": require("@/assets/images/appliances/bulb.png"),
+};

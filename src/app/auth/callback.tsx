@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -18,6 +18,7 @@ import Copyright from "@/components/ui/Copyright";
 import { Routes } from "@/constants/routes";
 import { useAppColors } from "@/hooks/useAppColors";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // AUTH CALLBACK
@@ -38,6 +39,7 @@ import { supabase } from "@/lib/supabase";
 type Status = "working" | "success" | "error";
 
 export default function AuthCallbackScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     code?: string | string[];
     token_hash?: string | string[];
@@ -59,6 +61,8 @@ export default function AuthCallbackScreen() {
   // email, or params lost in transit). Offers a direct
   // recovery shortcut instead of a dead end.
   const [isMissingCode, setIsMissingCode] = useState(false);
+
+  const exchangeAttempted = useRef(false);
 
   const firstParam = (
     value: string | string[] | undefined,
@@ -154,6 +158,16 @@ export default function AuthCallbackScreen() {
     let cancelled = false;
 
     const confirm = async () => {
+      // Single-shot: auth codes are single-use, so a second
+      // run (StrictMode remount, language switch mid-flow)
+      // must never re-exchange and burn a confusing error
+      // over a success.
+      if (exchangeAttempted.current) {
+        return;
+      }
+
+      exchangeAttempted.current = true;
+
       setStatus("working");
       setMessage("");
 
@@ -163,7 +177,7 @@ export default function AuthCallbackScreen() {
           setMessage(
             linkErrorDescription
               ? decodeParam(linkErrorDescription)
-              : "The confirmation link is invalid or has expired.",
+              : t("auth.callback.linkInvalid"),
           );
         }
         return;
@@ -177,7 +191,7 @@ export default function AuthCallbackScreen() {
           if (error) {
             setStatus("error");
             setMessage(
-              "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
+              t("auth.callback.linkInvalidResend"),
             );
           } else {
             // A PKCE code can also come from Google OAuth,
@@ -195,7 +209,7 @@ export default function AuthCallbackScreen() {
                 setIsOAuth(true);
                 setStatus("success");
                 setMessage(
-                  "Signed in with Google. Taking you to your dashboard.",
+                  t("auth.callback.signedInGoogle"),
                 );
                 return;
               }
@@ -208,7 +222,7 @@ export default function AuthCallbackScreen() {
             // routes to the dashboard on its own.
             setStatus("success");
             setMessage(
-              "Your email is confirmed. Taking you to your dashboard.",
+              t("auth.callback.confirmed"),
             );
           }
         }
@@ -241,7 +255,7 @@ export default function AuthCallbackScreen() {
           if (error) {
             setStatus("error");
             setMessage(
-              "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
+              t("auth.callback.linkInvalidResend"),
             );
           } else if (verifiedType === "recovery") {
             // The PASSWORD_RECOVERY listener above usually
@@ -253,7 +267,7 @@ export default function AuthCallbackScreen() {
           } else {
             setStatus("success");
             setMessage(
-              "Your email is confirmed. Taking you to your dashboard.",
+              t("auth.callback.confirmed"),
             );
           }
         }
@@ -278,7 +292,7 @@ export default function AuthCallbackScreen() {
           if (error) {
             setStatus("error");
             setMessage(
-              "Google sign-in was not completed. Please try again from the sign-in screen.",
+              t("auth.callback.googleIncomplete"),
             );
           } else {
             // Same session contract as the PKCE path; the
@@ -286,7 +300,7 @@ export default function AuthCallbackScreen() {
             setIsOAuth(true);
             setStatus("success");
             setMessage(
-              "Signed in with Google. Taking you to your dashboard.",
+              t("auth.callback.signedInGoogle"),
             );
           }
         }
@@ -306,7 +320,7 @@ export default function AuthCallbackScreen() {
         if (!cancelled && existing) {
           setStatus("success");
           setMessage(
-            "You are signed in. Taking you to your dashboard.",
+            t("auth.callback.signedIn"),
           );
           return;
         }
@@ -319,7 +333,7 @@ export default function AuthCallbackScreen() {
         setStatus("error");
         setIsMissingCode(true);
         setMessage(
-          "This link arrived without its verification code. If you were resetting your password, request a fresh recovery link — otherwise request a new confirmation email.",
+          t("auth.callback.linkMissing"),
         );
       }
     };
@@ -329,7 +343,7 @@ export default function AuthCallbackScreen() {
     return () => {
       cancelled = true;
     };
-  }, [code, tokenHash, otpType, linkError, linkErrorDescription]);
+  }, [t, code, tokenHash, otpType, linkError, linkErrorDescription]);
 
   return (
     <ScreenContainer>
@@ -337,11 +351,11 @@ export default function AuthCallbackScreen() {
         <AuthLogo />
 
         <AuthHeader
-          title={isOAuth ? "Google Sign-In" : "Email Confirmation"}
+          title={isOAuth ? t("auth.callback.oauthTitle") : t("auth.callback.title")}
           subtitle={
             isOAuth
-              ? "Finishing your Google sign-in."
-              : "Confirming your AdlaWatt account email."
+              ? t("auth.callback.oauthSubtitle")
+              : t("auth.callback.subtitle")
           }
         />
 
@@ -367,8 +381,8 @@ export default function AuthCallbackScreen() {
             <AppButton
               title={
                 status === "success"
-                  ? "Continue to Dashboard"
-                  : "Back to Sign In"
+                  ? t("auth.callback.continueToDashboard")
+                  : t("auth.callback.backToSignIn")
               }
               onPress={() =>
                 router.replace(
@@ -381,7 +395,7 @@ export default function AuthCallbackScreen() {
 
             {status === "error" && isMissingCode && (
               <AppButton
-                title="Go to Reset Password"
+                title={t("auth.callback.goToResetPassword")}
                 onPress={() =>
                   router.replace(Routes.FORGOT_PASSWORD)
                 }
@@ -391,8 +405,8 @@ export default function AuthCallbackScreen() {
         )}
 
         <AuthFooter
-          prompt="Need a new account?"
-          actionLabel="Create Account"
+          prompt={t("auth.callback.footerPrompt")}
+          actionLabel={t("auth.callback.footerAction")}
           onAction={() => router.replace(Routes.REGISTER)}
         />
 

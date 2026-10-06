@@ -45,6 +45,7 @@ import {
 import { OptionRow } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import { stopAlertVibration } from "@/services/alertVibration";
 
 type TimeFilter =
   | "All"
@@ -161,9 +162,13 @@ export default function NotificationsScreen() {
       }
 
       // Dedupe by content (title + description), keeping the
-      // newest row: rule refires can store near-identical rows
-      // and the list must never show the same entry twice.
-      const seen = new Set<string>();
+      // newest row — but only within a short window. Rule
+      // refires can store near-identical rows seconds apart
+      // and those must collapse; genuinely distinct
+      // occurrences (same text, well apart in time) render
+      // as separate rows so history is never silently lost.
+      const seen = new Map<string, number>();
+      const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
 
       const formattedNotifications: NotificationData[] =
         (data ?? []).map((notification) => {
@@ -203,12 +208,20 @@ export default function NotificationsScreen() {
         })
         .filter((notification) => {
           const key = `${notification.title}|||${notification.message}`;
+          // Iteration order is newest-first (query orders by
+          // created_at desc), so the stored stamp is always
+          // the newer occurrence.
+          const lastSeen = seen.get(key);
 
-          if (seen.has(key)) {
+          if (
+            lastSeen !== undefined &&
+            notification.timestamp >=
+              lastSeen - DEDUPE_WINDOW_MS
+          ) {
             return false;
           }
 
-          seen.add(key);
+          seen.set(key, notification.timestamp);
           return true;
         });
 
@@ -503,6 +516,11 @@ export default function NotificationsScreen() {
       if (error) {
         throw new Error(error.message);
       }
+
+      // Mark-as-read is the user's explicit silence switch:
+      // the update succeeded, so stop the alert buzz now
+      // rather than waiting on any re-check.
+      stopAlertVibration();
 
       retryLoad();
     } catch (thrown) {

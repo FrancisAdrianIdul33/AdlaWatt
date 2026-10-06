@@ -76,7 +76,7 @@ export default function ApplianceStatusBox({
         <Image
           source={imageSource}
           style={applianceCardStyles.image}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
 

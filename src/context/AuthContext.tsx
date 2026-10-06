@@ -4,12 +4,14 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase";
+import { getCurrentUserProfile } from "@/services/auth";
 
 // ============================================================
 // AUTH CONTEXT
@@ -28,6 +30,12 @@ interface AuthContextValue {
   user: User | null;
   isLoaded: boolean;
   isSignedIn: boolean;
+  // Cached profile username, loaded once per session so
+  // consumers (e.g. Navbar) never refetch per mount and
+  // the name never blinks on navigation. Null while
+  // signed out or before the first load resolves.
+  profileUsername: string | null;
+  refreshProfile: () => Promise<void>;
   // True between a PASSWORD_RECOVERY event and the password
   // actually being updated (or sign-out). Lets the auth
   // layout exempt /auth/forgot-password from its usual
@@ -55,9 +63,54 @@ export function AuthProvider({
   const [isRecoverySession, setIsRecoverySession] =
     useState(false);
 
+  const [profileUsername, setProfileUsername] =
+    useState<string | null>(null);
+
+  // Serializes overlapping loads (sign-in storm, StrictMode
+  // remount): only the latest request may write.
+  const profileRequestId = useRef(0);
+
   const clearRecoverySession = useCallback(() => {
     setIsRecoverySession(false);
   }, []);
+
+  const loadProfile = useCallback(
+    async (hasSession: boolean) => {
+      const requestId = (profileRequestId.current += 1);
+
+      if (!hasSession) {
+        setProfileUsername(null);
+        return;
+      }
+
+      try {
+        const profile = await getCurrentUserProfile();
+
+        if (
+          profileRequestId.current !== requestId
+        ) {
+          return;
+        }
+
+        if (profile.success && profile.username) {
+          setProfileUsername(profile.username);
+        } else {
+          setProfileUsername(null);
+        }
+      } catch {
+        if (
+          profileRequestId.current === requestId
+        ) {
+          setProfileUsername(null);
+        }
+      }
+    },
+    [],
+  );
+
+  const refreshProfile = useCallback(async () => {
+    await loadProfile(true);
+  }, [loadProfile]);
 
   const refresh = useCallback(async () => {
     const {
@@ -66,7 +119,8 @@ export function AuthProvider({
 
     setSession(current);
     setIsLoaded(true);
-  }, []);
+    await loadProfile(current !== null);
+  }, [loadProfile]);
 
   useEffect(() => {
     let mounted = true;
@@ -77,6 +131,7 @@ export function AuthProvider({
         if (mounted) {
           setSession(current);
           setIsLoaded(true);
+          void loadProfile(current !== null);
         }
       })
       .catch(() => {
@@ -98,6 +153,7 @@ export function AuthProvider({
 
           setSession(nextSession);
           setIsLoaded(true);
+          void loadProfile(nextSession !== null);
         }
       },
     );
@@ -106,9 +162,11 @@ export function AuthProvider({
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadProfile]);
 
   const signOut = useCallback(async () => {
+    profileRequestId.current += 1;
+    setProfileUsername(null);
     await supabase.auth.signOut();
     setSession(null);
     setIsRecoverySession(false);
@@ -124,6 +182,8 @@ export function AuthProvider({
       clearRecoverySession,
       refresh,
       signOut,
+      profileUsername,
+      refreshProfile,
     }),
     [
       session,
@@ -132,6 +192,8 @@ export function AuthProvider({
       clearRecoverySession,
       refresh,
       signOut,
+      profileUsername,
+      refreshProfile,
     ],
   );
 

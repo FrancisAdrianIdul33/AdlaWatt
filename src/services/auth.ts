@@ -12,6 +12,7 @@ import {
   logProfile,
 } from "@/services/activityLogService";
 import { Routes } from "@/constants/routes";
+import i18n from "@/services/i18n";
 
 // ============================================================
 // SHARED AUTH HELPERS
@@ -109,7 +110,7 @@ export async function resendConfirmation(email: string) {
     if (!cleanEmail) {
         return {
             success: false,
-            error: "Please enter your email address.",
+            error: i18n.t("validation.emailRequired"),
         };
     }
 
@@ -120,7 +121,7 @@ export async function resendConfirmation(email: string) {
         return {
             success: false,
             throttled: true,
-            error: "A confirmation email was sent recently. Please wait before requesting another.",
+            error: i18n.t("common.confirmationThrottled"),
         };
     }
 
@@ -200,14 +201,14 @@ export async function requestPasswordReset(email: string) {
     if (!cleanEmail) {
         return {
             success: false,
-            error: "Please enter your email address.",
+            error: i18n.t("validation.emailRequired"),
         };
     }
 
     if (!EMAIL_PATTERN.test(cleanEmail)) {
         return {
             success: false,
-            error: "Please enter a valid email address.",
+            error: i18n.t("validation.emailInvalid"),
         };
     }
 
@@ -218,7 +219,7 @@ export async function requestPasswordReset(email: string) {
         return {
             success: false,
             throttled: true,
-            error: "A recovery email was sent recently. Please wait before requesting another.",
+            error: i18n.t("auth.forgot.recoveryThrottled"),
         };
     }
 
@@ -234,14 +235,14 @@ export async function requestPasswordReset(email: string) {
             return {
                 success: false,
                 throttled: true,
-                error: "Too many requests. Please wait a moment and try again.",
+                error: i18n.t("common.tooManyRequests"),
             };
         }
 
         if (isNetworkMessage(error.message)) {
             return {
                 success: false,
-                error: "No connection. Check your internet and try again.",
+                error: i18n.t("common.noConnection"),
             };
         }
 
@@ -249,7 +250,7 @@ export async function requestPasswordReset(email: string) {
         // address is registered (see contract above).
         return {
             success: false,
-            error: "Unable to send a recovery email right now. Please try again.",
+            error: i18n.t("auth.forgot.recoveryFailed"),
         };
     }
 
@@ -260,14 +261,14 @@ export async function updateRecoveryPassword(password: string) {
     if (!password || password.trim().length < 8) {
         return {
             success: false,
-            error: "Password must be at least 8 characters.",
+            error: i18n.t("validation.passwordShort"),
         };
     }
 
     if (password.length > 72) {
         return {
             success: false,
-            error: "Password must not exceed 72 characters.",
+            error: i18n.t("validation.passwordLong"),
         };
     }
 
@@ -280,20 +281,20 @@ export async function updateRecoveryPassword(password: string) {
                 return {
                     success: false,
                     expired: true,
-                    error: "This recovery link is invalid or has expired. Request a new one.",
+                    error: i18n.t("auth.forgot.recoveryExpired"),
                 };
             }
 
             if (isRateLimitMessage(error.message)) {
                 return {
                     success: false,
-                    error: "Too many requests. Please wait a moment and try again.",
+                    error: i18n.t("common.tooManyRequests"),
                 };
             }
 
             return {
                 success: false,
-                error: "Unable to update your password right now. Please try again.",
+                error: i18n.t("auth.forgot.recoveryUpdateFailed"),
             };
         }
 
@@ -307,7 +308,7 @@ export async function updateRecoveryPassword(password: string) {
             return {
                 success: false,
                 expired: true,
-                error: "This recovery link is invalid or has expired. Request a new one.",
+                error: i18n.t("auth.forgot.recoveryExpired"),
             };
         }
 
@@ -315,7 +316,7 @@ export async function updateRecoveryPassword(password: string) {
 
         return {
             success: false,
-            error: "Unable to update your password right now. Please try again.",
+            error: i18n.t("auth.forgot.recoveryUpdateFailed"),
         };
     }
 }
@@ -334,21 +335,21 @@ export async function registerUser(
         if (!cleanUsername) {
             return {
                 success: false,
-                error: "Please enter a username.",
+                error: i18n.t("validation.usernameRequired"),
             };
         }
 
         if (cleanUsername.length < 3) {
             return {
                 success: false,
-                error: "Username must be at least 3 characters.",
+                error: i18n.t("validation.usernameShort"),
             };
         }
 
         if (cleanUsername.length > 30) {
             return {
                 success: false,
-                error: "Username must not exceed 30 characters.",
+                error: i18n.t("validation.usernameLong"),
             };
         }
 
@@ -356,21 +357,21 @@ export async function registerUser(
             return {
                 success: false,
                 error:
-                    "Username can only contain letters, numbers, and underscores.",
+                    i18n.t("validation.usernameChars"),
             };
         }
 
         if (!cleanEmail) {
             return {
                 success: false,
-                error: "Please enter your email address.",
+                error: i18n.t("validation.emailRequired"),
             };
         }
 
         if (!EMAIL_PATTERN.test(cleanEmail)) {
             return {
                 success: false,
-                error: "Please enter a valid email address.",
+                error: i18n.t("validation.emailInvalid"),
             };
         }
 
@@ -378,14 +379,14 @@ export async function registerUser(
         if (!password || password.trim().length < 8) {
             return {
                 success: false,
-                error: "Password must be at least 8 characters.",
+                error: i18n.t("validation.passwordShort"),
             };
         }
 
         if (password.length > 72) {
             return {
                 success: false,
-                error: "Password must not exceed 72 characters.",
+                error: i18n.t("validation.passwordLong"),
             };
         }
 
@@ -393,7 +394,7 @@ export async function registerUser(
         if (!termsAgreed) {
             return {
                 success: false,
-                error: "Please agree to the Terms and Conditions.",
+                error: i18n.t("validation.termsRequired"),
             };
         }
 
@@ -427,14 +428,14 @@ export async function registerUser(
             if (isAlreadyRegisteredMessage(authError.message)) {
                 return {
                     success: false,
-                    error: "Unable to create your account with these details. Try signing in instead.",
+                    error: i18n.t("auth.register.accountTaken"),
                 };
             }
 
             if (isRateLimitMessage(authError.message)) {
                 return {
                     success: false,
-                    error: "Too many attempts. Please wait a moment and try again.",
+                    error: i18n.t("auth.register.tooManyAttempts"),
                 };
             }
 
@@ -447,7 +448,7 @@ export async function registerUser(
         if (!authData.user) {
             return {
                 success: false,
-                error: "Account could not be created.",
+                error: i18n.t("auth.register.accountNotCreated"),
             };
         }
 
@@ -479,7 +480,7 @@ export async function registerUser(
 
         return {
             success: false,
-            error: "Unable to create your account. Please try again.",
+            error: i18n.t("auth.register.accountFailedNow"),
         };
     }
 }
@@ -493,7 +494,7 @@ export async function getCurrentUserProfile() {
         if (!user) {
             return {
                 success: false,
-                error: "No authenticated user found.",
+                error: i18n.t("common.authRequired"),
             };
         }
 
@@ -514,7 +515,7 @@ export async function getCurrentUserProfile() {
 
             return {
                 success: false,
-                error: "Unable to load your account information.",
+                error: i18n.t("common.accountLoadFailed"),
             };
         }
 
@@ -535,7 +536,7 @@ export async function getCurrentUserProfile() {
         if (isAuthSessionMissingError(error)) {
             return {
                 success: false,
-                error: "No authenticated user found.",
+                error: i18n.t("common.authRequired"),
             };
         }
 
@@ -547,7 +548,7 @@ export async function getCurrentUserProfile() {
         return {
             success: false,
             error:
-                "Unable to load your account information.",
+                i18n.t("common.accountLoadFailed"),
         };
     }
 }
@@ -563,7 +564,7 @@ export async function loginUser(
             return {
                 success: false,
                 error:
-                    "Please enter your username or email and password.",
+                    i18n.t("validation.identifierRequired"),
             };
         }
 
@@ -590,7 +591,7 @@ export async function loginUser(
                 return {
                     success: false,
                     kind: "invalid" as const,
-                    error: "The username or password is incorrect.",
+                    error: i18n.t("auth.login.invalidCredentials"),
                 };
             }
 
@@ -598,7 +599,7 @@ export async function loginUser(
                 return {
                     success: false,
                     kind: "invalid" as const,
-                    error: "The username or password is incorrect.",
+                    error: i18n.t("auth.login.invalidCredentials"),
                 };
             }
 
@@ -651,7 +652,7 @@ export async function loginUser(
                     emailNotConfirmed: true,
                     email,
                     confirmationResent,
-                    error: "Please confirm your email address before signing in. Check your inbox for the confirmation link.",
+                    error: i18n.t("auth.login.emailNotConfirmed"),
                 };
             }
 
@@ -659,7 +660,7 @@ export async function loginUser(
                 return {
                     success: false,
                     kind: "rate-limited" as const,
-                    error: "Too many sign-in attempts. Please wait a moment and try again.",
+                    error: i18n.t("auth.login.tooManyAttempts"),
                 };
             }
 
@@ -667,14 +668,14 @@ export async function loginUser(
                 return {
                     success: false,
                     kind: "network" as const,
-                    error: "No connection. Check your internet and try again.",
+                    error: i18n.t("common.noConnection"),
                 };
             }
 
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "The username or password is incorrect.",
+                error: i18n.t("auth.login.invalidCredentials"),
             };
         }
 
@@ -682,7 +683,7 @@ export async function loginUser(
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "Unable to create a login session.",
+                error: i18n.t("auth.login.sessionFailed"),
             };
         }
 
@@ -702,7 +703,7 @@ export async function loginUser(
             success: false,
             kind: "unknown" as const,
             error:
-                "Unable to sign in right now. Please try again.",
+                i18n.t("auth.login.sessionFailedNow"),
         };
     }
 }
@@ -785,7 +786,7 @@ export async function signInWithGoogle() {
                 return {
                     success: false,
                     kind: "rate-limited" as const,
-                    error: "Too many sign-in attempts. Please wait a moment and try again.",
+                    error: i18n.t("auth.login.tooManyAttempts"),
                 };
             }
 
@@ -793,14 +794,14 @@ export async function signInWithGoogle() {
                 return {
                     success: false,
                     kind: "network" as const,
-                    error: "No connection. Check your internet and try again.",
+                    error: i18n.t("common.noConnection"),
                 };
             }
 
             return {
                 success: false,
                 kind: "unknown" as const,
-                error: "Google sign-in is unavailable right now. Please try again.",
+                error: i18n.t("auth.login.googleUnavailable"),
             };
         }
 
@@ -808,7 +809,7 @@ export async function signInWithGoogle() {
             return {
                 success: false,
                 kind: "unknown" as const,
-                error: "Google sign-in is unavailable right now. Please try again.",
+                error: i18n.t("auth.login.googleUnavailable"),
             };
         }
 
@@ -844,7 +845,7 @@ export async function signInWithGoogle() {
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "Google sign-in was not completed. Please try again.",
+                error: i18n.t("auth.login.googleIncomplete"),
             };
         }
 
@@ -854,7 +855,7 @@ export async function signInWithGoogle() {
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "Google sign-in was not completed. Please try again.",
+                error: i18n.t("auth.login.googleIncomplete"),
             };
         }
 
@@ -870,7 +871,7 @@ export async function signInWithGoogle() {
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "Google sign-in was not completed. Please try again.",
+                error: i18n.t("auth.login.googleIncomplete"),
             };
         }
 
@@ -878,7 +879,7 @@ export async function signInWithGoogle() {
             return {
                 success: false,
                 kind: "invalid" as const,
-                error: "Unable to create a login session.",
+                error: i18n.t("auth.login.sessionFailed"),
             };
         }
 
@@ -896,7 +897,7 @@ export async function signInWithGoogle() {
         return {
             success: false,
             kind: "unknown" as const,
-            error: "Unable to sign in with Google right now. Please try again.",
+            error: i18n.t("auth.login.googleFailed"),
         };
     }
 }

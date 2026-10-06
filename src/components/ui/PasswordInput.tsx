@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useAppColors";
 import { Field, Touch } from "@/constants/sizing";
 import { useTypography } from "@/hooks/useTypography";
+import { useTranslation } from "react-i18next";
 
 interface PasswordInputProps {
   label?: string;
@@ -33,6 +34,7 @@ interface PasswordInputProps {
   autoComplete?: TextInputProps["autoComplete"];
   inputRef?: Ref<TextInput>;
   bottomGap?: number;
+  editable?: boolean;
 }
 
 // ============================================================
@@ -47,17 +49,25 @@ interface PasswordInputProps {
 // ============================================================
 
 export default function PasswordInput({
-  label = "Password",
+  label,
   value,
   onChangeText,
-  placeholder = "Enter your password",
+  placeholder,
   error,
   returnKeyType,
   onSubmitEditing,
   autoComplete,
   inputRef,
   bottomGap,
+  editable = true,
 }: PasswordInputProps) {
+  const { t } = useTranslation();
+
+  const resolvedLabel =
+    label ?? t("passwordInput.labelPassword");
+  const resolvedPlaceholder =
+    placeholder ?? t("passwordInput.placeholderPassword");
+
   const [showPassword, setShowPassword] = useState(false);
   // 5s visibility window: remaining seconds shown under
   // the field while the password is visible.
@@ -114,7 +124,7 @@ export default function PasswordInput({
   return (
     <View style={styles.container}>
       <AppText variant="body" style={styles.label}>
-        {label}
+        {resolvedLabel}
       </AppText>
 
       <View style={styles.field}>
@@ -122,11 +132,12 @@ export default function PasswordInput({
           ref={inputRef}
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoCorrect={false}
           allowFontScaling={false}
+          editable={editable}
           placeholderTextColor={colors.textSecondary}
           autoComplete={autoComplete}
           returnKeyType={returnKeyType}
@@ -148,13 +159,15 @@ export default function PasswordInput({
           accessibilityRole="button"
           accessibilityLabel={
             showPassword
-              ? `Hide password, auto-hides in ${remaining} seconds`
-              : "Show password for 5 seconds"
+              ? t("passwordInput.hideA11y", {
+                  seconds: remaining,
+                })
+              : t("passwordInput.showA11y")
           }
           accessibilityHint={
             showPassword
-              ? "Password is visible and will hide automatically"
-              : "Shows password for 5 seconds"
+              ? t("passwordInput.hideHint")
+              : t("passwordInput.showHint")
           }
           hitSlop={8}
         >
@@ -173,10 +186,14 @@ export default function PasswordInput({
       {showPassword ? (
         <View
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`Password visible, hides in ${remaining} seconds`}
+          accessibilityLabel={t("passwordInput.visibleLive", {
+            seconds: remaining,
+          })}
         >
           <AppText variant="caption" style={styles.hint}>
-            Showing password… hides in {remaining}s
+            {t("passwordInput.visibleHint", {
+              seconds: remaining,
+            })}
           </AppText>
           <View style={styles.timerTrack}>
             <View

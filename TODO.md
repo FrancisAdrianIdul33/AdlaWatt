@@ -13,14 +13,23 @@
   - Signed-in bounce exemption while a recovery link verifies
 - [x] Login: Password visibility should only be available for 5 seconds — **Resolved**
   - `PasswordInput` eye toggle with 5s auto-hide, live countdown, timer bar, screen-reader labels
-- [ ] Overall: Display only the toggle that has content
+- [x] Overall: Display only the toggle that has content — **Resolved**
+  - Appliances status filter renders only segments holding appliances (Caution → Advisable → Not Advisable auto-pick)
+  - Empty active segment auto-corrects on add/archive/delete/battery verdict shifts
+  - Empty appliance list keeps all three segments on Advisable
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
 - [ ] Navbar Upper: Display username
-- [ ] Appliances: Add image upload inside the Custom Appliance box with a media picker modal
+- [x] Appliances: Add image upload inside the Custom Appliance box with a media picker modal — **Resolved**
+  - Public `appliance-images` bucket (per-user write scope) + `appliances.image_url` column
+  - Library-only `MediaPickerModal` on the system `DropdownModal` shell (square crop, 5MB validation, permission-denied copy)
+  - Photo preview in Add/Edit custom form (adlawatt icon stays the default for every custom); upload on save, orphan cleanup on replace/remove/delete
+  - Box 3-dot camera button wired to the same picker; photos thread to modal list, dashboard list, and recommendation card
 - [ ] Analytics: Add more graphs and charts
   - Note: Critical
-- [ ] Preferences: Add phone vibration for alert notifications
-  - Vibration should continue until the notification is marked as done
+- [x] Preferences: Add phone vibration for alert notifications — **Resolved**
+  - Safe buzz-pause rhythm (400ms buzz / 2s rest; iOS re-buzz interval) that cannot escalate or overheat the motor
+  - Buzz starts on unread alerts (mount check + realtime inserts) and stops only on mark-as-read, zero unread, toggle OFF, or sign-out
+  - Menu Vibration row now persisted (default ON) instead of dead local state
 - [ ] Preferences: Add multi-language display
 - [ ] User Manual: Add manual contents inside its screen
 

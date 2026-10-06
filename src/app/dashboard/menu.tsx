@@ -30,13 +30,14 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control, Touch } from "@/constants/sizing";
+import { Control } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 import {
   getCurrentUserProfile,
   updateAccount,
 } from "@/services/auth";
+import PasswordInput from "@/components/ui/PasswordInput";
 import {
   logAuth,
   logProfile,
@@ -46,6 +47,7 @@ import {
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import type { ThemeOption } from "@/constants/colors";
 import { useTypography } from "@/hooks/useTypography";
@@ -56,8 +58,22 @@ import {
 } from "@/services/typography";
 import {
   loadCachedEmailNotifications,
+  loadLanguageSetting,
+  loadVibrationSetting,
   saveCachedEmailNotifications,
+  saveVibrationSetting,
 } from "@/services/settings";
+import {
+  ACTIVE_LANGUAGES,
+  COMING_SOON_LANGUAGES,
+  setAppLanguage,
+  type AppLanguage,
+} from "@/services/i18n";
+import { useTranslation } from "react-i18next";
+import {
+  stopAlertVibration,
+  syncAlertVibration,
+} from "@/services/alertVibration";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -100,15 +116,6 @@ export default function SettingsScreen() {
   const [currentPassword, setCurrentPassword] =
     useState("");
 
-  const [showCurrentPassword, setShowCurrentPassword] =
-    useState(false);
-
-  const [showNewPassword, setShowNewPassword] =
-    useState(false);
-
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
-
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
 
@@ -140,11 +147,77 @@ export default function SettingsScreen() {
   const [fontFamily, setFontFamily] =
     useState<FontFamilyOption>("Inter");
 
-  const [language, setLanguage] =
-    useState("English");
+  const [languageCode, setLanguageCode] =
+    useState<AppLanguage>("en");
+
+  // Functional language switch: persists, applies app-wide
+  // instantly via i18next, and survives restarts.
+  const { t: tMenu, i18n: menuI18n } = useTranslation();
+
+  useEffect(() => {
+    let active = true;
+
+    loadLanguageSetting().then((loaded) => {
+      if (active) {
+        setLanguageCode(loaded);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const current = menuI18n.language;
+
+    setLanguageCode(
+      current === "fil" || current === "ceb"
+        ? current
+        : "en",
+    );
+  }, [menuI18n.language]);
+
+  const handleLanguageSelect = (code: AppLanguage) => {
+    setLanguageOpen(false);
+    void setAppLanguage(code);
+  };
+
+  const languageLabel =
+    ACTIVE_LANGUAGES.find(
+      (item) => item.code === languageCode,
+    )?.label ?? "English";
 
   const [vibration, setVibration] =
     useState(true);
+
+  // Persisted device preference (default ON). Turning it
+  // OFF silences an active buzz at once; turning it back ON
+  // re-syncs so waiting unread alerts buzz again.
+  useEffect(() => {
+    let active = true;
+
+    loadVibrationSetting().then((loaded) => {
+      if (active) {
+        setVibration(loaded);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleVibrationToggle = (next: boolean) => {
+    setVibration(next);
+    void saveVibrationSetting(next);
+
+    if (next) {
+      void syncAlertVibration();
+    } else {
+      stopAlertVibration();
+    }
+  };
 
   // Global per-user alert-email switch (server column,
   // default ON). Drafted like typography: flips instantly,
@@ -194,6 +267,9 @@ export default function SettingsScreen() {
   } = useTypography();
 
   const colors = useAppColors();
+  // Pushes renames into the AuthContext session cache so
+  // the Navbar username updates without any navigation.
+  const { refreshProfile } = useAuth();
   const styles = useMemo(
     () => getStyles(colors),
     [colors],
@@ -395,10 +471,6 @@ export default function SettingsScreen() {
     setWarning("");
     setConfirmationWarning("");
 
-    setShowCurrentPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
-
     setIsEditingAccount(true);
   };
 
@@ -416,10 +488,6 @@ export default function SettingsScreen() {
 
     setWarning("");
     setConfirmationWarning("");
-
-    setShowCurrentPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
 
     setConfirmationVisible(false);
     setIsEditingAccount(false);
@@ -655,6 +723,11 @@ export default function SettingsScreen() {
       setUsername(updatedUsername);
       setEmail(updatedEmail);
 
+      // Fire-and-forget: the Navbar reads the session
+      // cache, so push the rename there without blocking
+      // the confirmation alert on a slow fetch.
+      void refreshProfile().catch(() => {});
+
       setEditUsername(updatedUsername);
       setEditEmail(updatedEmail);
 
@@ -664,10 +737,6 @@ export default function SettingsScreen() {
 
       setWarning("");
       setConfirmationWarning("");
-
-      setShowCurrentPassword(false);
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
 
       setConfirmationVisible(false);
       setIsEditingAccount(false);
@@ -1170,124 +1239,28 @@ export default function SettingsScreen() {
                   </View>
 
                   {/* New Password */}
-                  <View style={styles.inputGroup}>
-                    <AppText
-                      variant="caption"
-                      style={styles.inputLabel}
-                    >
-                      New Password
-                    </AppText>
-
-                    <View
-                      style={
-                        styles.passwordInputContainer
-                      }
-                    >
-                      <TextInput
-                        value={newPassword}
-                        onChangeText={(text) => {
-                          setNewPassword(text);
-                          setWarning("");
-                        }}
-                        allowFontScaling={false}
-                        style={[
-                          styles.passwordInput,
-                          inputFontStyle,
-                        ]}
-                        placeholder="Leave blank to keep current"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        secureTextEntry={
-                          !showNewPassword
-                        }
-                      />
-
-                      <Pressable
-                        onPress={() =>
-                          setShowNewPassword(
-                            (current) =>
-                              !current,
-                          )
-                        }
-                        style={
-                          styles.eyeButton
-                        }
-                      >
-                        <Ionicons
-                          name={
-                            showNewPassword
-                              ? "eye-outline"
-                              : "eye-off-outline"
-                          }
-                          size={22}
-                          color={colors.text}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+                  <PasswordInput
+                    label="New Password"
+                    value={newPassword}
+                    onChangeText={(text) => {
+                      setNewPassword(text);
+                      setWarning("");
+                    }}
+                    placeholder="Leave blank to keep current"
+                    autoComplete="password-new"
+                  />
 
                   {/* Confirm New Password */}
-                  <View style={styles.inputGroup}>
-                    <AppText
-                      variant="caption"
-                      style={styles.inputLabel}
-                    >
-                      Confirm New Password
-                    </AppText>
-
-                    <View
-                      style={
-                        styles.passwordInputContainer
-                      }
-                    >
-                      <TextInput
-                        value={
-                          confirmNewPassword
-                        }
-                        onChangeText={(text) => {
-                          setConfirmNewPassword(
-                            text,
-                          );
-                          setWarning("");
-                        }}
-                        allowFontScaling={false}
-                        style={[
-                          styles.passwordInput,
-                          inputFontStyle,
-                        ]}
-                        placeholder="Confirm new password"
-                        placeholderTextColor={
-                          colors.textSecondary
-                        }
-                        secureTextEntry={
-                          !showConfirmPassword
-                        }
-                      />
-
-                      <Pressable
-                        onPress={() =>
-                          setShowConfirmPassword(
-                            (current) =>
-                              !current,
-                          )
-                        }
-                        style={
-                          styles.eyeButton
-                        }
-                      >
-                        <Ionicons
-                          name={
-                            showConfirmPassword
-                              ? "eye-outline"
-                              : "eye-off-outline"
-                          }
-                          size={22}
-                          color={colors.text}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+                  <PasswordInput
+                    label="Confirm New Password"
+                    value={confirmNewPassword}
+                    onChangeText={(text) => {
+                      setConfirmNewPassword(text);
+                      setWarning("");
+                    }}
+                    placeholder="Confirm new password"
+                    autoComplete="password-new"
+                  />
 
                   {/* Warning */}
                   {warning ? (
@@ -1561,8 +1534,13 @@ export default function SettingsScreen() {
                     setFontFamilyOpen(false);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Choose language"
-                  accessibilityHint={`Current: ${language}`}
+                  accessibilityLabel={tMenu(
+                    "menu.language.chooseLanguage",
+                  )}
+                  accessibilityHint={tMenu(
+                    "menu.language.current",
+                    { language: languageLabel },
+                  )}
                   style={
                     styles.dropdownInput
                   }
@@ -1572,7 +1550,7 @@ export default function SettingsScreen() {
                       styles.dropdownInputText
                     }
                   >
-                    {language}
+                    {languageLabel}
                   </AppText>
 
                   <Ionicons
@@ -1608,7 +1586,7 @@ export default function SettingsScreen() {
 
                 {renderToggle(
                   vibration,
-                  setVibration,
+                  handleVibrationToggle,
                 )}
               </View>
 
@@ -1717,24 +1695,30 @@ export default function SettingsScreen() {
 
         <DropdownModal
           visible={languageOpen}
-          title="Language"
+          title={tMenu("menu.language.title")}
           onClose={() =>
             setLanguageOpen(false)
           }
         >
-          {[
-            "English",
-            "Cebuano (Bisaya)",
-            "Tagalog",
-          ].map((item) => (
+          {ACTIVE_LANGUAGES.map((item) => (
+            <RadioOptionRow
+              key={item.code}
+              label={item.label}
+              selected={languageCode === item.code}
+              onPress={() => {
+                handleLanguageSelect(item.code);
+              }}
+            />
+          ))}
+
+          {COMING_SOON_LANGUAGES.map((item) => (
             <RadioOptionRow
               key={item}
               label={item}
-              selected={language === item}
-              onPress={() => {
-                setLanguage(item);
-                setLanguageOpen(false);
-              }}
+              selected={false}
+              onPress={() => {}}
+              disabled
+              note={tMenu("menu.language.comingSoon")}
             />
           ))}
         </DropdownModal>
@@ -1867,68 +1851,17 @@ export default function SettingsScreen() {
               </View>
             ) : null}
 
-            <View style={styles.inputGroup}>
-              <AppText
-                variant="caption"
-                style={styles.inputLabel}
-              >
-                Current Password
-              </AppText>
-
-              <View
-                style={
-                  styles.passwordInputContainer
-                }
-              >
-                <TextInput
-                  value={currentPassword}
-                  onChangeText={(text) => {
-                    setCurrentPassword(text);
-                    setConfirmationWarning("");
-                  }}
-                  allowFontScaling={false}
-                  style={[
-                    styles.passwordInput,
-                    inputFontStyle,
-                  ]}
-                  placeholder="Enter current password"
-                  placeholderTextColor={
-                    colors.textSecondary
-                  }
-                  secureTextEntry={
-                    !showCurrentPassword
-                  }
-                  editable={
-                    !confirmingAccountUpdate
-                  }
-                />
-
-                <Pressable
-                  onPress={() =>
-                    setShowCurrentPassword(
-                      (current) =>
-                        !current,
-                    )
-                  }
-                  style={
-                    styles.eyeButton
-                  }
-                  disabled={
-                    confirmingAccountUpdate
-                  }
-                >
-                  <Ionicons
-                    name={
-                      showCurrentPassword
-                        ? "eye-outline"
-                        : "eye-off-outline"
-                    }
-                    size={22}
-                    color={colors.text}
-                  />
-                </Pressable>
-              </View>
-            </View>
+            <PasswordInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={(text) => {
+                setCurrentPassword(text);
+                setConfirmationWarning("");
+              }}
+              placeholder="Enter current password"
+              autoComplete="current-password"
+              editable={!confirmingAccountUpdate}
+            />
 
             <View style={styles.actionRow}>
               <Pressable
@@ -2163,31 +2096,6 @@ const getStyles = (colors: AppColors) =>
     paddingHorizontal: 14,
     color: colors.text,
     fontSize: 15,
-  },
-
-  passwordInputContainer: {
-    minHeight: 48,
-    backgroundColor: colors.glass.white,
-    borderWidth: 2,
-    borderColor: colors.error,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  passwordInput: {
-    flex: 1,
-    minHeight: Control.button,
-    paddingHorizontal: 14,
-    color: colors.text,
-    fontSize: 15,
-  },
-
-  eyeButton: {
-    width: Touch.target,
-    height: Touch.target,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   /* ================= PREFERENCES ================= */

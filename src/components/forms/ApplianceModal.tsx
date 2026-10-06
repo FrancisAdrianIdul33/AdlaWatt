@@ -19,12 +19,20 @@ import {
   applianceCardGrid,
 } from "@/components/forms/applianceCard";
 import CustomApplianceModal from "@/components/forms/CustomApplianceModal";
+import MediaPickerModal, {
+  type PickedPhoto,
+} from "@/components/forms/MediaPickerModal";
+import {
+  deleteAppliancePhotoByUrl,
+  uploadAppliancePhoto,
+} from "@/services/appliancePhotoService";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
 import {
+  CATALOG_IMAGES,
   CUSTOM_AREA,
   GIVEN_CATALOG,
   type CatalogItem,
@@ -48,6 +56,9 @@ type Appliance = {
   name: string;
   watts: string;
   area: string;
+  // Stored public photo URL. Null/undefined renders the
+  // bundled adlawatt icon — the default for every custom.
+  imageUrl?: string | null;
 };
 
 type ApplianceModalProps = {
@@ -189,6 +200,25 @@ export default function ApplianceModal({
   const [customWatts, setCustomWatts] =
     useState("");
 
+  // Live interval validity: the strict twin inputs admit
+  // only well-formed sides, but an interval can still be
+  // incomplete ("12-") or reversed ("720-129"). The confirm
+  // button stays disabled until the whole interval passes
+  // the exact submit rules below.
+  const customWattsValid = useMemo(() => {
+    const text = customWatts.trim();
+
+    if (
+      !/^\d+(\.\d{1,2})?\s*-\s*\d+(\.\d{1,2})?$/.test(
+        text,
+      )
+    ) {
+      return false;
+    }
+
+    return parseWattInterval(text) !== null;
+  }, [customWatts]);
+
   const [customError, setCustomError] =
     useState("");
 
@@ -202,6 +232,26 @@ export default function ApplianceModal({
 
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
+
+  // ---- Custom photo draft (add/edit form) ----
+  // Local pick (fresh from the library) wins over the
+  // stored URL for the preview. The stored URL is swapped
+  // into the row on confirm; the pre-edit original is kept
+  // separately so a replaced object can be deleted.
+  const [customPhotoLocal, setCustomPhotoLocal] =
+    useState<PickedPhoto | null>(null);
+
+  const [customPhotoUrl, setCustomPhotoUrl] =
+    useState<string | null>(null);
+
+  const [customPhotoOriginalUrl, setCustomPhotoOriginalUrl] =
+    useState<string | null>(null);
+
+  // True while a form photo upload runs (confirm dims).
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  // Media picker visibility. Only the add/edit form picks
+  // photos now that the box camera cell is gone.
 
   const [isReset, setIsReset] =
     useState(false);
@@ -296,7 +346,7 @@ export default function ApplianceModal({
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, image_url",
       )
       .eq("user_id", user.id)
       .order("appliance_name");
@@ -359,6 +409,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }));
 
     const archived: Appliance[] = rows
@@ -375,6 +429,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }));
 
     const selectedCustomIds = rows
@@ -436,7 +494,7 @@ export default function ApplianceModal({
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, image_url",
       )
       .eq("user_id", user.id)
       .eq("type", "custom")
@@ -468,6 +526,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }),
     );
 
@@ -516,6 +578,7 @@ export default function ApplianceModal({
     setSearchText("");
     setArchiveSearchText("");
     setLayer(1);
+    setOpenMenuId(null);
     setArchivedAppliances([]);
     setIsLoadingCustoms(false);
     setEditModalVisible(false);
@@ -582,39 +645,11 @@ export default function ApplianceModal({
     setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
-    // Catalog picks are deleted; Layer 1 customs move to Layer 2
-    // (archive = true through RPC/trigger). Hide prop-merged
-    // customs too, otherwise the prop fallback would resurrect
-    // them after reset.
-    const resetVisibleCustomIds = [
-      ...new Set([
-        ...appliances.map((item) => item.id),
-        ...selectedAppliances
-          .filter((item) => item.area === CUSTOM_AREA)
-          .map((item) => item.id),
-      ]),
-    ];
-    setDismissedCustomIds((current) => [
-      ...new Set([...current, ...resetVisibleCustomIds]),
-    ]);
-    const movedToArchive = appliances;
-    setAppliances([]);
-    setArchivedAppliances((current) => {
-      const byId = new Map(
-        current.map((item) => [item.id, item]),
-      );
-      for (const item of movedToArchive) {
-        if (!byId.has(item.id)) {
-          byId.set(item.id, item);
-        }
-      }
-      return [...byId.values()].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-    });
-    setArchivedCount(
-      (current) => current + movedToArchive.length,
-    );
+    // Selection-only reset (RPC clears given rows and flips
+    // customs to selection=false without touching archive):
+    // Layer 1 customs stay visible unticked, the archived
+    // list is untouched, so there is nothing to move or
+    // dismiss here.
 
     logAppliance.selectionReset();
   };
@@ -716,6 +751,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setEditingCustom(null);
     setEditModalVisible(false);
   };
@@ -729,6 +767,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(true);
   };
 
@@ -736,6 +777,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(false);
   };
 
@@ -814,6 +858,36 @@ export default function ApplianceModal({
       return;
     }
 
+    // Photo first: a failed upload aborts the add so no
+    // row is ever created pointing at a missing object.
+    let imageUrl: string | null = null;
+
+    if (customPhotoLocal) {
+      setPhotoBusy(true);
+
+      const upload = await uploadAppliancePhoto(
+        user.id,
+        customPhotoLocal.uri,
+        customPhotoLocal.mimeType,
+      );
+
+      setPhotoBusy(false);
+
+      if (
+        !upload.success ||
+        !("url" in upload) ||
+        !upload.url
+      ) {
+        setCustomError(
+          ("error" in upload && upload.error) ||
+            "Unable to upload that photo. Please try again.",
+        );
+        return;
+      }
+
+      imageUrl = upload.url;
+    }
+
     const { data, error } = await supabase
       .from("appliances")
       .insert({
@@ -822,13 +896,14 @@ export default function ApplianceModal({
         type: "custom",
         wattage_min: interval.min,
         wattage_max: interval.max,
+        image_url: imageUrl,
         // New customs start selected: under the v6 archive
         // flag an unselected row would be archive = true and
         // hidden from the list at once.
         selection: true,
       })
       .select(
-        "app_id, appliance_name, wattage_min, wattage_max",
+        "app_id, appliance_name, wattage_min, wattage_max, image_url",
       )
       .single();
 
@@ -853,6 +928,10 @@ export default function ApplianceModal({
         data.wattage_max,
       ),
       area: CUSTOM_AREA,
+      imageUrl:
+        typeof data.image_url === "string"
+          ? data.image_url
+          : imageUrl,
     };
 
     onCustomAdd?.(appliance);
@@ -871,6 +950,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(false);
 
     setSuccessMessage(
@@ -960,18 +1042,51 @@ export default function ApplianceModal({
       return;
     }
 
+    // Resolve the photo: a fresh pick uploads first (a
+    // failed upload aborts before the row is touched);
+    // otherwise keep the stored URL, or null when the user
+    // removed it in the picker.
+    let finalImageUrl: string | null = customPhotoUrl;
+
+    if (customPhotoLocal) {
+      setPhotoBusy(true);
+
+      const upload = await uploadAppliancePhoto(
+        user.id,
+        customPhotoLocal.uri,
+        customPhotoLocal.mimeType,
+      );
+
+      setPhotoBusy(false);
+
+      if (
+        !upload.success ||
+        !("url" in upload) ||
+        !upload.url
+      ) {
+        setCustomError(
+          ("error" in upload && upload.error) ||
+            "Unable to upload that photo. Please try again.",
+        );
+        return;
+      }
+
+      finalImageUrl = upload.url;
+    }
+
     const { data, error } = await supabase
       .from("appliances")
       .update({
         appliance_name: name,
         wattage_min: interval.min,
         wattage_max: interval.max,
+        image_url: finalImageUrl,
       })
       .eq("app_id", editingCustom.id)
       .eq("user_id", user.id)
       .eq("type", "custom")
       .select(
-        "app_id, appliance_name, wattage_min, wattage_max",
+        "app_id, appliance_name, wattage_min, wattage_max, image_url",
       )
       .single();
 
@@ -996,7 +1111,23 @@ export default function ApplianceModal({
         data.wattage_max,
       ),
       area: CUSTOM_AREA,
+      imageUrl:
+        typeof data.image_url === "string"
+          ? data.image_url
+          : finalImageUrl,
     };
+
+    // Replaced or removed photos leave orphaned objects:
+    // delete the pre-edit original best-effort. A failed
+    // delete never fails the save itself.
+    if (
+      customPhotoOriginalUrl &&
+      customPhotoOriginalUrl !== finalImageUrl
+    ) {
+      void deleteAppliancePhotoByUrl(
+        customPhotoOriginalUrl,
+      ).catch(() => {});
+    }
 
     setAppliances((current) =>
       current.map((item) =>
@@ -1023,6 +1154,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setEditModalVisible(false);
 
     setSuccessMessage(
@@ -1073,6 +1207,16 @@ export default function ApplianceModal({
     const removed =
       appliances.find((item) => item.id === id) ??
       archivedAppliances.find((item) => item.id === id);
+
+    // Deleting the row orphans its photo: remove the stored
+    // object best-effort. Never fails the delete itself.
+    const removedImageUrl = removed?.imageUrl ?? null;
+
+    if (removedImageUrl) {
+      void deleteAppliancePhotoByUrl(
+        removedImageUrl,
+      ).catch(() => {});
+    }
 
     const wasArchived = archivedAppliances.some(
       (item) => item.id === id,
@@ -1340,8 +1484,57 @@ export default function ApplianceModal({
       appliance.watts.replace(/W$/, ""),
     );
 
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(appliance.imageUrl ?? null);
+    setCustomPhotoOriginalUrl(
+      appliance.imageUrl ?? null,
+    );
+
     setCustomError("");
     setEditModalVisible(true);
+  };
+
+  // ============================================================
+  // CUSTOM PHOTO (ADD/EDIT FORM PICKER)
+  // ============================================================
+  //
+  // One MediaPickerModal serves the add/edit form. Picks stay
+  // a local draft until Add/Save persists them (upload, swap
+  // the row, delete the replaced object).
+  // ============================================================
+
+  const [photoPickerVisible, setPhotoPickerVisible] =
+    useState(false);
+
+  const handlePhotoSelect = (photo: PickedPhoto) => {
+    // Form draft only: persistence happens on Add/Save.
+    setCustomPhotoLocal(photo);
+    setPhotoPickerVisible(false);
+  };
+
+  const handlePhotoRemove = () => {
+    // Clearing the draft only: the stored object is deleted
+    // on Save (or kept when the form is cancelled with no
+    // changes persisted).
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setPhotoPickerVisible(false);
+  };
+
+  const formPhotoPreview =
+    customPhotoLocal?.uri ?? customPhotoUrl;
+
+  // Single-open 3-dot menus: at most one box menu across
+  // Layer 1 and the archived viewer. Boxes are controlled
+  // through menuOpen/onMenuToggle at their call sites.
+  const [openMenuId, setOpenMenuId] = useState<
+    string | null
+  >(null);
+
+  const handleBoxMenuToggle = (id: string) => {
+    setOpenMenuId((current) =>
+      current === id ? null : id,
+    );
   };
 
   // ============================================================
@@ -1451,6 +1644,7 @@ export default function ApplianceModal({
   const openArchiveLayer = () => {
     setCustomError("");
     setArchiveSearchText("");
+    setOpenMenuId(null);
     setLayer(2);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     // Always refetch so Layer 2 reflects the table, not just
@@ -1460,6 +1654,7 @@ export default function ApplianceModal({
 
   const closeArchiveLayer = () => {
     setArchiveSearchText("");
+    setOpenMenuId(null);
     setLayer(1);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
@@ -1520,9 +1715,7 @@ export default function ApplianceModal({
           ellipsizeMode="tail"
           style={styles.archiveRowButtonText}
         >
-          {archivedCount > 0
-            ? `Archived (${archivedCount})`
-            : "Archived"}
+          Archived
         </AppText>
       </Pressable>
     </View>
@@ -1564,7 +1757,7 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Header: Layer 1 = Add, Layer 2 = Archived viewer.
+          {/* Header: Layer 1 = Select, Layer 2 = Archived viewer.
               Layer 2 has no back arrow; the title sits left and
               return uses the row/footer Back buttons. */}
           <View style={styles.header}>
@@ -1574,7 +1767,7 @@ export default function ApplianceModal({
             >
               {layer === 2
                 ? "Archived Appliances"
-                : "Add Appliances"}
+                : "Select Appliances"}
             </AppText>
 
             <Pressable
@@ -1584,7 +1777,7 @@ export default function ApplianceModal({
               accessibilityLabel={
                 layer === 2
                   ? "Close Archived Appliances"
-                  : "Close Add Appliances"
+                  : "Close Select Appliances"
               }
             >
               <Ionicons
@@ -1729,8 +1922,24 @@ export default function ApplianceModal({
                               color={
                                 colors.primary
                               }
+                              imageSource={
+                                appliance.imageUrl
+                                  ? {
+                                      uri: appliance.imageUrl,
+                                    }
+                                  : undefined
+                              }
                               selected={isSelected}
                               isCustom
+                              menuOpen={
+                                openMenuId ===
+                                appliance.id
+                              }
+                              onMenuToggle={() =>
+                                handleBoxMenuToggle(
+                                  appliance.id,
+                                )
+                              }
                               onPress={() =>
                                 toggleAppliance(
                                   appliance.id,
@@ -1819,6 +2028,11 @@ export default function ApplianceModal({
                             color={areaColor(
                               appliance.area,
                             )}
+                            imageSource={
+                              CATALOG_IMAGES[
+                                appliance.id
+                              ]
+                            }
                             selected={isSelected}
                             onPress={() =>
                               toggleAppliance(
@@ -1944,9 +2158,25 @@ export default function ApplianceModal({
                             name={appliance.name}
                             wattage={appliance.watts}
                             color={colors.primary}
+                            imageSource={
+                              appliance.imageUrl
+                                ? {
+                                    uri: appliance.imageUrl,
+                                  }
+                                : undefined
+                            }
                             selectable={false}
                             isCustom
                             archiveVariant="unarchive"
+                            menuOpen={
+                              openMenuId ===
+                              appliance.id
+                            }
+                            onMenuToggle={() =>
+                              handleBoxMenuToggle(
+                                appliance.id,
+                              )
+                            }
                             onEdit={() =>
                               openCustomEditor(
                                 appliance,
@@ -2181,6 +2411,12 @@ export default function ApplianceModal({
           }}
           onCancel={handleAddCancel}
           onAdd={handleCustomAdd}
+          wattsValid={customWattsValid}
+          photoPreview={formPhotoPreview}
+          photoBusy={photoBusy}
+          onPhotoPress={() =>
+            setPhotoPickerVisible(true)
+          }
         />
 
         <CustomApplianceModal
@@ -2205,6 +2441,20 @@ export default function ApplianceModal({
           onCancel={handleEditCancel}
           onAdd={handleCustomAdd}
           onSave={handleCustomUpdate}
+          wattsValid={customWattsValid}
+          photoPreview={formPhotoPreview}
+          photoBusy={photoBusy}
+          onPhotoPress={() =>
+            setPhotoPickerVisible(true)
+          }
+        />
+
+        <MediaPickerModal
+          visible={photoPickerVisible}
+          hasPhoto={formPhotoPreview !== null}
+          onSelect={handlePhotoSelect}
+          onRemove={handlePhotoRemove}
+          onClose={() => setPhotoPickerVisible(false)}
         />
       </View>
     </Modal>

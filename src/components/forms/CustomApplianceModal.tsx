@@ -1,6 +1,9 @@
 import React, { useMemo } from "react";
 
+import { Ionicons } from "@expo/vector-icons";
+
 import {
+  Image,
   Pressable,
   StyleSheet,
   TextInput,
@@ -33,6 +36,7 @@ import { useTypography } from "@/hooks/useTypography";
 // ============================================================
 
 type CustomApplianceModalProps = {
+
   visible: boolean;
   mode?: "add" | "edit";
   name: string;
@@ -43,6 +47,69 @@ type CustomApplianceModalProps = {
   onCancel: () => void;
   onAdd: () => void;
   onSave?: () => void;
+  // Live interval validity from the parent (same rules as
+  // submit): the confirm button can't move forward on
+  // incomplete or reversed intervals.
+  wattsValid: boolean;
+  // Photo preview to display: a freshly picked local uri or
+  // the stored uploaded url. Null renders the bundled
+  // adlawatt icon — the default for every custom appliance.
+  photoPreview: string | null;
+  // True while a photo upload is in flight: the confirm
+  // button dims into a Saving state.
+  photoBusy: boolean;
+  onPhotoPress: () => void;
+};
+
+const defaultPhoto = require(
+  "@/assets/images/adlawatt-icon.png",
+);
+
+// Twin wattage inputs share the parent's single "min-max"
+// string: split for display, rejoin on edit. The parent's
+// validation, prefill, and resets work unchanged.
+// Strict per-side rule: digits, one dot, max 2 decimals,
+// max 3 integer digits, integer value at most 720. Empty
+// is always fine (deletion never blocked). Rejected
+// keystrokes keep the previous text with no error flash.
+const splitWatts = (watts: string): [string, string] => {
+  const dash = watts.indexOf("-");
+
+  if (dash < 0) {
+    return [watts, ""];
+  }
+
+  return [watts.slice(0, dash), watts.slice(dash + 1)];
+};
+
+const sanitizeWattSide = (
+  text: string,
+): string | null => {
+  const clean = text.replace(/-/g, "");
+
+  if (clean === "") {
+    return "";
+  }
+
+  if (!/^\d{0,3}(\.\d{0,2})?$/.test(clean)) {
+    return null;
+  }
+
+  const intPart = clean.split(".")[0] ?? "";
+
+  if (intPart !== "" && Number(intPart) > 720) {
+    return null;
+  }
+
+  return clean;
+};
+
+const joinWatts = (min: string, max: string): string => {
+  if (!min && !max) {
+    return "";
+  }
+
+  return `${min}-${max}`;
 };
 
 export default function CustomApplianceModal({
@@ -56,6 +123,10 @@ export default function CustomApplianceModal({
   onCancel,
   onAdd,
   onSave,
+  wattsValid,
+  photoPreview,
+  photoBusy,
+  onPhotoPress,
 }: CustomApplianceModalProps) {
   const colors = useAppColors();
 
@@ -82,6 +153,28 @@ export default function CustomApplianceModal({
     ? (onSave ?? onAdd)
     : onAdd;
 
+  const [wattMin, wattMax] = splitWatts(watts);
+
+  const handleWattMinChange = (text: string) => {
+    const clean = sanitizeWattSide(text);
+
+    if (clean === null) {
+      return;
+    }
+
+    onWattsChange(joinWatts(clean, wattMax));
+  };
+
+  const handleWattMaxChange = (text: string) => {
+    const clean = sanitizeWattSide(text);
+
+    if (clean === null) {
+      return;
+    }
+
+    onWattsChange(joinWatts(wattMin, clean));
+  };
+
   return (
     <DropdownModal
       visible={visible}
@@ -95,6 +188,57 @@ export default function CustomApplianceModal({
         Check the appliance wattage first, for
         example, soldering wire may use 15-25W.
       </AppText>
+
+      {/* Photo display on top, picker button below it,
+          with a section break before the fields. */}
+      <View style={styles.photoDisplay}>
+        <Image
+          source={
+            photoPreview
+              ? { uri: photoPreview }
+              : defaultPhoto
+          }
+          style={styles.photoDisplayImage}
+          resizeMode="contain"
+          accessibilityLabel={
+            photoPreview
+              ? "Custom appliance photo"
+              : "Default appliance icon"
+          }
+        />
+      </View>
+
+      <Pressable
+        onPress={onPhotoPress}
+        disabled={photoBusy}
+        style={({ pressed }) => [
+          styles.photoButton,
+          pressed && !photoBusy && styles.pressed,
+          photoBusy && styles.pressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={
+          photoPreview
+            ? "Change appliance photo"
+            : "Add appliance photo"
+        }
+        accessibilityHint="Opens the photo picker"
+      >
+        <Ionicons
+          name="camera"
+          size={20}
+          color={colors.onPrimary}
+        />
+
+        <AppText
+          variant="caption"
+          style={styles.photoButtonText}
+        >
+          {photoPreview
+            ? "Change Photo"
+            : "Add Photo"}
+        </AppText>
+      </Pressable>
 
       <TextInput
         value={name}
@@ -112,22 +256,53 @@ export default function CustomApplianceModal({
         }
       />
 
-      <TextInput
-        value={watts}
-        onChangeText={onWattsChange}
-        placeholder="Enter wattage like 15-25"
-        placeholderTextColor={
-          colors.textSecondary
-        }
-        allowFontScaling={false}
-        style={[styles.input, inputFontStyle]}
-        keyboardType="numeric"
-        accessibilityLabel={
-          isEdit
-            ? "Edit custom appliance wattage"
-            : "Add custom appliance wattage"
-        }
-      />
+      <View style={styles.wattsRow}>
+        <TextInput
+          value={wattMin}
+          onChangeText={handleWattMinChange}
+          placeholder="Min (W)"
+          placeholderTextColor={
+            colors.textSecondary
+          }
+          allowFontScaling={false}
+          style={[
+            styles.input,
+            styles.wattsInput,
+            inputFontStyle,
+          ]}
+          keyboardType="numeric"
+          accessibilityLabel={
+            isEdit
+              ? "Edit minimum wattage"
+              : "Add minimum wattage"
+          }
+        />
+
+        <AppText style={styles.wattsDash}>
+          –
+        </AppText>
+
+        <TextInput
+          value={wattMax}
+          onChangeText={handleWattMaxChange}
+          placeholder="Max (W)"
+          placeholderTextColor={
+            colors.textSecondary
+          }
+          allowFontScaling={false}
+          style={[
+            styles.input,
+            styles.wattsInput,
+            inputFontStyle,
+          ]}
+          keyboardType="numeric"
+          accessibilityLabel={
+            isEdit
+              ? "Edit maximum wattage"
+              : "Add maximum wattage"
+          }
+        />
+      </View>
 
       {error ? (
         <AppText
@@ -141,10 +316,11 @@ export default function CustomApplianceModal({
       <View style={styles.customActions}>
         <Pressable
           onPress={onCancel}
+          disabled={photoBusy}
           style={({ pressed }) => [
             styles.customAction,
             styles.cancelAction,
-            pressed && styles.pressed,
+            pressed && !photoBusy && styles.pressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel={
@@ -164,12 +340,13 @@ export default function CustomApplianceModal({
         <Pressable
           onPress={handleConfirm}
           disabled={
-            !name.trim() || !watts.trim()
+            !name.trim() || !wattsValid || photoBusy
           }
           style={({ pressed }) => [
             styles.customAction,
             styles.addAction,
-            pressed && styles.pressed,
+            pressed && !photoBusy && styles.pressed,
+            photoBusy && styles.pressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel={
@@ -182,7 +359,7 @@ export default function CustomApplianceModal({
             variant="caption"
             style={styles.addText}
           >
-            {confirmLabel}
+            {photoBusy ? "Saving…" : confirmLabel}
           </AppText>
         </Pressable>
       </View>
@@ -199,6 +376,43 @@ const getStyles = (colors: AppColors) =>
       marginBottom: 10,
     },
 
+    photoDisplay: {
+      width: "100%",
+      aspectRatio: 1,
+      borderRadius: Radius.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+
+    photoDisplayImage: {
+      width: "100%",
+      height: "100%",
+    },
+
+    photoButton: {
+      width: "100%",
+      minHeight: Control.button,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: colors.primary,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderRadius: Radius.md,
+      marginBottom: 16,
+    },
+
+    photoButtonText: {
+      color: colors.onPrimary,
+      fontWeight: "700",
+    },
+
     input: {
       minHeight: Field.minHeight,
       borderWidth: 2,
@@ -209,6 +423,24 @@ const getStyles = (colors: AppColors) =>
       color: colors.text,
       fontSize: 14,
       marginBottom: 8,
+    },
+
+    wattsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+
+    wattsInput: {
+      flex: 1,
+      marginBottom: 0,
+    },
+
+    wattsDash: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: "700",
     },
 
     customError: {

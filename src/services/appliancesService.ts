@@ -12,7 +12,7 @@ import {
 // come from GIVEN_CATALOG in code, never from these columns.
 // Both givens and customs carry wattage_min/max (numeric).
 const COLUMNS =
-  "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, user_id";
+  "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, user_id, image_url";
 
 type DbRow = Record<string, unknown>;
 
@@ -44,6 +44,10 @@ const toApplianceRow = (row: DbRow): ApplianceRow => ({
   user_id:
     typeof row.user_id === "string"
       ? row.user_id
+      : null,
+  image_url:
+    typeof row.image_url === "string"
+      ? row.image_url
       : null,
 });
 

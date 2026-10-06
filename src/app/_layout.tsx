@@ -3,6 +3,10 @@ import { LogBox } from "react-native";
 
 import { AuthProvider } from "@/context/AuthContext";
 
+// Side effect: boots i18next (default English paints
+// instantly; the saved language applies when loaded).
+import "@/services/i18n";
+
 // Benign web-only responder noise ("Cannot record touch end
 // without a touch start", empty Touch Bank) fires without user
 // interaction on localhost and doesn't block taps. Filter it

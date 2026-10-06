@@ -1,4 +1,10 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   Image,
@@ -40,9 +46,15 @@ type ApplianceBoxProps = {
   isCustom?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
-  onCamera?: () => void;
   onArchive?: () => void;
   archiveVariant?: "archive" | "unarchive";
+
+  // 3-dot menu is parent-controlled so only one box menu is
+  // open at a time across every list. Optional so catalog
+  // boxes (which render no dots) stay prop-free; custom
+  // boxes always receive both from ApplianceModal.
+  menuOpen?: boolean;
+  onMenuToggle?: () => void;
 };
 
 const defaultImage = require("@/assets/images/adlawatt-icon.png");
@@ -58,13 +70,58 @@ export default function ApplianceBox({
   isCustom = false,
   onEdit,
   onDelete,
-  onCamera,
   onArchive,
   archiveVariant = "archive",
+  menuOpen = false,
+  onMenuToggle,
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [archiveMode, setArchiveMode] = useState(false);
-  const [menuMode, setMenuMode] = useState(false);
+
+  // Silent 3s auto-close: any tap inside the menu or its
+  // confirmations re-arms the clock; full inactivity closes
+  // everything with no UI. toggleRef avoids stale closures
+  // across parent re-renders.
+  const closeTimer = useRef<
+    ReturnType<typeof setTimeout> | null
+  >(null);
+
+  const toggleRef = useRef(onMenuToggle);
+  toggleRef.current = onMenuToggle;
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
+  const pokeCloseTimer = useCallback(() => {
+    clearCloseTimer();
+
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      setDeleteMode(false);
+      setArchiveMode(false);
+      toggleRef.current?.();
+    }, 3000);
+  }, [clearCloseTimer]);
+
+  // Confirmations are local but unreachable without the menu:
+  // whenever the parent closes this menu externally (another
+  // box opened), drop any pending confirmation with it.
+  useEffect(() => {
+    if (!menuOpen) {
+      setDeleteMode(false);
+      setArchiveMode(false);
+      clearCloseTimer();
+      return;
+    }
+
+    pokeCloseTimer();
+
+    return clearCloseTimer;
+  }, [menuOpen, pokeCloseTimer, clearCloseTimer]);
 
   // A tap on the nested 3-dot toggle also bubbles to the outer
   // box Pressable. The flag makes the outer handler ignore that
@@ -82,32 +139,47 @@ export default function ApplianceBox({
   );
 
   const handleDeleteConfirm = () => {
+    pokeCloseTimer();
     setDeleteMode(false);
-    setMenuMode(false);
+    onMenuToggle?.();
     onDelete?.();
   };
 
   const handleDeleteCancel = () => {
+    pokeCloseTimer();
     setDeleteMode(false);
   };
 
   const handleArchiveConfirm = () => {
+    pokeCloseTimer();
     setArchiveMode(false);
-    setMenuMode(false);
+    onMenuToggle?.();
     onArchive?.();
   };
 
   const handleArchiveCancel = () => {
+    pokeCloseTimer();
     setArchiveMode(false);
   };
 
   // The same 3-dot icon opens and closes the options menu.
   // There is no back arrow: tapping the dots again returns
-  // the box to its default view.
+  // the box to its default view. The parent closes other
+  // boxes' menus, so only one is ever open. Every tap
+  // re-arms the silent auto-close clock.
   const handleDotsPress = () => {
     suppressNextSelect.current = true;
-    setMenuMode((current) => !current);
+    pokeCloseTimer();
+    onMenuToggle?.();
   };
+
+  // Menu icon taps reset the auto-close clock without
+  // changing what the tap does.
+  const pressAndPoke =
+    (fn?: () => void) => () => {
+      pokeCloseTimer();
+      fn?.();
+    };
 
   const isUnarchive = archiveVariant === "unarchive";
 
@@ -148,7 +220,9 @@ export default function ApplianceBox({
   const renderMenuLayer = () => (
     <>
       {/* ================================================= */}
-      {/* 2x2 ACTION GRID (centered both axes) */}
+      {/* ACTION ROW (centered both axes): Edit, Archive, */}
+      {/* Delete. Photo changes live in the edit form, so */}
+      {/* no camera cell here. */}
       {/* ================================================= */}
 
       <View style={styles.menuArea}>
@@ -156,7 +230,7 @@ export default function ApplianceBox({
           {/* EDIT */}
 
         <Pressable
-          onPress={onEdit}
+          onPress={pressAndPoke(onEdit)}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel="Edit appliance"
@@ -172,29 +246,12 @@ export default function ApplianceBox({
           />
         </Pressable>
 
-        {/* CAMERA */}
-
-        <Pressable
-          onPress={onCamera}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel="Change appliance photo"
-          style={({ pressed }) => [
-            styles.iconButton,
-            pressed && styles.actionPressed,
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="camera"
-            size={22}
-            color={colors.accentContent}
-          />
-        </Pressable>
-
         {/* ARCHIVE / UNARCHIVE */}
 
         <Pressable
-          onPress={() => setArchiveMode(true)}
+          onPress={pressAndPoke(() =>
+            setArchiveMode(true),
+          )}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel={
@@ -221,7 +278,9 @@ export default function ApplianceBox({
         {/* DELETE */}
 
         <Pressable
-          onPress={() => setDeleteMode(true)}
+          onPress={pressAndPoke(() =>
+            setDeleteMode(true),
+          )}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel="Delete appliance"
@@ -428,7 +487,7 @@ export default function ApplianceBox({
         <Image
           source={imageSource}
           style={applianceCardStyles.image}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
 
@@ -470,15 +529,18 @@ export default function ApplianceBox({
   return (
     <Pressable
       onPress={
-        menuMode || deleteMode || archiveMode
+        menuOpen || deleteMode || archiveMode
           ? undefined
           : handleBoxPress
       }
+      // Selection inertness lives in handleBoxPress (early
+      // return on !selectable): keeping the container enabled
+      // lets nested controls (3-dot menu, confirms) receive
+      // taps on web, where a disabled ancestor swallows them.
+      // Archived viewer boxes stay display-only this way.
       disabled={
         deleteMode ||
-        archiveMode ||
-        !selectable ||
-        !onPress
+        archiveMode
       }
       style={({ pressed }) => [
         applianceCardStyles.boxCompact,
@@ -486,14 +548,18 @@ export default function ApplianceBox({
           borderColor: color,
           position: "relative",
         },
-        pressed && !deleteMode && styles.pressed,
+        pressed &&
+          selectable &&
+          !deleteMode &&
+          !archiveMode &&
+          styles.pressed,
       ]}
     >
       {deleteMode && isCustom ? (
         renderDeleteConfirmation()
       ) : archiveMode && isCustom ? (
         renderArchiveConfirmation()
-      ) : menuMode && isCustom ? (
+      ) : menuOpen && isCustom ? (
         renderMenuLayer()
       ) : (
         renderNormalLayer()

@@ -10,8 +10,8 @@ import type {
 //
 // Local-only system settings. No Supabase.
 // Dark mode / color blind mode are intentionally excluded.
-// Language / vibration / email alerts are reserved for later
-// and can extend this interface without migration breaks.
+// Language / email alerts are reserved for later
+// and can extend this file without migration breaks.
 // ============================================================
 
 export interface TypographyPreferences {
@@ -83,6 +83,107 @@ export async function saveTypographyPreferences(
     await AsyncStorage.setItem(
       TYPOGRAPHY_STORAGE_KEY,
       JSON.stringify(sanitize(prefs)),
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}
+
+// ============================================================
+// VIBRATION SWITCH (v1)
+//
+// Device-level preference backing the Menu "Vibration" row
+// ("Vibrate when important alerts are received"). Persisted
+// so the choice survives restarts; default ON. The alert
+// vibration controller gates on this value, and turning it
+// OFF stops an active buzz immediately.
+// ============================================================
+
+const VIBRATION_STORAGE_KEY = "adlawatt.vibration.v1";
+
+export async function loadVibrationSetting(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      VIBRATION_STORAGE_KEY,
+    );
+
+    // Absent or corrupt reads fall back to ON (matches the
+    // Menu copy promising vibration on important alerts).
+    if (raw === null || raw === undefined) {
+      return true;
+    }
+
+    if (raw === "1" || raw === "true") {
+      return true;
+    }
+
+    if (raw === "0" || raw === "false") {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export async function saveVibrationSetting(
+  value: boolean,
+): Promise<void> {
+  // Best-effort like the rest: the UI already holds the new
+  // value, so a blocked store must not break the toggle.
+  try {
+    await AsyncStorage.setItem(
+      VIBRATION_STORAGE_KEY,
+      value ? "1" : "0",
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}
+
+// ============================================================
+// LANGUAGE PREFERENCE (v1)
+//
+// Device-level UI language backing the Menu Language row.
+// Always starts English; the user switches manually.
+// Persisted so the choice survives restarts. Unknown or
+// corrupt reads fall back to English (the source language
+// every string is written in).
+// ============================================================
+
+export type AppLanguage = "en" | "fil" | "ceb";
+
+const LANGUAGE_STORAGE_KEY = "adlawatt.language.v1";
+
+export const isAppLanguage = (
+  value: unknown,
+): value is AppLanguage =>
+  value === "en" ||
+  value === "fil" ||
+  value === "ceb";
+
+export async function loadLanguageSetting(): Promise<AppLanguage> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      LANGUAGE_STORAGE_KEY,
+    );
+
+    return isAppLanguage(raw) ? raw : "en";
+  } catch {
+    return "en";
+  }
+}
+
+export async function saveLanguageSetting(
+  value: AppLanguage,
+): Promise<void> {
+  // Best-effort like the rest: the UI already holds the new
+  // value, so a blocked store must not break the switch.
+  try {
+    await AsyncStorage.setItem(
+      LANGUAGE_STORAGE_KEY,
+      value,
     );
   } catch {
     // Intentionally ignored.
