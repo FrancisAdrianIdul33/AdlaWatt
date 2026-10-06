@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
@@ -10,6 +11,7 @@ import {
 
 import AppInput from "@/components/ui/AppInput";
 import Copyright from "@/components/ui/Copyright";
+import GoogleGIcon from "@/components/ui/GoogleGIcon";
 import PasswordInput from "@/components/ui/PasswordInput";
 import AuthFooter from "@/components/layout/AuthFooter";
 import AuthHeader from "@/components/layout/AuthHeader";
@@ -26,13 +28,18 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 
-import { loginUser, resendConfirmation } from "@/services/auth";
+import { loginUser, resendConfirmation, signInWithGoogle } from "@/services/auth";
+
+// Completes the pending auth session on Android when the
+// in-app browser redirects back to adlawatt://auth/callback.
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const [unconfirmedEmail, setUnconfirmedEmail] = useState("");
   const [confirmationResent, setConfirmationResent] = useState<
@@ -185,13 +192,55 @@ export default function LoginScreen() {
     router.push(Routes.REGISTER);
   };
 
-  // ── UI-only placeholders (Option B, no auth wiring yet) ──
+  // ── Forgot password routes to its screen; Google uses
+  // the Supabase OAuth provider (see services/auth). ──
   const handleForgotPassword = () => {
     router.push(Routes.FORGOT_PASSWORD);
   };
 
-  const handleGoogleSignIn = () => {
-    // TODO Login: wire Continue with Google / OAuth.
+  const handleGoogleSignIn = async () => {
+    if (loading || googleLoading) {
+      return;
+    }
+
+    setWarning("");
+
+    try {
+      setGoogleLoading(true);
+
+      const result = await signInWithGoogle();
+
+      if (result.success) {
+        // Web redirect unloads the page; native session is
+        // already persisted. The auth layout notices the new
+        // session and routes to the dashboard on its own —
+        // replace explicitly in case the event lags.
+        if (!("redirected" in result)) {
+          router.replace(Routes.DASHBOARD);
+        }
+        return;
+      }
+
+      // Dismissed browser: stay on login silently.
+      if ("cancelled" in result && result.cancelled) {
+        return;
+      }
+
+      if ("redirected" in result && result.redirected) {
+        return;
+      }
+
+      setWarning(
+        ("error" in result && typeof result.error === "string" && result.error) ||
+          "Google sign-in was not completed. Please try again.",
+      );
+    } catch {
+      setWarning(
+        "Google sign-in was not completed. Please try again.",
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -265,21 +314,22 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
             style={({ pressed }) => [
               extraStyles.googleButton,
               pressed && extraStyles.googlePressed,
+              (loading || googleLoading) &&
+                extraStyles.googlePressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Continue with Google"
-            accessibilityHint="Google sign-in coming soon"
+            accessibilityHint="Sign in with your Google account"
           >
-            <Ionicons
-              name="logo-google"
-              size={20}
-              color={colors.text}
-            />
+            <GoogleGIcon size={20} />
             <AppText style={extraStyles.googleLabel}>
-              Continue with Google
+              {googleLoading
+                ? "Connecting..."
+                : "Continue with Google"}
             </AppText>
           </Pressable>
 
