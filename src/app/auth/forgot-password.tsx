@@ -7,6 +7,8 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
+  Pressable,
   StyleSheet,
   TextInput,
   View,
@@ -25,6 +27,7 @@ import AppText from "@/components/ui/AppText";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import {
   EMAIL_PATTERN,
   requestPasswordReset,
@@ -36,14 +39,23 @@ import {
 } from "@/hooks/useAppColors";
 
 // ============================================================
-// FORGOT PASSWORD (UI-ONLY)
+// FORGOT PASSWORD (SELF-CONTAINED RECOVERY)
+// ============================================================
 //
 // Same shell as login/register: AuthLogo + AuthHeader +
-// form + AuthFooter + Copyright. No auth wiring yet — all
-// buttons are placeholders. Progressive disclosure:
-// email always; check-email card after Send; set-new-
-// password when ?verified=1 (stands in for the callback
-// redirect until the function phase).
+// form + AuthFooter + Copyright. Recovery links land here
+// directly (see getRecoveryRedirectTo) and this screen
+// exchanges the link's PKCE code — or verifies its
+// token_hash — itself, so no callback UI ever appears.
+//
+// Phases inside one morphing card:
+//   request   → email form + Send (always visible until
+//               the email is confirmed)
+//   sent      → "Check Your Email" + resend
+//   verifying → spinner while the link is exchanged
+//   verified  → success copy + [Continue to Account] with
+//               an opt-in password-change expander below
+//   linkError → error copy + resend (reuses the sent card)
 // ============================================================
 
 export default function ForgotPasswordScreen() {
@@ -52,22 +64,36 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [warning, setWarning] = useState("");
   const [updateWarning, setUpdateWarning] = useState("");
+  const [linkWarning, setLinkWarning] = useState("");
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [resending, setResending] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [showChangeForm, setShowChangeForm] =
+    useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const { verified: verifiedParam } = useLocalSearchParams<{
-    verified?: string;
+  const params = useLocalSearchParams<{
+    code?: string | string[];
+    token_hash?: string | string[];
+    type?: string | string[];
+    error?: string | string[];
+    error_description?: string | string[];
   }>();
-  // Preview (?verified=1) or a live recovery session both
-  // reveal the set-new-password section.
+
+  // A live recovery session is the source of truth for
+  // "email confirmed": the PASSWORD_RECOVERY event sets it
+  // after this screen exchanges the link itself, or when an
+  // old callback-routed link lands here already verified.
   const { isRecoverySession, clearRecoverySession } =
     useAuth();
-  const isVerified =
-    verifiedParam === "1" || isRecoverySession;
-  const showCard = sent || isVerified;
+  const isVerified = isRecoverySession;
+  const showCard =
+    sent ||
+    verifying ||
+    isVerified ||
+    linkWarning !== "";
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -81,6 +107,128 @@ export default function ForgotPasswordScreen() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  const firstParam = (
+    value: string | string[] | undefined,
+  ): string => {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      return value[0] ?? "";
+    }
+
+    return "";
+  };
+
+  const decodeLinkParam = (value: string): string => {
+    try {
+      return decodeURIComponent(value.replace(/\+/g, " "));
+    } catch {
+      return value;
+    }
+  };
+
+  // Single-shot guard: dev StrictMode re-runs effects and
+  // the auth code is single-use — a second exchange would
+  // burn a confusing "expired" error over a success.
+  const exchangeAttempted = useRef(false);
+
+  // ── In-screen link verification (no callback UI) ──
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyLink = async () => {
+      const code = firstParam(params.code);
+      const tokenHash = firstParam(params.token_hash);
+      const otpType = firstParam(params.type);
+      const linkError = firstParam(params.error);
+      const linkErrorDescription = firstParam(
+        params.error_description,
+      );
+
+      if (!code && !tokenHash && !linkError) {
+        return;
+      }
+
+      if (exchangeAttempted.current) {
+        return;
+      }
+
+      exchangeAttempted.current = true;
+
+      if (linkError) {
+        if (!cancelled) {
+          setLinkWarning(
+            linkErrorDescription
+              ? decodeLinkParam(linkErrorDescription)
+              : "This recovery link is invalid or has expired. Request a new one below.",
+          );
+        }
+        return;
+      }
+
+      if (tokenHash && otpType && otpType !== "recovery") {
+        if (!cancelled) {
+          setLinkWarning(
+            "This link is not a password recovery link. Request a new recovery email below.",
+          );
+        }
+        return;
+      }
+
+      setVerifying(true);
+      setLinkWarning("");
+
+      if (code) {
+        const { error } =
+          await supabase.auth.exchangeCodeForSession(code);
+
+        if (!cancelled) {
+          setVerifying(false);
+
+          if (error) {
+            setLinkWarning(
+              "This recovery link is invalid or has expired. Request a new one below.",
+            );
+          }
+          // Success path needs no local state: the
+          // PASSWORD_RECOVERY event flips
+          // isRecoverySession, revealing the verified card.
+        }
+        return;
+      }
+
+      // Legacy token-hash links.
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "recovery",
+      });
+
+      if (!cancelled) {
+        setVerifying(false);
+
+        if (error) {
+          setLinkWarning(
+            "This recovery link is invalid or has expired. Request a new one below.",
+          );
+        }
+      }
+    };
+
+    void verifyLink();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    params.code,
+    params.token_hash,
+    params.type,
+    params.error,
+    params.error_description,
+  ]);
+
   const newPasswordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
 
@@ -88,10 +236,6 @@ export default function ForgotPasswordScreen() {
   const mailStyles = useMemo(
     () => mailCardStyles(colors),
     [colors],
-  );
-  const previewStyles = useMemo(
-    () => previewSectionStyles(),
-    [],
   );
 
   // ── Validation mirrors login/register guards; the
@@ -224,6 +368,14 @@ export default function ForgotPasswordScreen() {
     router.replace(Routes.LOGIN);
   };
 
+  // Verified user skips the password change: the recovery
+  // session is a full session, so land on the dashboard as
+  // a normal signed-in user.
+  const handleContinue = () => {
+    clearRecoverySession();
+    router.replace(Routes.DASHBOARD);
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.container}>
@@ -231,11 +383,17 @@ export default function ForgotPasswordScreen() {
 
         <AuthHeader
           title="Reset Password"
-          subtitle="Enter your account email. We'll send you a recovery link."
+          subtitle={
+            isVerified
+              ? "Your email is confirmed. Continue to your account or set a new password."
+              : "Enter your account email. We'll send you a recovery link."
+          }
         />
 
         <View style={styles.form}>
-          {/* ── STATE A: email request ── */}
+          {/* ── STATE A: email request (hidden once verified) ── */}
+          {!isVerified ? (
+          <>
           <AppInput
             label="Email Address"
             value={email}
@@ -260,117 +418,206 @@ export default function ForgotPasswordScreen() {
           />
 
           <AuthWarning message={warning} />
+          </>
+          ) : null}
 
-          {/* ── STATE B: check-email card, appears after Send ── */}
+          {/* ── Card: sent / verifying / verified / linkError ── */}
           {showCard ? (
           <View
             style={mailStyles.card}
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
-            accessibilityLabel="Recovery email sent"
+            accessibilityLabel={
+              isVerified
+                ? "Email confirmed"
+                : verifying
+                  ? "Verifying recovery link"
+                  : "Recovery email sent"
+            }
           >
             <View style={mailStyles.headerPanel}>
               <View style={mailStyles.headerLeft}>
                 <Ionicons
-                  name="mail-unread-outline"
+                  name={
+                    isVerified
+                      ? "checkmark-circle-outline"
+                      : verifying
+                        ? "time-outline"
+                        : "mail-unread-outline"
+                  }
                   size={22}
                   color={colors.headerContent}
                 />
 
                 <AppText style={mailStyles.headerTitle}>
-                  Check Your Email
+                  {verifying
+                    ? "Verifying Link"
+                    : isVerified
+                      ? "Email Confirmed"
+                      : "Check Your Email"}
                 </AppText>
               </View>
 
-              <View style={mailStyles.sentPill}>
-                <AppText style={mailStyles.sentPillText}>
-                  • Sent
-                </AppText>
-              </View>
+              {!isVerified && !verifying && sent ? (
+                <View style={mailStyles.sentPill}>
+                  <AppText
+                    style={mailStyles.sentPillText}
+                  >
+                    • Sent
+                  </AppText>
+                </View>
+              ) : null}
             </View>
 
             <View style={mailStyles.body}>
-              <View style={mailStyles.toRow}>
-                <AppText style={mailStyles.toLabel}>
-                  To:
-                </AppText>
+              {verifying ? (
+                <>
+                  <ActivityIndicator
+                    size="large"
+                    color={colors.accentContent}
+                  />
 
-                <View style={mailStyles.emailChip}>
-                  <AppText
-                    style={mailStyles.emailChipText}
-                    numberOfLines={1}
-                  >
-                    {email || "your inbox"}
+                  <AppText style={mailStyles.status}>
+                    Verifying your recovery link…
                   </AppText>
-                </View>
-              </View>
+                </>
+              ) : isVerified ? (
+                <>
+                  <AppText style={mailStyles.bodyText}>
+                    You have successfully confirmed
+                    your email.
+                  </AppText>
 
-              <AppText style={mailStyles.bodyText}>
-                We sent a recovery link. Tap it, then
-                set a new password.
-              </AppText>
+                  <AppButton
+                    title="Continue to Account"
+                    onPress={handleContinue}
+                  />
 
-              <AppButton
-                title={
-                  resending
-                    ? "Resending..."
-                    : resendCooldown > 0
-                      ? `Resend in ${resendCooldown}s`
-                      : "Resend recovery email"
-                }
-                onPress={handleResend}
-                disabled={resending || resendCooldown > 0}
-              />
+                  <Pressable
+                    onPress={() =>
+                      setShowChangeForm(
+                        (current) => !current,
+                      )
+                    }
+                    style={mailStyles.changeToggle}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showChangeForm
+                        ? "Hide password change form"
+                        : "Show password change form"
+                    }
+                    accessibilityHint="Reveals the new password fields"
+                    hitSlop={8}
+                  >
+                    <AppText
+                      style={
+                        mailStyles.changeToggleText
+                      }
+                    >
+                      {showChangeForm
+                        ? "Hide password fields"
+                        : "Or you want to change your password?"}
+                    </AppText>
+                  </Pressable>
 
-              <AppText style={mailStyles.status}>
-                Didn&apos;t get it? Check spam or try
-                a different address.
-              </AppText>
+                  {showChangeForm ? (
+                    <View
+                      style={mailStyles.changeSection}
+                    >
+                      <PasswordInput
+                        label="New Password"
+                        value={newPassword}
+                        onChangeText={(text) => {
+                          setNewPassword(text);
+                          setUpdateWarning("");
+                        }}
+                        placeholder="Create a new password"
+                        autoComplete="password-new"
+                        returnKeyType="next"
+                        onSubmitEditing={() =>
+                          confirmPasswordRef.current?.focus()
+                        }
+                        inputRef={newPasswordRef}
+                      />
+
+                      <PasswordInput
+                        label="Confirm New Password"
+                        value={confirmPassword}
+                        onChangeText={(text) => {
+                          setConfirmPassword(text);
+                          setUpdateWarning("");
+                        }}
+                        placeholder="Confirm your new password"
+                        autoComplete="password-new"
+                        returnKeyType="done"
+                        onSubmitEditing={handleUpdate}
+                        inputRef={confirmPasswordRef}
+                        bottomGap={0}
+                      />
+
+                      <AppButton
+                        title={
+                          updating
+                            ? "Updating..."
+                            : "Update Password"
+                        }
+                        onPress={handleUpdate}
+                        disabled={updating}
+                      />
+
+                      <AuthWarning
+                        message={updateWarning}
+                      />
+                    </View>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <View style={mailStyles.toRow}>
+                    <AppText style={mailStyles.toLabel}>
+                      To:
+                    </AppText>
+
+                    <View style={mailStyles.emailChip}>
+                      <AppText
+                        style={mailStyles.emailChipText}
+                        numberOfLines={1}
+                      >
+                        {email || "your inbox"}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <AppText style={mailStyles.bodyText}>
+                    We sent a recovery link. Tap it,
+                    then set a new password.
+                  </AppText>
+
+                  {linkWarning ? (
+                    <AuthWarning
+                      message={linkWarning}
+                    />
+                  ) : null}
+
+                  <AppButton
+                    title={
+                      resending
+                        ? "Resending..."
+                        : resendCooldown > 0
+                          ? `Resend in ${resendCooldown}s`
+                          : "Resend recovery email"
+                    }
+                    onPress={handleResend}
+                    disabled={resending || resendCooldown > 0}
+                  />
+
+                  <AppText style={mailStyles.status}>
+                    Didn&apos;t get it? Check spam or
+                    try a different address.
+                  </AppText>
+                </>
+              )}
             </View>
-          </View>
-          ) : null}
-
-          {/* ── STATE C: set new password, appears when verified ── */}
-          {isVerified ? (
-          <View style={previewStyles.section}>
-          <PasswordInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={(text) => {
-              setNewPassword(text);
-              setUpdateWarning("");
-            }}
-            placeholder="Create a new password"
-            autoComplete="password-new"
-            returnKeyType="next"
-            onSubmitEditing={() =>
-              confirmPasswordRef.current?.focus()
-            }
-            inputRef={newPasswordRef}
-          />
-
-          <PasswordInput
-            label="Confirm New Password"
-            value={confirmPassword}
-            onChangeText={(text) => {
-              setConfirmPassword(text);
-              setUpdateWarning("");
-            }}
-            placeholder="Confirm your new password"
-            autoComplete="password-new"
-            returnKeyType="done"
-            onSubmitEditing={handleUpdate}
-            inputRef={confirmPasswordRef}
-            bottomGap={0}
-          />
-
-          <AppButton
-            title={updating ? "Updating..." : "Update Password"}
-            onPress={handleUpdate}
-            disabled={updating}
-          />
-
-          <AuthWarning message={updateWarning} />
           </View>
           ) : null}
         </View>
@@ -398,13 +645,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 });
-
-const previewSectionStyles = () =>
-  StyleSheet.create({
-    section: {
-      marginTop: Spacing.lg,
-    },
-  });
 
 const mailCardStyles = (colors: AppColors) =>
   StyleSheet.create({
@@ -495,5 +735,25 @@ const mailCardStyles = (colors: AppColors) =>
     status: {
       marginTop: Spacing.sm,
       color: colors.textSecondary,
+    },
+
+    changeToggle: {
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 40,
+      marginTop: Spacing.xs,
+      paddingHorizontal: 4,
+    },
+
+    changeToggleText: {
+      color: colors.linkText,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+      textAlign: "center",
+    },
+
+    changeSection: {
+      width: "100%",
+      marginTop: Spacing.sm,
     },
   });
