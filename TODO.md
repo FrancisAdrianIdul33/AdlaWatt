@@ -13,7 +13,10 @@
   - Signed-in bounce exemption while a recovery link verifies
 - [x] Login: Password visibility should only be available for 5 seconds — **Resolved**
   - `PasswordInput` eye toggle with 5s auto-hide, live countdown, timer bar, screen-reader labels
-- [ ] Overall: Display only the toggle that has content
+- [x] Overall: Display only the toggle that has content — **Resolved**
+  - Appliances status filter renders only segments holding appliances (Caution → Advisable → Not Advisable auto-pick)
+  - Empty active segment auto-corrects on add/archive/delete/battery verdict shifts
+  - Empty appliance list keeps all three segments on Advisable
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
 - [ ] Navbar Upper: Display username
 - [ ] Appliances: Add image upload inside the Custom Appliance box with a media picker modal
