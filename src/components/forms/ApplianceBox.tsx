@@ -40,7 +40,6 @@ type ApplianceBoxProps = {
   isCustom?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
-  onCamera?: () => void;
   onArchive?: () => void;
   archiveVariant?: "archive" | "unarchive";
 };
@@ -58,7 +57,6 @@ export default function ApplianceBox({
   isCustom = false,
   onEdit,
   onDelete,
-  onCamera,
   onArchive,
   archiveVariant = "archive",
 }: ApplianceBoxProps) {
@@ -148,7 +146,9 @@ export default function ApplianceBox({
   const renderMenuLayer = () => (
     <>
       {/* ================================================= */}
-      {/* 2x2 ACTION GRID (centered both axes) */}
+      {/* ACTION ROW (centered both axes): Edit, Archive, */}
+      {/* Delete. Photo changes live in the edit form, so */}
+      {/* no camera cell here. */}
       {/* ================================================= */}
 
       <View style={styles.menuArea}>
@@ -167,25 +167,6 @@ export default function ApplianceBox({
         >
           <MaterialCommunityIcons
             name="pencil"
-            size={22}
-            color={colors.accentContent}
-          />
-        </Pressable>
-
-        {/* CAMERA */}
-
-        <Pressable
-          onPress={onCamera}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel="Change appliance photo"
-          style={({ pressed }) => [
-            styles.iconButton,
-            pressed && styles.actionPressed,
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="camera"
             size={22}
             color={colors.accentContent}
           />
