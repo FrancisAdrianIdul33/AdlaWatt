@@ -2,7 +2,7 @@
 
 ## First Page
 
-- [ ] Login: Add Continue with Google / OAuth
+- [x] Login: Add Continue with Google / OAuth
 - [ ] Login: Add Forgot Password
 - [ ] Login: Password visibility should only be available for 5 seconds
 - [ ] Overall: Display only the toggle that has content
