@@ -54,7 +54,8 @@
           "locationWhenInUsePermission": "Allow app to access your location for weather."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
