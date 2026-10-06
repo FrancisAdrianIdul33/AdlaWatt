@@ -24,6 +24,9 @@ import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
 import {
+  CATALOG_IMAGES,
+} from "@/constants/applianceCatalog";
+import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
@@ -50,6 +53,8 @@ type Appliance = {
   watts: string;
   status: Status;
   imageUrl?: string | null;
+  // Catalog key for photo lookup (custom ids never match).
+  imageKey?: string | null;
 };
 
 type DecoratedAppliance = Appliance & {
@@ -375,6 +380,8 @@ export default function AppRecCard({
           watts: item.display,
           status: "advisable",
           imageUrl: item.imageUrl ?? null,
+          imageKey:
+            item.source === "catalog" ? item.id : null,
         })),
       );
 
@@ -395,7 +402,7 @@ export default function AppRecCard({
       await supabase
         .from("appliances")
         .select(
-          "app_id, appliance_name, wattage_min, wattage_max, selection, image_url",
+          "app_id, appliance_name, wattage_min, wattage_max, selection, image_url, catalog_key",
         )
         .eq("user_id", user.id)
         .order("appliance_name");
@@ -440,6 +447,10 @@ export default function AppRecCard({
           imageUrl:
             typeof item.image_url === "string"
               ? item.image_url
+              : null,
+          imageKey:
+            typeof item.catalog_key === "string"
+              ? item.catalog_key
               : null,
         };
       });
@@ -668,7 +679,14 @@ export default function AppRecCard({
                             ? {
                                 uri: appliance.imageUrl,
                               }
-                            : defaultImage
+                            : (
+                                (appliance.imageKey
+                                  ? CATALOG_IMAGES[
+                                      appliance.imageKey
+                                    ]
+                                  : undefined) ??
+                                defaultImage
+                              )
                         }
                         style={
                           applianceCardStyles.image

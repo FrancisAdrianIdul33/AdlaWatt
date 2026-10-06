@@ -27,6 +27,9 @@ import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
 import {
+  CATALOG_IMAGES,
+} from "@/constants/applianceCatalog";
+import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
@@ -719,7 +722,9 @@ export default function AppliancesScreen() {
                   imageSource={
                     appliance.imageUrl
                       ? { uri: appliance.imageUrl }
-                      : undefined
+                      : (CATALOG_IMAGES[
+                          appliance.id
+                        ] ?? undefined)
                   }
                 />
               );

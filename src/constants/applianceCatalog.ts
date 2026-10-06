@@ -192,3 +192,22 @@ export function resolveRow(
         : null,
   };
 }
+
+// ============================================================
+// BUNDLED CATALOG PHOTOS (Living Area batch)
+// ============================================================
+//
+// Keys match GIVEN_CATALOG keys; require() paths must be
+// static for the bundler. Items without an entry render the
+// default adlawatt icon. Resolved items carry the catalog
+// key as id, so every surface looks photos up the same way:
+// custom uploads first, then this map, then the default.
+
+export const CATALOG_IMAGES: Record<string, number> = {
+  "catalog:living:stand-fan": require("@/assets/images/appliances/stand-fan.png"),
+  "catalog:living:led-tv": require("@/assets/images/appliances/led-tv.png"),
+  "catalog:living:router": require("@/assets/images/appliances/router.png"),
+  "catalog:living:tv-box": require("@/assets/images/appliances/tv-box.png"),
+  "catalog:living:speaker": require("@/assets/images/appliances/speaker.png"),
+  "catalog:living:bulb": require("@/assets/images/appliances/bulb.png"),
+};

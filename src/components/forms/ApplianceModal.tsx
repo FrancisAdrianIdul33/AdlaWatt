@@ -32,6 +32,7 @@ import SearchBox from "@/components/ui/SearchBox";
 
 import { Colors } from "@/constants/colors";
 import {
+  CATALOG_IMAGES,
   CUSTOM_AREA,
   GIVEN_CATALOG,
   type CatalogItem,
@@ -2027,6 +2028,11 @@ export default function ApplianceModal({
                             color={areaColor(
                               appliance.area,
                             )}
+                            imageSource={
+                              CATALOG_IMAGES[
+                                appliance.id
+                              ]
+                            }
                             selected={isSelected}
                             onPress={() =>
                               toggleAppliance(
