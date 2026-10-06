@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   TextInput,
@@ -319,13 +320,24 @@ export default function LoginScreen() {
               extraStyles.googleButton,
               pressed && extraStyles.googlePressed,
               (loading || googleLoading) &&
-                extraStyles.googlePressed,
+                extraStyles.googleDisabled,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Continue with Google"
             accessibilityHint="Sign in with your Google account"
+            accessibilityState={{
+              disabled: loading || googleLoading,
+              busy: googleLoading,
+            }}
           >
-            <GoogleGIcon size={20} />
+            {googleLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.textSecondary}
+              />
+            ) : (
+              <GoogleGIcon size={20} />
+            )}
             <AppText style={extraStyles.googleLabel}>
               {googleLoading
                 ? "Connecting..."
@@ -585,6 +597,10 @@ const loginExtraStyles = (colors: AppColors) =>
 
     googlePressed: {
       opacity: 0.7,
+    },
+
+    googleDisabled: {
+      opacity: 0.6,
     },
 
     googleLabel: {
