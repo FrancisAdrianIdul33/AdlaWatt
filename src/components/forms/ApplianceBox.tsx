@@ -533,11 +533,14 @@ export default function ApplianceBox({
           ? undefined
           : handleBoxPress
       }
+      // Selection inertness lives in handleBoxPress (early
+      // return on !selectable): keeping the container enabled
+      // lets nested controls (3-dot menu, confirms) receive
+      // taps on web, where a disabled ancestor swallows them.
+      // Archived viewer boxes stay display-only this way.
       disabled={
         deleteMode ||
-        archiveMode ||
-        !selectable ||
-        !onPress
+        archiveMode
       }
       style={({ pressed }) => [
         applianceCardStyles.boxCompact,
@@ -545,7 +548,11 @@ export default function ApplianceBox({
           borderColor: color,
           position: "relative",
         },
-        pressed && !deleteMode && styles.pressed,
+        pressed &&
+          selectable &&
+          !deleteMode &&
+          !archiveMode &&
+          styles.pressed,
       ]}
     >
       {deleteMode && isCustom ? (
