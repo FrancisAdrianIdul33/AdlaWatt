@@ -1,4 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
+import {
+  manipulateAsync,
+  SaveFormat,
+} from "expo-image-manipulator";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -28,9 +32,11 @@ import { MAX_PHOTO_BYTES } from "@/services/appliancePhotoService";
 //
 // DropdownModal shell like the rest of the system dialogs.
 // Owns the whole pick flow — permission request, square-crop
-// editor, size/type validation — and hands the caller a local
-// uri. Uploading stays with the caller (it owns the row the
-// photo belongs to).
+// editor, size/type validation, and center-crop
+// normalization to a 1:1 JPEG (web ignores the editor
+// aspect, so non-square picks are cropped here) — and hands
+// the caller a local uri. Uploading stays with the caller
+// (it owns the row the photo belongs to).
 //
 // No camera path by design: library-only keeps permissions to
 // photo access and skips device-camera testing entirely.
@@ -124,6 +130,54 @@ export default function MediaPickerModal({
         setError(
           "That photo is over 5 MB. Choose a smaller one.",
         );
+        return;
+      }
+
+      // Square normalization: non-1:1 picks (web ignores
+      // the editor aspect) center-crop to a square and
+      // downscale to 1024px so preview and stored object
+      // agree. Square assets pass through untouched.
+      const width = asset.width ?? 0;
+      const height = asset.height ?? 0;
+
+      if (width > 0 && height > 0 && width !== height) {
+        const side = Math.min(width, height);
+
+        const normalized = await manipulateAsync(
+          asset.uri,
+          [
+            {
+              crop: {
+                originX: Math.floor((width - side) / 2),
+                originY: Math.floor((height - side) / 2),
+                width: side,
+                height: side,
+              },
+            },
+            {
+              resize: {
+                width: Math.min(side, 1024),
+                height: Math.min(side, 1024),
+              },
+            },
+          ],
+          {
+            compress: 0.8,
+            format: SaveFormat.JPEG,
+          },
+        );
+
+        if (!normalized?.uri) {
+          setError(
+            "Could not process that photo. Try another one.",
+          );
+          return;
+        }
+
+        onSelect({
+          uri: normalized.uri,
+          mimeType: "image/jpeg",
+        });
         return;
       }
 
