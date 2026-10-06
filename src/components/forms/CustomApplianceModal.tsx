@@ -120,7 +120,7 @@ export default function CustomApplianceModal({
           <Image
             source={{ uri: photoPreview }}
             style={styles.photoDisplayImage}
-            resizeMode="cover"
+            resizeMode="contain"
             accessibilityLabel="Custom appliance photo"
           />
         ) : (
@@ -150,9 +150,9 @@ export default function CustomApplianceModal({
         accessibilityHint="Opens the photo picker"
       >
         <Ionicons
-          name="camera-outline"
+          name="camera"
           size={20}
-          color={colors.text}
+          color={colors.onPrimary}
         />
 
         <AppText
@@ -272,7 +272,7 @@ const getStyles = (colors: AppColors) =>
 
     photoDisplay: {
       width: "100%",
-      height: 180,
+      aspectRatio: 1,
       borderRadius: Radius.md,
       borderWidth: 2,
       borderColor: colors.border,
@@ -300,15 +300,15 @@ const getStyles = (colors: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.primary,
       borderWidth: 2,
-      borderColor: colors.border,
+      borderColor: colors.primary,
       borderRadius: Radius.md,
       marginBottom: 8,
     },
 
     photoButtonText: {
-      color: colors.text,
+      color: colors.onPrimary,
       fontWeight: "700",
     },
 

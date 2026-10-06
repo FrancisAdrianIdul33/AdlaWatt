@@ -673,7 +673,7 @@ export default function AppRecCard({
                         style={
                           applianceCardStyles.image
                         }
-                        resizeMode="cover"
+                        resizeMode="contain"
                       />
                     </View>
 

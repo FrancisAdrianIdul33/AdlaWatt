@@ -409,7 +409,7 @@ export default function ApplianceBox({
         <Image
           source={imageSource}
           style={applianceCardStyles.image}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
 
