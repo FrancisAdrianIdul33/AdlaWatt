@@ -19,6 +19,13 @@ import {
   applianceCardGrid,
 } from "@/components/forms/applianceCard";
 import CustomApplianceModal from "@/components/forms/CustomApplianceModal";
+import MediaPickerModal, {
+  type PickedPhoto,
+} from "@/components/forms/MediaPickerModal";
+import {
+  deleteAppliancePhotoByUrl,
+  uploadAppliancePhoto,
+} from "@/services/appliancePhotoService";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 import SearchBox from "@/components/ui/SearchBox";
@@ -48,7 +55,14 @@ type Appliance = {
   name: string;
   watts: string;
   area: string;
+  // Stored public photo URL. Null/undefined renders the
+  // bundled adlawatt icon — the default for every custom.
+  imageUrl?: string | null;
 };
+
+type PhotoPickerTarget =
+  | { kind: "form" }
+  | { kind: "box"; id: string };
 
 type ApplianceModalProps = {
   visible: boolean;
@@ -203,6 +217,32 @@ export default function ApplianceModal({
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
 
+  // ---- Custom photo draft (add/edit form) ----
+  // Local pick (fresh from the library) wins over the
+  // stored URL for the preview. The stored URL is swapped
+  // into the row on confirm; the pre-edit original is kept
+  // separately so a replaced object can be deleted.
+  const [customPhotoLocal, setCustomPhotoLocal] =
+    useState<PickedPhoto | null>(null);
+
+  const [customPhotoUrl, setCustomPhotoUrl] =
+    useState<string | null>(null);
+
+  const [customPhotoOriginalUrl, setCustomPhotoOriginalUrl] =
+    useState<string | null>(null);
+
+  // True while a form photo upload runs (confirm dims).
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  // Media picker target: the add/edit form, or a box
+  // camera button keyed by appliance id.
+  const [photoPickerFor, setPhotoPickerFor] =
+    useState<PhotoPickerTarget | null>(null);
+
+  // Box camera upload in flight (guards double-taps).
+  const [uploadingBoxPhotoId, setUploadingBoxPhotoId] =
+    useState<string | null>(null);
+
   const [isReset, setIsReset] =
     useState(false);
 
@@ -296,7 +336,7 @@ export default function ApplianceModal({
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, image_url",
       )
       .eq("user_id", user.id)
       .order("appliance_name");
@@ -359,6 +399,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }));
 
     const archived: Appliance[] = rows
@@ -375,6 +419,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }));
 
     const selectedCustomIds = rows
@@ -436,7 +484,7 @@ export default function ApplianceModal({
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, archive, image_url",
       )
       .eq("user_id", user.id)
       .eq("type", "custom")
@@ -468,6 +516,10 @@ export default function ApplianceModal({
           item.wattage_max,
         ),
         area: CUSTOM_AREA,
+        imageUrl:
+          typeof item.image_url === "string"
+            ? item.image_url
+            : null,
       }),
     );
 
@@ -716,6 +768,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setEditingCustom(null);
     setEditModalVisible(false);
   };
@@ -729,6 +784,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(true);
   };
 
@@ -736,6 +794,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(false);
   };
 
@@ -814,6 +875,36 @@ export default function ApplianceModal({
       return;
     }
 
+    // Photo first: a failed upload aborts the add so no
+    // row is ever created pointing at a missing object.
+    let imageUrl: string | null = null;
+
+    if (customPhotoLocal) {
+      setPhotoBusy(true);
+
+      const upload = await uploadAppliancePhoto(
+        user.id,
+        customPhotoLocal.uri,
+        customPhotoLocal.mimeType,
+      );
+
+      setPhotoBusy(false);
+
+      if (
+        !upload.success ||
+        !("url" in upload) ||
+        !upload.url
+      ) {
+        setCustomError(
+          ("error" in upload && upload.error) ||
+            "Unable to upload that photo. Please try again.",
+        );
+        return;
+      }
+
+      imageUrl = upload.url;
+    }
+
     const { data, error } = await supabase
       .from("appliances")
       .insert({
@@ -822,13 +913,14 @@ export default function ApplianceModal({
         type: "custom",
         wattage_min: interval.min,
         wattage_max: interval.max,
+        image_url: imageUrl,
         // New customs start selected: under the v6 archive
         // flag an unselected row would be archive = true and
         // hidden from the list at once.
         selection: true,
       })
       .select(
-        "app_id, appliance_name, wattage_min, wattage_max",
+        "app_id, appliance_name, wattage_min, wattage_max, image_url",
       )
       .single();
 
@@ -853,6 +945,10 @@ export default function ApplianceModal({
         data.wattage_max,
       ),
       area: CUSTOM_AREA,
+      imageUrl:
+        typeof data.image_url === "string"
+          ? data.image_url
+          : imageUrl,
     };
 
     onCustomAdd?.(appliance);
@@ -871,6 +967,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setAddModalVisible(false);
 
     setSuccessMessage(
@@ -960,18 +1059,51 @@ export default function ApplianceModal({
       return;
     }
 
+    // Resolve the photo: a fresh pick uploads first (a
+    // failed upload aborts before the row is touched);
+    // otherwise keep the stored URL, or null when the user
+    // removed it in the picker.
+    let finalImageUrl: string | null = customPhotoUrl;
+
+    if (customPhotoLocal) {
+      setPhotoBusy(true);
+
+      const upload = await uploadAppliancePhoto(
+        user.id,
+        customPhotoLocal.uri,
+        customPhotoLocal.mimeType,
+      );
+
+      setPhotoBusy(false);
+
+      if (
+        !upload.success ||
+        !("url" in upload) ||
+        !upload.url
+      ) {
+        setCustomError(
+          ("error" in upload && upload.error) ||
+            "Unable to upload that photo. Please try again.",
+        );
+        return;
+      }
+
+      finalImageUrl = upload.url;
+    }
+
     const { data, error } = await supabase
       .from("appliances")
       .update({
         appliance_name: name,
         wattage_min: interval.min,
         wattage_max: interval.max,
+        image_url: finalImageUrl,
       })
       .eq("app_id", editingCustom.id)
       .eq("user_id", user.id)
       .eq("type", "custom")
       .select(
-        "app_id, appliance_name, wattage_min, wattage_max",
+        "app_id, appliance_name, wattage_min, wattage_max, image_url",
       )
       .single();
 
@@ -996,7 +1128,23 @@ export default function ApplianceModal({
         data.wattage_max,
       ),
       area: CUSTOM_AREA,
+      imageUrl:
+        typeof data.image_url === "string"
+          ? data.image_url
+          : finalImageUrl,
     };
+
+    // Replaced or removed photos leave orphaned objects:
+    // delete the pre-edit original best-effort. A failed
+    // delete never fails the save itself.
+    if (
+      customPhotoOriginalUrl &&
+      customPhotoOriginalUrl !== finalImageUrl
+    ) {
+      void deleteAppliancePhotoByUrl(
+        customPhotoOriginalUrl,
+      ).catch(() => {});
+    }
 
     setAppliances((current) =>
       current.map((item) =>
@@ -1023,6 +1171,9 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(null);
+    setCustomPhotoOriginalUrl(null);
     setEditModalVisible(false);
 
     setSuccessMessage(
@@ -1073,6 +1224,16 @@ export default function ApplianceModal({
     const removed =
       appliances.find((item) => item.id === id) ??
       archivedAppliances.find((item) => item.id === id);
+
+    // Deleting the row orphans its photo: remove the stored
+    // object best-effort. Never fails the delete itself.
+    const removedImageUrl = removed?.imageUrl ?? null;
+
+    if (removedImageUrl) {
+      void deleteAppliancePhotoByUrl(
+        removedImageUrl,
+      ).catch(() => {});
+    }
 
     const wasArchived = archivedAppliances.some(
       (item) => item.id === id,
@@ -1340,9 +1501,208 @@ export default function ApplianceModal({
       appliance.watts.replace(/W$/, ""),
     );
 
+    setCustomPhotoLocal(null);
+    setCustomPhotoUrl(appliance.imageUrl ?? null);
+    setCustomPhotoOriginalUrl(
+      appliance.imageUrl ?? null,
+    );
+
     setCustomError("");
     setEditModalVisible(true);
   };
+
+  // ============================================================
+  // CUSTOM PHOTO (MEDIA PICKER TARGETS)
+  // ============================================================
+  //
+  // One MediaPickerModal serves the add/edit form and every
+  // box camera button. Form picks stay a local draft until
+  // Add/Save persists them; box picks upload and persist at
+  // once (there is no confirm step out there).
+  // ============================================================
+
+  const findCustomImageUrl = (
+    id: string,
+  ): string | null =>
+    appliances.find((item) => item.id === id)
+      ?.imageUrl ??
+    archivedAppliances.find((item) => item.id === id)
+      ?.imageUrl ??
+    null;
+
+  const handlePhotoSelect = async (
+    photo: PickedPhoto,
+  ) => {
+    const target = photoPickerFor;
+
+    if (!target || uploadingBoxPhotoId) {
+      return;
+    }
+
+    // Form draft only: persistence happens on Add/Save.
+    if (target.kind === "form") {
+      setCustomPhotoLocal(photo);
+      setPhotoPickerFor(null);
+      return;
+    }
+
+    const user = await getAuthenticatedUserSafe();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to add a photo.",
+      );
+      setPhotoPickerFor(null);
+      return;
+    }
+
+    setUploadingBoxPhotoId(target.id);
+
+    const upload = await uploadAppliancePhoto(
+      user.id,
+      photo.uri,
+      photo.mimeType,
+    );
+
+    if (
+      !upload.success ||
+      !("url" in upload) ||
+      !upload.url
+    ) {
+      setUploadingBoxPhotoId(null);
+      setPhotoPickerFor(null);
+      setCustomError(
+        ("error" in upload && upload.error) ||
+          "Unable to upload that photo. Please try again.",
+      );
+      return;
+    }
+
+    const previous = findCustomImageUrl(target.id);
+    const nextUrl = upload.url;
+
+    const { error } = await supabase
+      .from("appliances")
+      .update({ image_url: nextUrl })
+      .eq("app_id", target.id)
+      .eq("user_id", user.id)
+      .eq("type", "custom");
+
+    setUploadingBoxPhotoId(null);
+    setPhotoPickerFor(null);
+
+    if (error) {
+      console.error(
+        "Custom photo update error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to save that photo. Please try again.",
+      );
+      void deleteAppliancePhotoByUrl(nextUrl).catch(
+        () => {},
+      );
+      return;
+    }
+
+    const applyImage = (current: Appliance[]) =>
+      current.map((item) =>
+        item.id === target.id
+          ? { ...item, imageUrl: nextUrl }
+          : item,
+      );
+
+    setAppliances(applyImage);
+    setArchivedAppliances(applyImage);
+
+    if (previous && previous !== nextUrl) {
+      void deleteAppliancePhotoByUrl(previous).catch(
+        () => {},
+      );
+    }
+  };
+
+  const handlePhotoRemove = async () => {
+    const target = photoPickerFor;
+
+    if (!target || uploadingBoxPhotoId) {
+      return;
+    }
+
+    // Form removal only clears the draft: the stored
+    // object is deleted on Save (or kept when the form is
+    // cancelled with no changes persisted).
+    if (target.kind === "form") {
+      setCustomPhotoLocal(null);
+      setCustomPhotoUrl(null);
+      setPhotoPickerFor(null);
+      return;
+    }
+
+    const user = await getAuthenticatedUserSafe();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to remove a photo.",
+      );
+      setPhotoPickerFor(null);
+      return;
+    }
+
+    const previous = findCustomImageUrl(target.id);
+
+    if (!previous) {
+      setPhotoPickerFor(null);
+      return;
+    }
+
+    setUploadingBoxPhotoId(target.id);
+
+    const { error } = await supabase
+      .from("appliances")
+      .update({ image_url: null })
+      .eq("app_id", target.id)
+      .eq("user_id", user.id)
+      .eq("type", "custom");
+
+    setUploadingBoxPhotoId(null);
+    setPhotoPickerFor(null);
+
+    if (error) {
+      console.error(
+        "Custom photo remove error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to remove that photo. Please try again.",
+      );
+      return;
+    }
+
+    const clearImage = (current: Appliance[]) =>
+      current.map((item) =>
+        item.id === target.id
+          ? { ...item, imageUrl: null }
+          : item,
+      );
+
+    setAppliances(clearImage);
+    setArchivedAppliances(clearImage);
+
+    void deleteAppliancePhotoByUrl(previous).catch(
+      () => {},
+    );
+  };
+
+  const formPhotoPreview =
+    customPhotoLocal?.uri ?? customPhotoUrl;
+
+  const pickerHasPhoto =
+    photoPickerFor?.kind === "form"
+      ? formPhotoPreview !== null
+      : photoPickerFor
+        ? findCustomImageUrl(photoPickerFor.id) !== null
+        : false;
 
   // ============================================================
   // AREA SECTIONS
@@ -1729,6 +2089,13 @@ export default function ApplianceModal({
                               color={
                                 colors.primary
                               }
+                              imageSource={
+                                appliance.imageUrl
+                                  ? {
+                                      uri: appliance.imageUrl,
+                                    }
+                                  : undefined
+                              }
                               selected={isSelected}
                               isCustom
                               onPress={() =>
@@ -1741,6 +2108,18 @@ export default function ApplianceModal({
                                   appliance,
                                 )
                               }
+                              onCamera={() => {
+                                if (
+                                  uploadingBoxPhotoId
+                                ) {
+                                  return;
+                                }
+
+                                setPhotoPickerFor({
+                                  kind: "box",
+                                  id: appliance.id,
+                                });
+                              }}
                               onDelete={() =>
                                 handleCustomDelete(
                                   appliance.id,
@@ -1944,6 +2323,13 @@ export default function ApplianceModal({
                             name={appliance.name}
                             wattage={appliance.watts}
                             color={colors.primary}
+                            imageSource={
+                              appliance.imageUrl
+                                ? {
+                                    uri: appliance.imageUrl,
+                                  }
+                                : undefined
+                            }
                             selectable={false}
                             isCustom
                             archiveVariant="unarchive"
@@ -1952,6 +2338,18 @@ export default function ApplianceModal({
                                 appliance,
                               )
                             }
+                            onCamera={() => {
+                              if (
+                                uploadingBoxPhotoId
+                              ) {
+                                return;
+                              }
+
+                              setPhotoPickerFor({
+                                kind: "box",
+                                id: appliance.id,
+                              });
+                            }}
                             onDelete={() =>
                               handleCustomDelete(
                                 appliance.id,
@@ -2181,6 +2579,11 @@ export default function ApplianceModal({
           }}
           onCancel={handleAddCancel}
           onAdd={handleCustomAdd}
+          photoPreview={formPhotoPreview}
+          photoBusy={photoBusy}
+          onPhotoPress={() =>
+            setPhotoPickerFor({ kind: "form" })
+          }
         />
 
         <CustomApplianceModal
@@ -2205,6 +2608,19 @@ export default function ApplianceModal({
           onCancel={handleEditCancel}
           onAdd={handleCustomAdd}
           onSave={handleCustomUpdate}
+          photoPreview={formPhotoPreview}
+          photoBusy={photoBusy}
+          onPhotoPress={() =>
+            setPhotoPickerFor({ kind: "form" })
+          }
+        />
+
+        <MediaPickerModal
+          visible={photoPickerFor !== null}
+          hasPhoto={pickerHasPhoto}
+          onSelect={handlePhotoSelect}
+          onRemove={handlePhotoRemove}
+          onClose={() => setPhotoPickerFor(null)}
         />
       </View>
     </Modal>
