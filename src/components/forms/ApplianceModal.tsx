@@ -558,6 +558,7 @@ export default function ApplianceModal({
     setSearchText("");
     setArchiveSearchText("");
     setLayer(1);
+    setOpenMenuId(null);
     setArchivedAppliances([]);
     setIsLoadingCustoms(false);
     setEditModalVisible(false);
@@ -1503,6 +1504,19 @@ export default function ApplianceModal({
   const formPhotoPreview =
     customPhotoLocal?.uri ?? customPhotoUrl;
 
+  // Single-open 3-dot menus: at most one box menu across
+  // Layer 1 and the archived viewer. Boxes are controlled
+  // through menuOpen/onMenuToggle at their call sites.
+  const [openMenuId, setOpenMenuId] = useState<
+    string | null
+  >(null);
+
+  const handleBoxMenuToggle = (id: string) => {
+    setOpenMenuId((current) =>
+      current === id ? null : id,
+    );
+  };
+
   // ============================================================
   // AREA SECTIONS
   // ============================================================
@@ -1610,6 +1624,7 @@ export default function ApplianceModal({
   const openArchiveLayer = () => {
     setCustomError("");
     setArchiveSearchText("");
+    setOpenMenuId(null);
     setLayer(2);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     // Always refetch so Layer 2 reflects the table, not just
@@ -1619,6 +1634,7 @@ export default function ApplianceModal({
 
   const closeArchiveLayer = () => {
     setArchiveSearchText("");
+    setOpenMenuId(null);
     setLayer(1);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
@@ -1897,6 +1913,15 @@ export default function ApplianceModal({
                               }
                               selected={isSelected}
                               isCustom
+                              menuOpen={
+                                openMenuId ===
+                                appliance.id
+                              }
+                              onMenuToggle={() =>
+                                handleBoxMenuToggle(
+                                  appliance.id,
+                                )
+                              }
                               onPress={() =>
                                 toggleAppliance(
                                   appliance.id,
@@ -2120,6 +2145,15 @@ export default function ApplianceModal({
                             selectable={false}
                             isCustom
                             archiveVariant="unarchive"
+                            menuOpen={
+                              openMenuId ===
+                              appliance.id
+                            }
+                            onMenuToggle={() =>
+                              handleBoxMenuToggle(
+                                appliance.id,
+                              )
+                            }
                             onEdit={() =>
                               openCustomEditor(
                                 appliance,

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Image,
@@ -42,6 +42,13 @@ type ApplianceBoxProps = {
   onDelete?: () => void;
   onArchive?: () => void;
   archiveVariant?: "archive" | "unarchive";
+
+  // 3-dot menu is parent-controlled so only one box menu is
+  // open at a time across every list. Optional so catalog
+  // boxes (which render no dots) stay prop-free; custom
+  // boxes always receive both from ApplianceModal.
+  menuOpen?: boolean;
+  onMenuToggle?: () => void;
 };
 
 const defaultImage = require("@/assets/images/adlawatt-icon.png");
@@ -59,10 +66,21 @@ export default function ApplianceBox({
   onDelete,
   onArchive,
   archiveVariant = "archive",
+  menuOpen = false,
+  onMenuToggle,
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [archiveMode, setArchiveMode] = useState(false);
-  const [menuMode, setMenuMode] = useState(false);
+
+  // Confirmations are local but unreachable without the menu:
+  // whenever the parent closes this menu externally (another
+  // box opened), drop any pending confirmation with it.
+  useEffect(() => {
+    if (!menuOpen) {
+      setDeleteMode(false);
+      setArchiveMode(false);
+    }
+  }, [menuOpen]);
 
   // A tap on the nested 3-dot toggle also bubbles to the outer
   // box Pressable. The flag makes the outer handler ignore that
@@ -81,7 +99,7 @@ export default function ApplianceBox({
 
   const handleDeleteConfirm = () => {
     setDeleteMode(false);
-    setMenuMode(false);
+    onMenuToggle?.();
     onDelete?.();
   };
 
@@ -91,7 +109,7 @@ export default function ApplianceBox({
 
   const handleArchiveConfirm = () => {
     setArchiveMode(false);
-    setMenuMode(false);
+    onMenuToggle?.();
     onArchive?.();
   };
 
@@ -101,10 +119,11 @@ export default function ApplianceBox({
 
   // The same 3-dot icon opens and closes the options menu.
   // There is no back arrow: tapping the dots again returns
-  // the box to its default view.
+  // the box to its default view. The parent closes other
+  // boxes' menus, so only one is ever open.
   const handleDotsPress = () => {
     suppressNextSelect.current = true;
-    setMenuMode((current) => !current);
+    onMenuToggle?.();
   };
 
   const isUnarchive = archiveVariant === "unarchive";
@@ -451,7 +470,7 @@ export default function ApplianceBox({
   return (
     <Pressable
       onPress={
-        menuMode || deleteMode || archiveMode
+        menuOpen || deleteMode || archiveMode
           ? undefined
           : handleBoxPress
       }
@@ -474,7 +493,7 @@ export default function ApplianceBox({
         renderDeleteConfirmation()
       ) : archiveMode && isCustom ? (
         renderArchiveConfirmation()
-      ) : menuMode && isCustom ? (
+      ) : menuOpen && isCustom ? (
         renderMenuLayer()
       ) : (
         renderNormalLayer()
