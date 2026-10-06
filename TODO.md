@@ -26,8 +26,10 @@
   - Box 3-dot camera button wired to the same picker; photos thread to modal list, dashboard list, and recommendation card
 - [ ] Analytics: Add more graphs and charts
   - Note: Critical
-- [ ] Preferences: Add phone vibration for alert notifications
-  - Vibration should continue until the notification is marked as done
+- [x] Preferences: Add phone vibration for alert notifications — **Resolved**
+  - Safe buzz-pause rhythm (400ms buzz / 2s rest; iOS re-buzz interval) that cannot escalate or overheat the motor
+  - Buzz starts on unread alerts (mount check + realtime inserts) and stops only on mark-as-read, zero unread, toggle OFF, or sign-out
+  - Menu Vibration row now persisted (default ON) instead of dead local state
 - [ ] Preferences: Add multi-language display
 - [ ] User Manual: Add manual contents inside its screen
 
