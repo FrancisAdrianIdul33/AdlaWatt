@@ -1036,18 +1036,27 @@ export default function SettingsScreen() {
           title="Account Profile"
           onClose={handleCloseAccountModal}
         >
-          <ScrollView
-            style={[
-              styles.modalScroll,
-              {
-                maxHeight:
-                  windowHeight * 0.55,
-              },
-            ]}
-            showsVerticalScrollIndicator={
-              false
-            }
-          >
+            <ScrollView
+              style={[
+                styles.modalScroll,
+                {
+                  maxHeight:
+                    windowHeight * 0.55,
+                  // Fixed body height (tallest state = edit
+                  // mode ≈ 370): view↔edit switches and the
+                  // warning row no longer resize the card.
+                  // Capped by maxHeight so small screens
+                  // still scroll instead of overflowing.
+                  minHeight: Math.min(
+                    370,
+                    windowHeight * 0.55,
+                  ),
+                },
+              ]}
+              showsVerticalScrollIndicator={
+                false
+              }
+            >
               {loadingAccount ? (
                 <AppText
                   variant="caption"
@@ -1291,28 +1300,32 @@ export default function SettingsScreen() {
                     </View>
                   </View>
 
-                  {/* Warning */}
-                  {warning ? (
-                    <View
-                      style={
-                        styles.warningContainer
-                      }
-                    >
-                      <Ionicons
-                        name="alert-circle-outline"
-                        size={18}
-                        color={colors.error}
-                      />
-
-                      <AppText
+                  {/* Warning (reserved slot: one line of
+                      space is always held so validation
+                      errors never resize the modal) */}
+                  <View style={styles.warningSlot}>
+                    {warning ? (
+                      <View
                         style={
-                          styles.warningText
+                          styles.warningContainer
                         }
                       >
-                        {warning}
-                      </AppText>
-                    </View>
-                  ) : null}
+                        <Ionicons
+                          name="alert-circle-outline"
+                          size={18}
+                          color={colors.error}
+                        />
+
+                        <AppText
+                          style={
+                            styles.warningText
+                          }
+                        >
+                          {warning}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
 
                 </>
               )}
@@ -2432,11 +2445,20 @@ const getStyles = (colors: AppColors) =>
     lineHeight: 20,
   },
 
+  // Reserved one-line slot so account validation errors
+  // never resize the modal (login uses the same pattern).
+  // The slot owns the bottom margin so spacing is
+  // identical with or without a message.
+  warningSlot: {
+    minHeight: 26,
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+
   warningContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 8,
   },
   warningText: {
     color: colors.error,
