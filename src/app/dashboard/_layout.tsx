@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAlertVibration } from "@/hooks/useAlertVibration";
 import {
   initializeNotificationService,
   shutdownNotificationService,
@@ -30,6 +31,10 @@ function ThemedDashboard() {
   const { isLoaded, isSignedIn, user } = useAuth();
   const userId = user?.id ?? null;
   const initializedUserId = useRef<string | null>(null);
+
+  // Persistent alert buzz while unread alerts exist.
+  // Mounted once for the whole signed-in dashboard.
+  useAlertVibration();
 
   // Auth guard: unauthenticated deep-links land here
   // without passing through splash.

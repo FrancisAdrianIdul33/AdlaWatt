@@ -45,6 +45,7 @@ import {
 import { OptionRow } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import { stopAlertVibration } from "@/services/alertVibration";
 
 type TimeFilter =
   | "All"
@@ -503,6 +504,11 @@ export default function NotificationsScreen() {
       if (error) {
         throw new Error(error.message);
       }
+
+      // Mark-as-read is the user's explicit silence switch:
+      // the update succeeded, so stop the alert buzz now
+      // rather than waiting on any re-check.
+      stopAlertVibration();
 
       retryLoad();
     } catch (thrown) {

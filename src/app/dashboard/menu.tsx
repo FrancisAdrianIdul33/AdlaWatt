@@ -58,8 +58,14 @@ import {
 } from "@/services/typography";
 import {
   loadCachedEmailNotifications,
+  loadVibrationSetting,
   saveCachedEmailNotifications,
+  saveVibrationSetting,
 } from "@/services/settings";
+import {
+  stopAlertVibration,
+  syncAlertVibration,
+} from "@/services/alertVibration";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -138,6 +144,34 @@ export default function SettingsScreen() {
 
   const [vibration, setVibration] =
     useState(true);
+
+  // Persisted device preference (default ON). Turning it
+  // OFF silences an active buzz at once; turning it back ON
+  // re-syncs so waiting unread alerts buzz again.
+  useEffect(() => {
+    let active = true;
+
+    loadVibrationSetting().then((loaded) => {
+      if (active) {
+        setVibration(loaded);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleVibrationToggle = (next: boolean) => {
+    setVibration(next);
+    void saveVibrationSetting(next);
+
+    if (next) {
+      void syncAlertVibration();
+    } else {
+      stopAlertVibration();
+    }
+  };
 
   // Global per-user alert-email switch (server column,
   // default ON). Drafted like typography: flips instantly,
@@ -1501,7 +1535,7 @@ export default function SettingsScreen() {
 
                 {renderToggle(
                   vibration,
-                  setVibration,
+                  handleVibrationToggle,
                 )}
               </View>
 
