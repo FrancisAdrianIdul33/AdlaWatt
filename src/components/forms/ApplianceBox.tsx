@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   Image,
@@ -72,6 +78,35 @@ export default function ApplianceBox({
   const [deleteMode, setDeleteMode] = useState(false);
   const [archiveMode, setArchiveMode] = useState(false);
 
+  // Silent 3s auto-close: any tap inside the menu or its
+  // confirmations re-arms the clock; full inactivity closes
+  // everything with no UI. toggleRef avoids stale closures
+  // across parent re-renders.
+  const closeTimer = useRef<
+    ReturnType<typeof setTimeout> | null
+  >(null);
+
+  const toggleRef = useRef(onMenuToggle);
+  toggleRef.current = onMenuToggle;
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
+  const pokeCloseTimer = useCallback(() => {
+    clearCloseTimer();
+
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      setDeleteMode(false);
+      setArchiveMode(false);
+      toggleRef.current?.();
+    }, 3000);
+  }, [clearCloseTimer]);
+
   // Confirmations are local but unreachable without the menu:
   // whenever the parent closes this menu externally (another
   // box opened), drop any pending confirmation with it.
@@ -79,8 +114,14 @@ export default function ApplianceBox({
     if (!menuOpen) {
       setDeleteMode(false);
       setArchiveMode(false);
+      clearCloseTimer();
+      return;
     }
-  }, [menuOpen]);
+
+    pokeCloseTimer();
+
+    return clearCloseTimer;
+  }, [menuOpen, pokeCloseTimer, clearCloseTimer]);
 
   // A tap on the nested 3-dot toggle also bubbles to the outer
   // box Pressable. The flag makes the outer handler ignore that
@@ -98,33 +139,47 @@ export default function ApplianceBox({
   );
 
   const handleDeleteConfirm = () => {
+    pokeCloseTimer();
     setDeleteMode(false);
     onMenuToggle?.();
     onDelete?.();
   };
 
   const handleDeleteCancel = () => {
+    pokeCloseTimer();
     setDeleteMode(false);
   };
 
   const handleArchiveConfirm = () => {
+    pokeCloseTimer();
     setArchiveMode(false);
     onMenuToggle?.();
     onArchive?.();
   };
 
   const handleArchiveCancel = () => {
+    pokeCloseTimer();
     setArchiveMode(false);
   };
 
   // The same 3-dot icon opens and closes the options menu.
   // There is no back arrow: tapping the dots again returns
   // the box to its default view. The parent closes other
-  // boxes' menus, so only one is ever open.
+  // boxes' menus, so only one is ever open. Every tap
+  // re-arms the silent auto-close clock.
   const handleDotsPress = () => {
     suppressNextSelect.current = true;
+    pokeCloseTimer();
     onMenuToggle?.();
   };
+
+  // Menu icon taps reset the auto-close clock without
+  // changing what the tap does.
+  const pressAndPoke =
+    (fn?: () => void) => () => {
+      pokeCloseTimer();
+      fn?.();
+    };
 
   const isUnarchive = archiveVariant === "unarchive";
 
@@ -175,7 +230,7 @@ export default function ApplianceBox({
           {/* EDIT */}
 
         <Pressable
-          onPress={onEdit}
+          onPress={pressAndPoke(onEdit)}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel="Edit appliance"
@@ -194,7 +249,9 @@ export default function ApplianceBox({
         {/* ARCHIVE / UNARCHIVE */}
 
         <Pressable
-          onPress={() => setArchiveMode(true)}
+          onPress={pressAndPoke(() =>
+            setArchiveMode(true),
+          )}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel={
@@ -221,7 +278,9 @@ export default function ApplianceBox({
         {/* DELETE */}
 
         <Pressable
-          onPress={() => setDeleteMode(true)}
+          onPress={pressAndPoke(() =>
+            setDeleteMode(true),
+          )}
           hitSlop={6}
           accessibilityRole="button"
           accessibilityLabel="Delete appliance"
