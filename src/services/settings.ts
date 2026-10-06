@@ -143,6 +143,54 @@ export async function saveVibrationSetting(
 }
 
 // ============================================================
+// LANGUAGE PREFERENCE (v1)
+//
+// Device-level UI language backing the Menu Language row.
+// Always starts English; the user switches manually.
+// Persisted so the choice survives restarts. Unknown or
+// corrupt reads fall back to English (the source language
+// every string is written in).
+// ============================================================
+
+export type AppLanguage = "en" | "fil" | "ceb";
+
+const LANGUAGE_STORAGE_KEY = "adlawatt.language.v1";
+
+export const isAppLanguage = (
+  value: unknown,
+): value is AppLanguage =>
+  value === "en" ||
+  value === "fil" ||
+  value === "ceb";
+
+export async function loadLanguageSetting(): Promise<AppLanguage> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      LANGUAGE_STORAGE_KEY,
+    );
+
+    return isAppLanguage(raw) ? raw : "en";
+  } catch {
+    return "en";
+  }
+}
+
+export async function saveLanguageSetting(
+  value: AppLanguage,
+): Promise<void> {
+  // Best-effort like the rest: the UI already holds the new
+  // value, so a blocked store must not break the switch.
+  try {
+    await AsyncStorage.setItem(
+      LANGUAGE_STORAGE_KEY,
+      value,
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}
+
+// ============================================================
 // EMAIL NOTIFICATION SWITCH (v1)
 //
 // Last CONFIRMED value of the global per-user alert-email
