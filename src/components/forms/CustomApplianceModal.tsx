@@ -114,23 +114,23 @@ export default function CustomApplianceModal({
         example, soldering wire may use 15-25W.
       </AppText>
 
-      {/* Photo display on top, picker button below it. */}
+      {/* Photo display on top, picker button below it,
+          with a section break before the fields. */}
       <View style={styles.photoDisplay}>
-        {photoPreview ? (
-          <Image
-            source={{ uri: photoPreview }}
-            style={styles.photoDisplayImage}
-            resizeMode="contain"
-            accessibilityLabel="Custom appliance photo"
-          />
-        ) : (
-          <Image
-            source={defaultPhoto}
-            style={styles.photoDefaultIcon}
-            resizeMode="contain"
-            accessibilityLabel="Default appliance icon"
-          />
-        )}
+        <Image
+          source={
+            photoPreview
+              ? { uri: photoPreview }
+              : defaultPhoto
+          }
+          style={styles.photoDisplayImage}
+          resizeMode="contain"
+          accessibilityLabel={
+            photoPreview
+              ? "Custom appliance photo"
+              : "Default appliance icon"
+          }
+        />
       </View>
 
       <Pressable
@@ -288,11 +288,6 @@ const getStyles = (colors: AppColors) =>
       height: "100%",
     },
 
-    photoDefaultIcon: {
-      width: 96,
-      height: 96,
-    },
-
     photoButton: {
       width: "100%",
       minHeight: Control.button,
@@ -304,7 +299,7 @@ const getStyles = (colors: AppColors) =>
       borderWidth: 2,
       borderColor: colors.primary,
       borderRadius: Radius.md,
-      marginBottom: 8,
+      marginBottom: 16,
     },
 
     photoButtonText: {
