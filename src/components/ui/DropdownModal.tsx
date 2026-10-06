@@ -121,12 +121,18 @@ interface RadioOptionRowProps {
   label: string;
   selected: boolean;
   onPress: () => void;
+  // Disabled rows render muted with an optional note
+  // (used for coming-soon languages): not pressable.
+  disabled?: boolean;
+  note?: string;
 }
 
 export function RadioOptionRow({
   label,
   selected,
   onPress,
+  disabled = false,
+  note,
 }: RadioOptionRowProps) {
   const colors = useAppColors();
   const dropdownModalStyles = useMemo(
@@ -139,8 +145,18 @@ export function RadioOptionRow({
         dropdownModalStyles.option,
         selected &&
           dropdownModalStyles.optionSelected,
+        disabled && dropdownModalStyles.optionDisabled,
       ]}
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+      accessibilityRole="radio"
+      accessibilityState={{
+        selected,
+        disabled,
+      }}
+      accessibilityLabel={
+        note ? `${label}, ${note}` : label
+      }
     >
       <Ionicons
         name={
@@ -149,7 +165,11 @@ export function RadioOptionRow({
             : "radio-button-off-outline"
         }
         size={18}
-        color={colors.accentContent}
+        color={
+          disabled
+            ? colors.textSecondary
+            : colors.accentContent
+        }
       />
 
       <AppText
@@ -158,10 +178,21 @@ export function RadioOptionRow({
           dropdownModalStyles.optionText,
           selected &&
             dropdownModalStyles.optionTextSelected,
+          disabled &&
+            dropdownModalStyles.optionTextDisabled,
         ]}
       >
         {label}
       </AppText>
+
+      {note ? (
+        <AppText
+          variant="caption"
+          style={dropdownModalStyles.optionNote}
+        >
+          {note}
+        </AppText>
+      ) : null}
     </Pressable>
   );
 }
@@ -291,11 +322,25 @@ const getDropdownModalStyles = (colors: AppColors) =>
       backgroundColor: colors.selectedWash,
     },
 
+    optionDisabled: {
+      opacity: 0.55,
+    },
+
     optionText: {
       color: colors.text,
+      flexShrink: 1,
     },
 
     optionTextSelected: {
       fontWeight: "700",
+    },
+
+    optionTextDisabled: {
+      color: colors.textSecondary,
+    },
+
+    optionNote: {
+      color: colors.textSecondary,
+      marginLeft: "auto",
     },
   });

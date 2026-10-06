@@ -58,10 +58,18 @@ import {
 } from "@/services/typography";
 import {
   loadCachedEmailNotifications,
+  loadLanguageSetting,
   loadVibrationSetting,
   saveCachedEmailNotifications,
   saveVibrationSetting,
 } from "@/services/settings";
+import {
+  ACTIVE_LANGUAGES,
+  COMING_SOON_LANGUAGES,
+  setAppLanguage,
+  type AppLanguage,
+} from "@/services/i18n";
+import { useTranslation } from "react-i18next";
 import {
   stopAlertVibration,
   syncAlertVibration,
@@ -139,8 +147,46 @@ export default function SettingsScreen() {
   const [fontFamily, setFontFamily] =
     useState<FontFamilyOption>("Inter");
 
-  const [language, setLanguage] =
-    useState("English");
+  const [languageCode, setLanguageCode] =
+    useState<AppLanguage>("en");
+
+  // Functional language switch: persists, applies app-wide
+  // instantly via i18next, and survives restarts.
+  const { t: tMenu, i18n: menuI18n } = useTranslation();
+
+  useEffect(() => {
+    let active = true;
+
+    loadLanguageSetting().then((loaded) => {
+      if (active) {
+        setLanguageCode(loaded);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const current = menuI18n.language;
+
+    setLanguageCode(
+      current === "fil" || current === "ceb"
+        ? current
+        : "en",
+    );
+  }, [menuI18n.language]);
+
+  const handleLanguageSelect = (code: AppLanguage) => {
+    setLanguageOpen(false);
+    void setAppLanguage(code);
+  };
+
+  const languageLabel =
+    ACTIVE_LANGUAGES.find(
+      (item) => item.code === languageCode,
+    )?.label ?? "English";
 
   const [vibration, setVibration] =
     useState(true);
@@ -1488,8 +1534,13 @@ export default function SettingsScreen() {
                     setFontFamilyOpen(false);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Choose language"
-                  accessibilityHint={`Current: ${language}`}
+                  accessibilityLabel={tMenu(
+                    "menu.language.chooseLanguage",
+                  )}
+                  accessibilityHint={tMenu(
+                    "menu.language.current",
+                    { language: languageLabel },
+                  )}
                   style={
                     styles.dropdownInput
                   }
@@ -1499,7 +1550,7 @@ export default function SettingsScreen() {
                       styles.dropdownInputText
                     }
                   >
-                    {language}
+                    {languageLabel}
                   </AppText>
 
                   <Ionicons
@@ -1644,24 +1695,30 @@ export default function SettingsScreen() {
 
         <DropdownModal
           visible={languageOpen}
-          title="Language"
+          title={tMenu("menu.language.title")}
           onClose={() =>
             setLanguageOpen(false)
           }
         >
-          {[
-            "English",
-            "Cebuano (Bisaya)",
-            "Tagalog",
-          ].map((item) => (
+          {ACTIVE_LANGUAGES.map((item) => (
+            <RadioOptionRow
+              key={item.code}
+              label={item.label}
+              selected={languageCode === item.code}
+              onPress={() => {
+                handleLanguageSelect(item.code);
+              }}
+            />
+          ))}
+
+          {COMING_SOON_LANGUAGES.map((item) => (
             <RadioOptionRow
               key={item}
               label={item}
-              selected={language === item}
-              onPress={() => {
-                setLanguage(item);
-                setLanguageOpen(false);
-              }}
+              selected={false}
+              onPress={() => {}}
+              disabled
+              note={tMenu("menu.language.comingSoon")}
             />
           ))}
         </DropdownModal>
