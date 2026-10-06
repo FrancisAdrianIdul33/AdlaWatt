@@ -97,6 +97,7 @@ export type ApplianceRow = {
   selection?: boolean | null;
   archive?: boolean | null;
   user_id?: string | null;
+  image_url?: string | null;
 };
 
 // One shape for every reader.
@@ -111,6 +112,9 @@ export type ResolvedAppliance = {
   level: ApplianceLevel;
   selected: boolean;
   appId?: string | null;
+  // Stored public photo URL (custom rows only). Absent =
+  // bundled adlawatt icon, the default everywhere.
+  imageUrl?: string | null;
 };
 
 // Turns a DB row into a ResolvedAppliance. Returns null
@@ -182,5 +186,9 @@ export function resolveRow(
     level: levelFromWatts(colMax),
     selected: row.selection ?? false,
     appId: row.app_id ?? null,
+    imageUrl:
+      typeof row.image_url === "string"
+        ? row.image_url
+        : null,
   };
 }

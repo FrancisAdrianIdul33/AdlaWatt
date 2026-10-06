@@ -49,6 +49,7 @@ type Appliance = {
   name: string;
   watts: string;
   status: Status;
+  imageUrl?: string | null;
 };
 
 type DecoratedAppliance = Appliance & {
@@ -373,6 +374,7 @@ export default function AppRecCard({
           name: item.name,
           watts: item.display,
           status: "advisable",
+          imageUrl: item.imageUrl ?? null,
         })),
       );
 
@@ -393,7 +395,7 @@ export default function AppRecCard({
       await supabase
         .from("appliances")
         .select(
-          "app_id, appliance_name, wattage_min, wattage_max, selection",
+          "app_id, appliance_name, wattage_min, wattage_max, selection, image_url",
         )
         .eq("user_id", user.id)
         .order("appliance_name");
@@ -435,6 +437,10 @@ export default function AppRecCard({
           name: item.appliance_name,
           watts,
           status: "advisable",
+          imageUrl:
+            typeof item.image_url === "string"
+              ? item.image_url
+              : null,
         };
       });
 
@@ -657,7 +663,13 @@ export default function AppRecCard({
                       ]}
                     >
                       <Image
-                        source={defaultImage}
+                        source={
+                          appliance.imageUrl
+                            ? {
+                                uri: appliance.imageUrl,
+                              }
+                            : defaultImage
+                        }
                         style={
                           applianceCardStyles.image
                         }

@@ -67,6 +67,7 @@ type SelectedAppliance = {
   name: string;
   watts: string;
   area: string;
+  imageUrl?: string | null;
 };
 
 type StatusFilter =
@@ -228,6 +229,7 @@ export default function AppliancesScreen() {
           name: item.name,
           watts: item.display,
           area: item.area,
+          imageUrl: item.imageUrl ?? null,
         })),
       );
 
@@ -246,7 +248,7 @@ export default function AppliancesScreen() {
     const { data, error } = await supabase
       .from("appliances")
       .select(
-        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection",
+        "app_id, appliance_name, type, catalog_key, wattage_min, wattage_max, selection, image_url",
       )
       .eq("user_id", user.id)
       .order("appliance_name");
@@ -304,6 +306,10 @@ export default function AppliancesScreen() {
             name: String(item.appliance_name),
             watts,
             area: "Custom Appliances",
+            imageUrl:
+              typeof item.image_url === "string"
+                ? item.image_url
+                : null,
           };
         }),
     );
@@ -709,6 +715,11 @@ export default function AppliancesScreen() {
                   }
                   statusTone={
                     statusMapped.tone
+                  }
+                  imageSource={
+                    appliance.imageUrl
+                      ? { uri: appliance.imageUrl }
+                      : undefined
                   }
                 />
               );
