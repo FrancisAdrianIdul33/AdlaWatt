@@ -154,16 +154,45 @@ const recoveryTimestamps = new Map<string, number>();
 // ============================================================
 //
 // Step 1: requestPasswordReset() sends the recovery link to
-// the account email. Step 2 happens in /auth/callback, which
-// verifies the link and routes to /auth/forgot-password.
+// the account email. Step 2 happens inside
+// /auth/forgot-password itself, which exchanges the link's
+// PKCE code (or verifies its token_hash) and reveals the
+// verified card: Continue to Account or set a new password.
 // Step 3: updateRecoveryPassword() sets the new password on
 // the recovery session.
+//
+// Recovery links never pass through /auth/callback: that
+// screen is reserved for signup confirmation and OAuth.
+// Old callback-addressed recovery links still resolve via
+// the callback's fallback, which routes here.
 //
 // Anti-enumeration: send failures that could reveal whether
 // an address is registered map to one generic message, and
 // the screen shows the same "check your inbox" card either
 // way (mirrors the signup/resend contract above).
 // ============================================================
+
+// Recovery links land directly on the reset screen so the
+// email-confirmation step stays embedded there. Must be
+// allowlisted in Supabase URL Configuration:
+//   web:    <origin>/auth/forgot-password
+//   native: adlawatt:///auth/forgot-password
+export const getRecoveryRedirectTo = ():
+    | string
+    | undefined => {
+    if (Platform.OS === "web") {
+        if (
+            typeof window !== "undefined" &&
+            window.location?.origin
+        ) {
+            return `${window.location.origin}${Routes.FORGOT_PASSWORD}`;
+        }
+
+        return undefined;
+    }
+
+    return `adlawatt:/${Routes.FORGOT_PASSWORD}`;
+};
 
 export async function requestPasswordReset(email: string) {
     const cleanEmail = email.trim().toLowerCase();
@@ -197,7 +226,7 @@ export async function requestPasswordReset(email: string) {
 
     const { error } = await supabase.auth.resetPasswordForEmail(
         cleanEmail,
-        { redirectTo: getEmailRedirectTo() },
+        { redirectTo: getRecoveryRedirectTo() },
     );
 
     if (error) {
