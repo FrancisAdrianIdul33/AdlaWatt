@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 
 import {
   getAuthenticatedUserSafe,
@@ -673,6 +674,200 @@ export async function loginUser(
             kind: "unknown" as const,
             error:
                 "Unable to sign in right now. Please try again.",
+        };
+    }
+}
+
+// ============================================================
+// GOOGLE OAUTH (Supabase provider)
+// ============================================================
+//
+// Requires Supabase Dashboard > Authentication > Providers >
+// Google enabled with the Google Cloud Web-client ID + secret,
+// and the redirect allowlisted:
+//   web:    <origin>/auth/callback
+//   native: adlawatt:///auth/callback (matches
+//           getEmailRedirectTo + Routes.AUTH_CALLBACK)
+//
+// Profile rows for OAuth users are auto-created by the
+// public.handle_new_auth_user_profile() trigger (username
+// derived from the email prefix), so no client-side username
+// step is needed here.
+//
+// Web takes a full redirect (page unloads); native opens an
+// auth session and exchanges the returned PKCE code, which
+// the /auth/callback screen also handles for cold-start
+// deep links.
+// ============================================================
+
+const extractOAuthCode = (url: string): string => {
+    const match = url.match(/[?&#]code=([^&#]+)/);
+
+    if (!match?.[1]) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(match[1]);
+    } catch {
+        return match[1];
+    }
+};
+
+const extractOAuthError = (url: string): string => {
+    const match =
+        url.match(/[?&#]error_description=([^&#]+)/) ??
+        url.match(/[?&#]error=([^&#]+)/);
+
+    if (!match?.[1]) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(match[1].replace(/\+/g, " "));
+    } catch {
+        return match[1];
+    }
+};
+
+export async function signInWithGoogle() {
+    try {
+        const redirectTo = getEmailRedirectTo();
+
+        const { data, error } =
+            await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo,
+                    // Handle navigation ourselves so web and
+                    // native share one deterministic flow.
+                    skipBrowserRedirect: true,
+                    queryParams: {
+                        access_type: "offline",
+                        prompt: "consent",
+                    },
+                },
+            });
+
+        if (error) {
+            console.error("Google OAuth error:", error.message);
+
+            if (isRateLimitMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "rate-limited" as const,
+                    error: "Too many sign-in attempts. Please wait a moment and try again.",
+                };
+            }
+
+            if (isNetworkMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "network" as const,
+                    error: "No connection. Check your internet and try again.",
+                };
+            }
+
+            return {
+                success: false,
+                kind: "unknown" as const,
+                error: "Google sign-in is unavailable right now. Please try again.",
+            };
+        }
+
+        if (!data?.url) {
+            return {
+                success: false,
+                kind: "unknown" as const,
+                error: "Google sign-in is unavailable right now. Please try again.",
+            };
+        }
+
+        // Web: full redirect to Google; Supabase returns to
+        // /auth/callback where the PKCE code is exchanged.
+        if (Platform.OS === "web") {
+            if (typeof window !== "undefined") {
+                window.location.assign(data.url);
+            }
+
+            return { success: true, redirected: true as const };
+        }
+
+        // Native (dev client): in-app auth session. The custom
+        // adlawatt:// scheme requires a dev-client or device
+        // build — it does not resolve inside Expo Go.
+        const result = await WebBrowser.openAuthSessionAsync(
+            data.url,
+            redirectTo,
+        );
+
+        if (result.type !== "success") {
+            return {
+                success: false,
+                cancelled: true as const,
+                kind: "cancelled" as const,
+            };
+        }
+
+        const providerError = extractOAuthError(result.url);
+
+        if (providerError) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        const code = extractOAuthCode(result.url);
+
+        if (!code) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        const { data: sessionData, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+            console.error(
+                "Google OAuth exchange error:",
+                exchangeError.message,
+            );
+
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        if (!sessionData.user || !sessionData.session) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Unable to create a login session.",
+            };
+        }
+
+        // Same credential-safe contract as loginUser.
+        logAuth.loggedIn();
+
+        return {
+            success: true,
+            user: sessionData.user,
+            session: sessionData.session,
+        };
+    } catch (error) {
+        console.error("Google OAuth error:", error);
+
+        return {
+            success: false,
+            kind: "unknown" as const,
+            error: "Unable to sign in with Google right now. Please try again.",
         };
     }
 }
