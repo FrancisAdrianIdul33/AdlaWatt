@@ -10,8 +10,8 @@ import type {
 //
 // Local-only system settings. No Supabase.
 // Dark mode / color blind mode are intentionally excluded.
-// Language / vibration / email alerts are reserved for later
-// and can extend this interface without migration breaks.
+// Language / email alerts are reserved for later
+// and can extend this file without migration breaks.
 // ============================================================
 
 export interface TypographyPreferences {
@@ -83,6 +83,59 @@ export async function saveTypographyPreferences(
     await AsyncStorage.setItem(
       TYPOGRAPHY_STORAGE_KEY,
       JSON.stringify(sanitize(prefs)),
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}
+
+// ============================================================
+// VIBRATION SWITCH (v1)
+//
+// Device-level preference backing the Menu "Vibration" row
+// ("Vibrate when important alerts are received"). Persisted
+// so the choice survives restarts; default ON. The alert
+// vibration controller gates on this value, and turning it
+// OFF stops an active buzz immediately.
+// ============================================================
+
+const VIBRATION_STORAGE_KEY = "adlawatt.vibration.v1";
+
+export async function loadVibrationSetting(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      VIBRATION_STORAGE_KEY,
+    );
+
+    // Absent or corrupt reads fall back to ON (matches the
+    // Menu copy promising vibration on important alerts).
+    if (raw === null || raw === undefined) {
+      return true;
+    }
+
+    if (raw === "1" || raw === "true") {
+      return true;
+    }
+
+    if (raw === "0" || raw === "false") {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export async function saveVibrationSetting(
+  value: boolean,
+): Promise<void> {
+  // Best-effort like the rest: the UI already holds the new
+  // value, so a blocked store must not break the toggle.
+  try {
+    await AsyncStorage.setItem(
+      VIBRATION_STORAGE_KEY,
+      value ? "1" : "0",
     );
   } catch {
     // Intentionally ignored.
