@@ -14,6 +14,11 @@ const fil = {
       "Walang koneksyon. Suriin ang iyong internet at subukang muli.",
     tooManyRequests:
       "Masyadong maraming pagtatangka. Maghintay sandali at subukang muli.",
+    confirmationThrottled:
+      "Kamakailan ay nagpadala ng confirmation email. Maghintay bago humiling ng panibago.",
+    authRequired: "Walang naka-authenticate na user.",
+    accountLoadFailed:
+      "Hindi ma-load ang impormasyon ng iyong account.",
   },
 
   validation: {
@@ -155,6 +160,7 @@ const fil = {
         "Hindi muling maipadala ang confirmation email.",
       footerPrompt: "May account ka na?",
       footerAction: "Mag-Sign In",
+      googleHint: "Lumikha ng iyong account gamit ang Google",
     },
 
     forgot: {

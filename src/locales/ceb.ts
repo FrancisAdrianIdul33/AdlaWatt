@@ -14,6 +14,11 @@ const ceb = {
       "Walay koneksyon. Susiha ang imong internet ug sulayi pag-usab.",
     tooManyRequests:
       "Sobra kadaghan ang pagsulay. Paghulat ug sulayi pag-usab.",
+    confirmationThrottled:
+      "Bag-o lang nagpadala ug confirmation email. Paghulat sa dili pa mangayo pag-usab.",
+    authRequired: "Walay naka-authenticate nga user.",
+    accountLoadFailed:
+      "Dili ma-load ang impormasyon sa imong account.",
   },
 
   validation: {
@@ -155,6 +160,7 @@ const ceb = {
         "Dili mapadala pag-usab ang confirmation email.",
       footerPrompt: "Naana kay account?",
       footerAction: "Pag-Sign In",
+      googleHint: "Pagbuhat ug imong account gamit ang Google",
     },
 
     forgot: {

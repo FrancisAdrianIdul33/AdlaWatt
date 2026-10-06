@@ -14,6 +14,11 @@ const en = {
       "No connection. Check your internet and try again.",
     tooManyRequests:
       "Too many requests. Please wait a moment and try again.",
+    confirmationThrottled:
+      "A confirmation email was sent recently. Please wait before requesting another.",
+    authRequired: "No authenticated user found.",
+    accountLoadFailed:
+      "Unable to load your account information.",
   },
 
   validation: {
@@ -141,6 +146,7 @@ const en = {
       resendFailed: "Unable to resend confirmation email.",
       footerPrompt: "Already have an account?",
       footerAction: "Sign In",
+      googleHint: "Create your account with Google",
     },
 
     forgot: {
