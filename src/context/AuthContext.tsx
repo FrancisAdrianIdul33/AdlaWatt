@@ -28,6 +28,12 @@ interface AuthContextValue {
   user: User | null;
   isLoaded: boolean;
   isSignedIn: boolean;
+  // True between a PASSWORD_RECOVERY event and the password
+  // actually being updated (or sign-out). Lets the auth
+  // layout exempt /auth/forgot-password from its usual
+  // signed-in bounce so the user can set the new password.
+  isRecoverySession: boolean;
+  clearRecoverySession: () => void;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -45,6 +51,13 @@ export function AuthProvider({
 
   const [isLoaded, setIsLoaded] =
     useState(false);
+
+  const [isRecoverySession, setIsRecoverySession] =
+    useState(false);
+
+  const clearRecoverySession = useCallback(() => {
+    setIsRecoverySession(false);
+  }, []);
 
   const refresh = useCallback(async () => {
     const {
@@ -75,8 +88,14 @@ export function AuthProvider({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
+      (event, nextSession) => {
         if (mounted) {
+          if (event === "PASSWORD_RECOVERY") {
+            setIsRecoverySession(true);
+          } else if (event === "SIGNED_OUT") {
+            setIsRecoverySession(false);
+          }
+
           setSession(nextSession);
           setIsLoaded(true);
         }
@@ -92,6 +111,7 @@ export function AuthProvider({
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setSession(null);
+    setIsRecoverySession(false);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -100,10 +120,19 @@ export function AuthProvider({
       user: session?.user ?? null,
       isLoaded,
       isSignedIn: session !== null,
+      isRecoverySession,
+      clearRecoverySession,
       refresh,
       signOut,
     }),
-    [session, isLoaded, refresh, signOut],
+    [
+      session,
+      isLoaded,
+      isRecoverySession,
+      clearRecoverySession,
+      refresh,
+      signOut,
+    ],
   );
 
   return (

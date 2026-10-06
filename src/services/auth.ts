@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 
 import {
   getAuthenticatedUserSafe,
@@ -141,6 +142,182 @@ export async function resendConfirmation(email: string) {
     }
 
     return { success: true, throttled: false };
+}
+
+// Separate throttle bucket so recovery requests never eat
+// into the signup-confirmation resend budget (and vice
+// versa). Same 60s window, same service-side spirit.
+const recoveryTimestamps = new Map<string, number>();
+
+// ============================================================
+// PASSWORD RECOVERY (Supabase built-in email flow)
+// ============================================================
+//
+// Step 1: requestPasswordReset() sends the recovery link to
+// the account email. Step 2 happens inside
+// /auth/forgot-password itself, which exchanges the link's
+// PKCE code (or verifies its token_hash) and reveals the
+// verified card: Continue to Account or set a new password.
+// Step 3: updateRecoveryPassword() sets the new password on
+// the recovery session.
+//
+// Recovery links never pass through /auth/callback: that
+// screen is reserved for signup confirmation and OAuth.
+// Old callback-addressed recovery links still resolve via
+// the callback's fallback, which routes here.
+//
+// Anti-enumeration: send failures that could reveal whether
+// an address is registered map to one generic message, and
+// the screen shows the same "check your inbox" card either
+// way (mirrors the signup/resend contract above).
+// ============================================================
+
+// Recovery links land directly on the reset screen so the
+// email-confirmation step stays embedded there. Must be
+// allowlisted in Supabase URL Configuration:
+//   web:    <origin>/auth/forgot-password
+//   native: adlawatt:///auth/forgot-password
+export const getRecoveryRedirectTo = ():
+    | string
+    | undefined => {
+    if (Platform.OS === "web") {
+        if (
+            typeof window !== "undefined" &&
+            window.location?.origin
+        ) {
+            return `${window.location.origin}${Routes.FORGOT_PASSWORD}`;
+        }
+
+        return undefined;
+    }
+
+    return `adlawatt:/${Routes.FORGOT_PASSWORD}`;
+};
+
+export async function requestPasswordReset(email: string) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+        return {
+            success: false,
+            error: "Please enter your email address.",
+        };
+    }
+
+    if (!EMAIL_PATTERN.test(cleanEmail)) {
+        return {
+            success: false,
+            error: "Please enter a valid email address.",
+        };
+    }
+
+    const now = Date.now();
+    const lastSent = recoveryTimestamps.get(cleanEmail) ?? 0;
+
+    if (now - lastSent < RESEND_COOLDOWN_MS) {
+        return {
+            success: false,
+            throttled: true,
+            error: "A recovery email was sent recently. Please wait before requesting another.",
+        };
+    }
+
+    recoveryTimestamps.set(cleanEmail, now);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+        cleanEmail,
+        { redirectTo: getRecoveryRedirectTo() },
+    );
+
+    if (error) {
+        if (isRateLimitMessage(error.message)) {
+            return {
+                success: false,
+                throttled: true,
+                error: "Too many requests. Please wait a moment and try again.",
+            };
+        }
+
+        if (isNetworkMessage(error.message)) {
+            return {
+                success: false,
+                error: "No connection. Check your internet and try again.",
+            };
+        }
+
+        // Generic on purpose: never reveal whether the
+        // address is registered (see contract above).
+        return {
+            success: false,
+            error: "Unable to send a recovery email right now. Please try again.",
+        };
+    }
+
+    return { success: true, throttled: false };
+}
+
+export async function updateRecoveryPassword(password: string) {
+    if (!password || password.trim().length < 8) {
+        return {
+            success: false,
+            error: "Password must be at least 8 characters.",
+        };
+    }
+
+    if (password.length > 72) {
+        return {
+            success: false,
+            error: "Password must not exceed 72 characters.",
+        };
+    }
+
+    try {
+        const { error } =
+            await supabase.auth.updateUser({ password });
+
+        if (error) {
+            if (isAuthSessionMissingError(error)) {
+                return {
+                    success: false,
+                    expired: true,
+                    error: "This recovery link is invalid or has expired. Request a new one.",
+                };
+            }
+
+            if (isRateLimitMessage(error.message)) {
+                return {
+                    success: false,
+                    error: "Too many requests. Please wait a moment and try again.",
+                };
+            }
+
+            return {
+                success: false,
+                error: "Unable to update your password right now. Please try again.",
+            };
+        }
+
+        // Fire-and-forget: a slow insert must never freeze
+        // the password update (same rule as loginUser).
+        logProfile.passwordChanged();
+
+        return { success: true };
+    } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+            return {
+                success: false,
+                expired: true,
+                error: "This recovery link is invalid or has expired. Request a new one.",
+            };
+        }
+
+        console.error("Recovery password update error:", error);
+
+        return {
+            success: false,
+            error: "Unable to update your password right now. Please try again.",
+        };
+    }
 }
 
 export async function registerUser(
@@ -526,6 +703,200 @@ export async function loginUser(
             kind: "unknown" as const,
             error:
                 "Unable to sign in right now. Please try again.",
+        };
+    }
+}
+
+// ============================================================
+// GOOGLE OAUTH (Supabase provider)
+// ============================================================
+//
+// Requires Supabase Dashboard > Authentication > Providers >
+// Google enabled with the Google Cloud Web-client ID + secret,
+// and the redirect allowlisted:
+//   web:    <origin>/auth/callback
+//   native: adlawatt:///auth/callback (matches
+//           getEmailRedirectTo + Routes.AUTH_CALLBACK)
+//
+// Profile rows for OAuth users are auto-created by the
+// public.handle_new_auth_user_profile() trigger (username
+// derived from the email prefix), so no client-side username
+// step is needed here.
+//
+// Web takes a full redirect (page unloads); native opens an
+// auth session and exchanges the returned PKCE code, which
+// the /auth/callback screen also handles for cold-start
+// deep links.
+// ============================================================
+
+const extractOAuthCode = (url: string): string => {
+    const match = url.match(/[?&#]code=([^&#]+)/);
+
+    if (!match?.[1]) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(match[1]);
+    } catch {
+        return match[1];
+    }
+};
+
+const extractOAuthError = (url: string): string => {
+    const match =
+        url.match(/[?&#]error_description=([^&#]+)/) ??
+        url.match(/[?&#]error=([^&#]+)/);
+
+    if (!match?.[1]) {
+        return "";
+    }
+
+    try {
+        return decodeURIComponent(match[1].replace(/\+/g, " "));
+    } catch {
+        return match[1];
+    }
+};
+
+export async function signInWithGoogle() {
+    try {
+        const redirectTo = getEmailRedirectTo();
+
+        const { data, error } =
+            await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo,
+                    // Handle navigation ourselves so web and
+                    // native share one deterministic flow.
+                    skipBrowserRedirect: true,
+                    queryParams: {
+                        access_type: "offline",
+                        prompt: "consent",
+                    },
+                },
+            });
+
+        if (error) {
+            console.error("Google OAuth error:", error.message);
+
+            if (isRateLimitMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "rate-limited" as const,
+                    error: "Too many sign-in attempts. Please wait a moment and try again.",
+                };
+            }
+
+            if (isNetworkMessage(error.message)) {
+                return {
+                    success: false,
+                    kind: "network" as const,
+                    error: "No connection. Check your internet and try again.",
+                };
+            }
+
+            return {
+                success: false,
+                kind: "unknown" as const,
+                error: "Google sign-in is unavailable right now. Please try again.",
+            };
+        }
+
+        if (!data?.url) {
+            return {
+                success: false,
+                kind: "unknown" as const,
+                error: "Google sign-in is unavailable right now. Please try again.",
+            };
+        }
+
+        // Web: full redirect to Google; Supabase returns to
+        // /auth/callback where the PKCE code is exchanged.
+        if (Platform.OS === "web") {
+            if (typeof window !== "undefined") {
+                window.location.assign(data.url);
+            }
+
+            return { success: true, redirected: true as const };
+        }
+
+        // Native (dev client): in-app auth session. The custom
+        // adlawatt:// scheme requires a dev-client or device
+        // build — it does not resolve inside Expo Go.
+        const result = await WebBrowser.openAuthSessionAsync(
+            data.url,
+            redirectTo,
+        );
+
+        if (result.type !== "success") {
+            return {
+                success: false,
+                cancelled: true as const,
+                kind: "cancelled" as const,
+            };
+        }
+
+        const providerError = extractOAuthError(result.url);
+
+        if (providerError) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        const code = extractOAuthCode(result.url);
+
+        if (!code) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        const { data: sessionData, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+            console.error(
+                "Google OAuth exchange error:",
+                exchangeError.message,
+            );
+
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Google sign-in was not completed. Please try again.",
+            };
+        }
+
+        if (!sessionData.user || !sessionData.session) {
+            return {
+                success: false,
+                kind: "invalid" as const,
+                error: "Unable to create a login session.",
+            };
+        }
+
+        // Same credential-safe contract as loginUser.
+        logAuth.loggedIn();
+
+        return {
+            success: true,
+            user: sessionData.user,
+            session: sessionData.session,
+        };
+    } catch (error) {
+        console.error("Google OAuth error:", error);
+
+        return {
+            success: false,
+            kind: "unknown" as const,
+            error: "Unable to sign in with Google right now. Please try again.",
         };
     }
 }

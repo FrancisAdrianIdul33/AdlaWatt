@@ -1,6 +1,8 @@
 import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   TextInput,
@@ -9,6 +11,7 @@ import {
 
 import AppInput from "@/components/ui/AppInput";
 import PasswordInput from "@/components/ui/PasswordInput";
+import GoogleGIcon from "@/components/ui/GoogleGIcon";
 import TermsModal from "@/components/forms/TermsModal";
 import AuthFooter from "@/components/layout/AuthFooter";
 import AuthHeader from "@/components/layout/AuthHeader";
@@ -22,13 +25,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppColors } from "@/hooks/useAppColors";
 import { Routes } from "@/constants/routes";
 import { Spacing } from "@/constants/theme";
+import { Control } from "@/constants/sizing";
 import Copyright from "@/components/ui/Copyright";
 
 import {
   EMAIL_PATTERN,
   registerUser,
   resendConfirmation,
+  signInWithGoogle,
 } from "@/services/auth";
+
+// Completes the pending auth session on Android when the
+// in-app browser redirects back to adlawatt://auth/callback.
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -46,6 +55,9 @@ export default function RegisterScreen() {
     useState("");
 
   const [loading, setLoading] =
+    useState(false);
+
+  const [googleLoading, setGoogleLoading] =
     useState(false);
 
   const [confirmationPending, setConfirmationPending] =
@@ -197,6 +209,53 @@ export default function RegisterScreen() {
 
   const handleLogin = () => {
     router.replace(Routes.LOGIN);
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (loading || googleLoading) {
+      return;
+    }
+
+    setWarning("");
+
+    try {
+      setGoogleLoading(true);
+
+      const result = await signInWithGoogle();
+
+      if (result.success) {
+        // Web redirect unloads the page; native session is
+        // already persisted. The auth layout notices the new
+        // session and routes to the dashboard on its own —
+        // replace explicitly in case the event lags.
+        if (!("redirected" in result)) {
+          router.replace(Routes.DASHBOARD);
+        }
+        return;
+      }
+
+      // Dismissed browser: stay put silently.
+      if ("cancelled" in result && result.cancelled) {
+        return;
+      }
+
+      if ("redirected" in result && result.redirected) {
+        return;
+      }
+
+      showWarning(
+        ("error" in result &&
+          typeof result.error === "string" &&
+          result.error) ||
+          "Google sign-in was not completed. Please try again.",
+      );
+    } catch {
+      showWarning(
+        "Google sign-in was not completed. Please try again.",
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleTermsAgree = () => {
@@ -401,8 +460,6 @@ export default function RegisterScreen() {
             </AppText>
           </View>
 
-          <AuthWarning message={warning} />
-
           <AppButton
             title={
               loading
@@ -410,9 +467,87 @@ export default function RegisterScreen() {
                 : "Create Account"
             }
             onPress={handleRegister}
-            disabled={loading}
+            disabled={loading || googleLoading}
             style={styles.createButton}
           />
+
+          <AuthWarning message={warning} />
+
+          <View
+            style={styles.dividerRow}
+            accessibilityRole="none"
+          >
+            <View
+              style={[
+                styles.dividerLine,
+                {
+                  backgroundColor:
+                    colors.border,
+                },
+              ]}
+            />
+            <AppText
+              style={[
+                styles.dividerText,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              OR
+            </AppText>
+            <View
+              style={[
+                styles.dividerLine,
+                {
+                  backgroundColor:
+                    colors.border,
+                },
+              ]}
+            />
+          </View>
+
+          <Pressable
+            onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            style={({ pressed }) => [
+              styles.googleButton,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+              (pressed ||
+                loading ||
+                googleLoading) &&
+                styles.googlePressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+            accessibilityHint="Create your account with Google"
+            accessibilityState={{
+              disabled: loading || googleLoading,
+              busy: googleLoading,
+            }}
+          >
+            {googleLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.textSecondary}
+              />
+            ) : (
+              <GoogleGIcon size={20} />
+            )}
+            <AppText
+              style={[
+                styles.googleLabel,
+                { color: colors.text },
+              ]}
+            >
+              {googleLoading
+                ? "Connecting..."
+                : "Continue with Google"}
+            </AppText>
+          </Pressable>
 
           <DropdownModal
             visible={confirmationPending}
@@ -550,6 +685,47 @@ const styles = StyleSheet.create({
 
   createButton: {
     marginTop: Spacing.sm,
+  },
+
+  dividerRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+
+  dividerText: {
+    marginHorizontal: Spacing.sm,
+    fontWeight: "600",
+  },
+
+  googleButton: {
+    width: "100%",
+    minHeight: Control.button,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: Control.buttonPadding,
+    marginTop: Control.buttonGap,
+    gap: 10,
+  },
+
+  googlePressed: {
+    opacity: 0.6,
+  },
+
+  googleLabel: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 
   confirmationBody: {

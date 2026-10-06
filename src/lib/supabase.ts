@@ -27,6 +27,11 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // PKCE code flow: OAuth and email links return ?code=
+      // which /auth/callback exchanges. The auth-js default
+      // ('implicit') returns #access_token fragments that
+      // expo-router params can never see, breaking OAuth.
+      flowType: "pkce",
     },
   },
 );

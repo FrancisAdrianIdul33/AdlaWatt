@@ -1,5 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState, type Ref } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import {
   Pressable,
   StyleSheet,
@@ -26,6 +32,7 @@ interface PasswordInputProps {
   onSubmitEditing?: TextInputProps["onSubmitEditing"];
   autoComplete?: TextInputProps["autoComplete"];
   inputRef?: Ref<TextInput>;
+  bottomGap?: number;
 }
 
 // ============================================================
@@ -49,8 +56,50 @@ export default function PasswordInput({
   onSubmitEditing,
   autoComplete,
   inputRef,
+  bottomGap,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
+  // 5s visibility window: remaining seconds shown under
+  // the field while the password is visible.
+  const [remaining, setRemaining] = useState(0);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearTimers = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    if (tickTimer.current) {
+      clearInterval(tickTimer.current);
+      tickTimer.current = null;
+    }
+  };
+
+  useEffect(() => clearTimers, []);
+
+  const handleToggle = () => {
+    if (showPassword) {
+      clearTimers();
+      setShowPassword(false);
+      setRemaining(0);
+      return;
+    }
+
+    setShowPassword(true);
+    setRemaining(5);
+    clearTimers();
+
+    tickTimer.current = setInterval(() => {
+      setRemaining((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    hideTimer.current = setTimeout(() => {
+      clearTimers();
+      setShowPassword(false);
+      setRemaining(0);
+    }, 5000);
+  };
 
   const { scaledSize, family, weight } =
     useTypography();
@@ -58,8 +107,8 @@ export default function PasswordInput({
   const colors = useAppColors();
 
   const styles = useMemo(
-    () => getStyles(colors),
-    [colors],
+    () => getStyles(colors, bottomGap),
+    [colors, bottomGap],
   );
 
   return (
@@ -95,14 +144,17 @@ export default function PasswordInput({
 
         <Pressable
           style={styles.toggle}
-          onPress={() =>
-            setShowPassword((previous) => !previous)
-          }
+          onPress={handleToggle}
           accessibilityRole="button"
           accessibilityLabel={
             showPassword
-              ? "Hide password"
-              : "Show password"
+              ? `Hide password, auto-hides in ${remaining} seconds`
+              : "Show password for 5 seconds"
+          }
+          accessibilityHint={
+            showPassword
+              ? "Password is visible and will hide automatically"
+              : "Shows password for 5 seconds"
           }
           hitSlop={8}
         >
@@ -118,6 +170,25 @@ export default function PasswordInput({
         </Pressable>
       </View>
 
+      {showPassword ? (
+        <View
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={`Password visible, hides in ${remaining} seconds`}
+        >
+          <AppText variant="caption" style={styles.hint}>
+            Showing password… hides in {remaining}s
+          </AppText>
+          <View style={styles.timerTrack}>
+            <View
+              style={[
+                styles.timerFill,
+                { width: `${(remaining / 5) * 100}%` },
+              ]}
+            />
+          </View>
+        </View>
+      ) : null}
+
       {error && (
         <AppText variant="caption" style={styles.error}>
           {error}
@@ -127,10 +198,10 @@ export default function PasswordInput({
   );
 }
 
-const getStyles = (colors: AppColors) =>
+const getStyles = (colors: AppColors, bottomGap?: number) =>
   StyleSheet.create({
     container: {
-      marginBottom: Field.fieldGap,
+      marginBottom: bottomGap ?? Field.fieldGap,
     },
 
     label: {
@@ -178,5 +249,24 @@ const getStyles = (colors: AppColors) =>
     error: {
       marginTop: 6,
       color: colors.error,
+    },
+
+    hint: {
+      marginTop: 6,
+      color: colors.textSecondary,
+    },
+
+    timerTrack: {
+      marginTop: 6,
+      height: 4,
+      borderRadius: 999,
+      backgroundColor: colors.border,
+      overflow: "hidden",
+    },
+
+    timerFill: {
+      height: 4,
+      borderRadius: 999,
+      backgroundColor: colors.primary,
     },
   });

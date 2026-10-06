@@ -1,6 +1,11 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import AppButton from "@/components/ui/AppButton";
 import AppText from "@/components/ui/AppText";
@@ -22,6 +27,12 @@ import { supabase } from "@/lib/supabase";
 // native (adlawatt://auth/callback?code=…) and web
 // (/auth/callback?code=…). PKCE code flow is primary;
 // token_hash links are verified as fallback.
+//
+// Legacy implicit-flow links (#access_token=… in the hash,
+// issued before the client forced flowType: 'pkce') carry
+// no query params at all — expo-router can never see the
+// fragment — so web parses the hash and sets the session
+// directly as a second fallback.
 // ============================================================
 
 type Status = "working" | "success" | "error";
@@ -40,6 +51,14 @@ export default function AuthCallbackScreen() {
 
   const [status, setStatus] = useState<Status>("working");
   const [message, setMessage] = useState("");
+  // True when the arriving link is an OAuth sign-in rather
+  // than an email confirmation, so the header reads
+  // "Google Sign-In" instead of "Email Confirmation".
+  const [isOAuth, setIsOAuth] = useState(false);
+  // True when the link carried no code at all (wrong/old
+  // email, or params lost in transit). Offers a direct
+  // recovery shortcut instead of a dead end.
+  const [isMissingCode, setIsMissingCode] = useState(false);
 
   const firstParam = (
     value: string | string[] | undefined,
@@ -63,6 +82,44 @@ export default function AuthCallbackScreen() {
     }
   };
 
+  // Implicit-flow tokens live in the URL fragment
+  // (#access_token=…&refresh_token=…), which never reaches
+  // useLocalSearchParams. Parse it manually on web only.
+  const parseHashParams = (): Record<string, string> => {
+    if (
+      Platform.OS !== "web" ||
+      typeof window === "undefined" ||
+      !window.location?.hash
+    ) {
+      return {};
+    }
+
+    const out: Record<string, string> = {};
+
+    for (const part of window.location.hash
+      .replace(/^#/, "")
+      .split("&")) {
+      const idx = part.indexOf("=");
+
+      if (idx <= 0) {
+        continue;
+      }
+
+      const key = part.slice(0, idx);
+      const raw = part.slice(idx + 1);
+
+      try {
+        out[key] = decodeURIComponent(
+          raw.replace(/\+/g, " "),
+        );
+      } catch {
+        out[key] = raw;
+      }
+    }
+
+    return out;
+  };
+
   const code = firstParam(params.code);
   const tokenHash = firstParam(params.token_hash);
   const otpType = firstParam(params.type);
@@ -71,6 +128,27 @@ export default function AuthCallbackScreen() {
   const linkErrorDescription = firstParam(
     params.error_description,
   );
+
+  // Recovery links sign the user in with a PASSWORD_RECOVERY
+  // event (both PKCE-code and token-hash flows). Catch it and
+  // hand the flow to /auth/forgot-password instead of the
+  // dashboard — the AuthContext flag exempts that screen
+  // from the signed-in bounce in the auth layout.
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.replace(
+          `${Routes.FORGOT_PASSWORD}?verified=1`,
+        );
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +180,30 @@ export default function AuthCallbackScreen() {
               "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
             );
           } else {
+            // A PKCE code can also come from Google OAuth,
+            // not just email confirmation — label it by the
+            // signed-in provider so Google users never see a
+            // confusing "email confirmed" message.
+            try {
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+
+              if (
+                user?.app_metadata?.provider === "google"
+              ) {
+                setIsOAuth(true);
+                setStatus("success");
+                setMessage(
+                  "Signed in with Google. Taking you to your dashboard.",
+                );
+                return;
+              }
+            } catch {
+              // Provider lookup is cosmetic only; fall
+              // through to the confirmation copy below.
+            }
+
             // The auth layout notices the new session and
             // routes to the dashboard on its own.
             setStatus("success");
@@ -141,6 +243,13 @@ export default function AuthCallbackScreen() {
             setMessage(
               "This confirmation link is invalid or has expired. Request a new one from the sign-in screen.",
             );
+          } else if (verifiedType === "recovery") {
+            // The PASSWORD_RECOVERY listener above usually
+            // beats us here; this covers the case where the
+            // event was already consumed before we mounted.
+            router.replace(
+              `${Routes.FORGOT_PASSWORD}?verified=1`,
+            );
           } else {
             setStatus("success");
             setMessage(
@@ -151,10 +260,66 @@ export default function AuthCallbackScreen() {
         return;
       }
 
+      // Legacy implicit-flow links carry tokens in the URL
+      // fragment instead of a ?code= param. Set the session
+      // directly so in-flight Google links keep working.
+      const hashParams = parseHashParams();
+
+      if (
+        hashParams.access_token &&
+        hashParams.refresh_token
+      ) {
+        const { error } = await supabase.auth.setSession({
+          access_token: hashParams.access_token,
+          refresh_token: hashParams.refresh_token,
+        });
+
+        if (!cancelled) {
+          if (error) {
+            setStatus("error");
+            setMessage(
+              "Google sign-in was not completed. Please try again from the sign-in screen.",
+            );
+          } else {
+            // Same session contract as the PKCE path; the
+            // auth layout routes to the dashboard on its own.
+            setIsOAuth(true);
+            setStatus("success");
+            setMessage(
+              "Signed in with Google. Taking you to your dashboard.",
+            );
+          }
+        }
+        return;
+      }
+
+      // Bare mount with a live session: the OAuth code was
+      // already exchanged elsewhere (e.g. the login screen's
+      // native auth-session handler won the race with this
+      // deep link). Report success instead of a scary
+      // missing-code error.
+      try {
+        const {
+          data: { session: existing },
+        } = await supabase.auth.getSession();
+
+        if (!cancelled && existing) {
+          setStatus("success");
+          setMessage(
+            "You are signed in. Taking you to your dashboard.",
+          );
+          return;
+        }
+      } catch {
+        // Session probe is best-effort only; fall through
+        // to the missing-code message below.
+      }
+
       if (!cancelled) {
         setStatus("error");
+        setIsMissingCode(true);
         setMessage(
-          "This confirmation link is missing its code. Please request a new confirmation email.",
+          "This link arrived without its verification code. If you were resetting your password, request a fresh recovery link — otherwise request a new confirmation email.",
         );
       }
     };
@@ -172,8 +337,12 @@ export default function AuthCallbackScreen() {
         <AuthLogo />
 
         <AuthHeader
-          title="Email Confirmation"
-          subtitle="Confirming your AdlaWatt account email."
+          title={isOAuth ? "Google Sign-In" : "Email Confirmation"}
+          subtitle={
+            isOAuth
+              ? "Finishing your Google sign-in."
+              : "Confirming your AdlaWatt account email."
+          }
         />
 
         {status === "working" && (
@@ -209,6 +378,15 @@ export default function AuthCallbackScreen() {
                 )
               }
             />
+
+            {status === "error" && isMissingCode && (
+              <AppButton
+                title="Go to Reset Password"
+                onPress={() =>
+                  router.replace(Routes.FORGOT_PASSWORD)
+                }
+              />
+            )}
           </View>
         )}
 

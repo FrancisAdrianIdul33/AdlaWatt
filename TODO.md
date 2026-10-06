@@ -2,9 +2,17 @@
 
 ## First Page
 
-- [ ] Login: Add Continue with Google / OAuth
-- [ ] Login: Add Forgot Password
-- [ ] Login: Password visibility should only be available for 5 seconds
+- [x] Login: Add Continue with Google / OAuth — **Resolved**
+  - Official multicolor Google G icon (`GoogleGIcon.tsx`) on login + register
+  - `signInWithGoogle()` in `auth.ts` (web redirect + native auth-session with PKCE code exchange)
+  - Supabase Google provider enabled; client forces `flowType: 'pkce'`
+  - Callback handles implicit-hash fallback, live-session check, Google-specific header/copy
+- [x] Login: Add Forgot Password — **Resolved**
+  - Recovery links land directly on `/auth/forgot-password` and verify in-screen (no callback UI)
+  - Verified card morphs: success message + Continue to Account, opt-in password-change expander
+  - Signed-in bounce exemption while a recovery link verifies
+- [x] Login: Password visibility should only be available for 5 seconds — **Resolved**
+  - `PasswordInput` eye toggle with 5s auto-hide, live countdown, timer bar, screen-reader labels
 - [ ] Overall: Display only the toggle that has content
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
 - [ ] Navbar Upper: Display username

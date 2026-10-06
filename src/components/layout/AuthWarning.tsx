@@ -11,9 +11,11 @@ import {
 // ============================================================
 // AUTH WARNING
 //
-// Single shared error row for login + register. Left-aligned
-// icon + text so both screens present identical states.
-// Returns null when there is no message.
+// Single shared error row for login + register + forgot-
+// password. Left-aligned icon + text so all screens present
+// identical states. Rendered below the primary button with
+// a close 6px gap; returns null when there is no message so
+// no space is reserved (buttons sit tight under fields).
 // ============================================================
 
 interface AuthWarningProps {
@@ -62,7 +64,8 @@ const getStyles = (colors: AppColors) =>
   container: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginTop: 6,
+    marginBottom: 6,
   },
 
   icon: {
