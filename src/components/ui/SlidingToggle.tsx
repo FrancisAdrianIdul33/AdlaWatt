@@ -113,6 +113,73 @@ export function SlidingToggle<T extends string>({
 
   const active = options[activeIndex];
 
+  // Fewer than two segments carry no glide: a single option
+  // renders as a static full-width status label (used by
+  // content-aware callers that hide empty segments), and
+  // zero options render nothing. interpolate() requires
+  // ≥2-element ranges, so the Animated pill must never run
+  // here — it threw Invariant Violation on single-option
+  // toggles before this guard existed.
+  if (options.length < 2) {
+    const single = options[0];
+
+    if (!single) {
+      return null;
+    }
+
+    return (
+      <View
+        style={[
+          segmentedSizes.shell,
+          style,
+        ]}
+        onLayout={(event) =>
+          setWidth(
+            event.nativeEvent.layout.width,
+          )
+        }
+        accessibilityRole="radiogroup"
+        accessibilityLabel={
+          single.accessibilityLabel
+        }
+      >
+        <View
+          style={[
+            segmentedSizes.segment,
+            {
+              backgroundColor:
+                single.activeColor,
+              borderRadius: pillRadius,
+              marginHorizontal: inset,
+              marginVertical: 6,
+            },
+          ]}
+          accessibilityRole="radio"
+          accessibilityState={{
+            selected: true,
+          }}
+          accessibilityLabel={
+            single.accessibilityLabel
+          }
+        >
+          <AppText
+            variant="caption"
+            style={[
+              segmentedSizes.label,
+              {
+                color:
+                  single.activeInk ??
+                  colors.onPrimary,
+              },
+            ]}
+          >
+            {single.label}
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
