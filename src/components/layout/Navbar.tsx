@@ -32,6 +32,7 @@ import {
 } from "@/services/realtimeResubscribe";
 
 import AppText from "@/components/ui/AppText";
+import { useTranslation } from "react-i18next";
 
 import type { DeviceStatus } from "@/services/monitoringService";
 
@@ -56,6 +57,7 @@ export default function NavBar({
     hasUnreadNotifications,
     setHasUnreadNotifications,
   ] = useState(false);
+  const { t } = useTranslation();
 
   // Signed-in username, served synchronously from the
   // AuthContext session cache — no per-mount fetch, so the
@@ -323,7 +325,9 @@ export default function NavBar({
         {username ? (
           <View
             style={navBarStyles.usernameSlot}
-            accessibilityLabel={`Signed in as ${username}`}
+            accessibilityLabel={t("shared.signedInAs", {
+              username,
+            })}
           >
             <AppText
               variant="body"
@@ -357,7 +361,7 @@ export default function NavBar({
               navBarStyles.iconButton
             }
             accessibilityRole="button"
-            accessibilityLabel="Notifications"
+            accessibilityLabel={t("shared.notifications")}
           >
             <Ionicons
               name="notifications-outline"

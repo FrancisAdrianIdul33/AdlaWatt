@@ -11,6 +11,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // ERROR STATE
@@ -26,10 +27,12 @@ interface ErrorStateProps {
 }
 
 export default function ErrorState({
-  message = "Something went wrong. Please try again.",
+  message,
   onRetry,
 }: ErrorStateProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
+  const resolvedMessage = message ?? t("common.wentWrong");
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -52,19 +55,19 @@ export default function ErrorState({
         variant="heading"
         style={styles.title}
       >
-        Couldn&apos;t load data
+        {t("shared.errorTitle")}
       </AppText>
 
       <AppText
         variant="caption"
         style={styles.message}
       >
-        {message}
+        {resolvedMessage}
       </AppText>
 
       <View style={styles.action}>
         <AppButton
-          title="Try Again"
+          title={t("shared.retry")}
           onPress={onRetry}
         />
       </View>

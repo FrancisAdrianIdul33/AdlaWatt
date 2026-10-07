@@ -11,6 +11,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 
 interface EmptyStateProps {
@@ -21,12 +22,16 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({
-  title = "No Activity Logs",
-  description = "No activities match the selected filters.",
+  title,
+  description,
   icon = "document-text-outline",
   style,
 }: EmptyStateProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
+  const resolvedTitle = title ?? t("shared.emptyTitle");
+  const resolvedDescription =
+    description ?? t("shared.emptyDescription");
   const styles = useMemo(
     () => getStyles(colors),
     [colors],
@@ -43,14 +48,14 @@ export default function EmptyState({
         variant="body"
         style={styles.title}
       >
-        {title}
+        {resolvedTitle}
       </AppText>
 
       <AppText
         variant="caption"
         style={styles.description}
       >
-        {description}
+        {resolvedDescription}
       </AppText>
     </View>
   );

@@ -6,8 +6,7 @@ byte-identical to a shipped string (including `{{var}}`
 placeholders — never edit or drop the braces).
 
 Active languages: English `en` (default, source of truth),
-Filipino `fil`, Cebuano `ceb`. Coming soon (disabled rows
-in Menu): Español, 中文, Français, Deutsch, 日本語, Português.
+Filipino `fil`, Cebuano `ceb` — these three only, no coming-soon rows.
 
 Translation policy: UI chrome translates; proper nouns
 (appliance + catalog names, usernames, emails, brand,
@@ -205,15 +204,128 @@ by hand.
 | `auth.callback.footerPrompt` | Need a new account? | Kailangan ng bagong account? | Kinahanglan ug bag-ong account? |  |
 | `auth.callback.footerAction` | Create Account | Lumikha ng Account | Pagbuhat ug Account |  |
 
-## Menu — Language Picker (5 keys)
+## Menu — Language Picker (3 keys)
 
 | Key | English | Filipino | Cebuano | Notes |
 |---|---|---|---|---|
 | `menu.language.title` | Language | Wika | Pinulongan |  |
 | `menu.language.chooseLanguage` | Choose language | Pumili ng wika | Pagpili ug pinulongan |  |
 | `menu.language.current` | Current: {{language}} | Kasalukuyan: {{language}} | Karon: {{language}} |  |
-| `menu.language.comingSoon` | Coming soon | Malapit na | Moabotay |  |
-| `menu.language.comingSoonA11y` | {{language}}, coming soon, not yet available | {{language}}, malapit na, hindi pa available | {{language}}, moabotay, dili pa available | Reserved for future screen-reader use; the picker currently announces label + note. |
+
+## Menu — Dashboard (79 keys, Phase 1)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `menu.title` | Menu | Menu | Menu |  |
+| `menu.subtitle` | Browse and manage your AdlaWatt application. | I-browse at pamahalaan ang iyong AdlaWatt application. | Tan-awa ug dumalaha ang imong AdlaWatt application. |  |
+| `menu.accountProfile` | Account Profile | Account Profile | Account Profile |  |
+| `menu.preferences` | Preferences | Preferences | Preferences |  |
+| `menu.userManual` | User Manual | User Manual | User Manual |  |
+| `menu.components` | Components | Components | Components |  |
+| `menu.activityLogs` | Activity Logs | Activity Logs | Activity Logs |  |
+| `menu.aboutUs` | About Us | About Us | About Us |  |
+| `menu.openAccountProfile` | Open Account Profile | Buksan ang Account Profile | Ablihi ang Account Profile | a11y |
+| `menu.openPreferences` | Open Preferences | Buksan ang Preferences | Ablihi ang Preferences | a11y |
+| `menu.openUserManual` | Open User Manual | Buksan ang User Manual | Ablihi ang User Manual | a11y |
+| `menu.openComponents` | Open Components | Buksan ang Components | Ablihi ang Components | a11y |
+| `menu.openActivityLogs` | Open Activity Logs | Buksan ang Activity Logs | Ablihi ang Activity Logs | a11y |
+| `menu.openAboutUs` | Open About Us | Buksan ang About Us | Ablihi ang About Us | a11y |
+| `menu.loadingAccount` | Loading account information... | Naglo-load ng impormasyon ng account... | Nag-load sa impormasyon sa account... |  |
+| `menu.username` | Username | Username | Username |  |
+| `menu.email` | Email | Email | Email |  |
+| `menu.update` | Update | Update | Update |  |
+| `menu.enterUsername` | Enter username | Ilagay ang username | Isulod ang username | placeholder |
+| `menu.enterEmail` | Enter email | Ilagay ang email | Isulod ang email | placeholder |
+| `menu.currentPassword` | Current Password | Current Password | Current Password |  |
+| `menu.enterCurrentPassword` | Enter current password | Ilagay ang current password | Isulod ang current password | placeholder |
+| `menu.keepCurrentPassword` | Leave blank to keep current | Iwang blangko upang panatilihin | Biyai nga blangko aron magpabilin | placeholder |
+| `menu.confirmNewPasswordPlaceholder` | Confirm new password | Kumpirmahin ang bagong password | Kumpirmahi ang bag-ong password | placeholder |
+| `menu.cancel` | Cancel | Cancel | Cancel |  |
+| `menu.submit` | Submit | Submit | Submit |  |
+| `menu.save` | Save | Save | Save |  |
+| `menu.saving` | Saving... | Nagse-save... | Nag-save... |  |
+| `menu.confirm` | Confirm | Confirm | Confirm |  |
+| `menu.cancelAccountChanges` | Cancel account changes | Kanselahin ang mga pagbabago sa account | Kanselahon ang mga pagbag-o sa account | a11y |
+| `menu.submitAccountChanges` | Submit account changes | Isumite ang mga pagbabago sa account | Isumite ang mga pagbag-o sa account | a11y |
+| `menu.cancelPreferences` | Cancel Preferences | Kanselahin ang Preferences | Kanselahon ang Preferences | a11y |
+| `menu.savePreferences` | Save Preferences | I-save ang Preferences | I-save ang Preferences | a11y |
+| `menu.logoutA11y` | Log out | Mag-log out | Pag-log out | a11y |
+| `menu.exitAppA11y` | Exit app | Isara ang app | Isira ang app | a11y |
+| `menu.themes` | Themes | Themes | Themes |  |
+| `menu.themesA11y` | Themes | Themes | Themes | a11y |
+| `menu.themeSystem` | System | System | System | display only; option code stays `system` |
+| `menu.themeDark` | Dark | Dark | Dark | display only; option code stays `dark` |
+| `menu.themeLight` | Light | Light | Light | display only; option code stays `light` |
+| `menu.themeSystemWith` | System ({{mode}}) | System ({{mode}}) | System ({{mode}}) |  |
+| `menu.themeOptionA11y` | Theme {{option}} | Theme {{option}} | Theme {{option}} | a11y; option text stays backend-bound |
+| `menu.colorBlindMode` | Color Blind Mode | Color Blind Mode | Color Blind Mode |  |
+| `menu.colorBlindHint` | Adjust colors for better accessibility. | Ayusin ang mga kulay para sa accessibility. | I-adjust ang mga kolor para sa accessibility. |  |
+| `menu.fontSize` | Font Size | Font Size | Font Size |  |
+| `menu.fontSmall` | Small | Small | Small | display only |
+| `menu.fontMedium` | Medium | Medium | Medium | display only |
+| `menu.fontBig` | Big | Big | Big | display only |
+| `menu.fontSizeOptionA11y` | Font size {{option}} | Font size {{option}} | Font size {{option}} | a11y |
+| `menu.fontFamily` | Font Family | Font Family | Font Family |  |
+| `menu.chooseFontFamily` | Choose font family | Pumili ng font family | Pagpili ug font family | a11y |
+| `menu.currentFont` | Current: {{font}} | Kasalukuyan: {{font}} | Karon: {{font}} | a11y |
+| `menu.vibration` | Vibration | Vibration | Vibration |  |
+| `menu.vibrationHint` | Vibrate when important alerts are received. | Mag-vibrate kapag may mahalagang alerto. | Mag-vibrate kung adunay importanteng alerto. |  |
+| `menu.emailNotifications` | Email Notifications | Email Notifications | Email Notifications |  |
+| `menu.emailNotificationsHint` | Allow AdlaWatt to send alerts and notifications through your email. | Payagan ang AdlaWatt na magpadala ng mga alerto sa iyong email. | Tugoti ang AdlaWatt nga magpadala ug mga alerto sa imong email. |  |
+| `menu.confirmChanges` | Confirm Changes | Kumpirmahin ang mga Pagbabago | Kumpirmahi ang mga Pagbag-o |  |
+| `menu.confirmChangesBody` | Enter your current password to confirm these account changes. | Ilagay ang iyong current password upang kumpirmahin ang mga pagbabagong ito. | Isulod ang imong current password aron kumpirmahon kini nga mga pagbag-o. |  |
+| `menu.accountUpdated` | Account Updated | Na-update ang Account | Na-update ang Account | alert title |
+| `menu.accountUpdatedEmailPending` | Your username was updated. Please confirm your new email address. | Na-update ang iyong username. Pakikumpirma ang iyong bagong email address. | Na-update ang imong username. Palihug kumpirmahi ang imong bag-ong email address. | alert fallback |
+| `menu.changesSaved` | Changes Saved | Nai-save ang mga Pagbabago | Nai-save ang mga Pagbag-o | alert title |
+| `menu.changesSavedMessage` | Your account information has been updated successfully. | Matagumpay na na-update ang iyong account. | Malampuson nga na-update ang imong account. | alert message |
+| `menu.noChanges` | No account changes were made. | Walang ginawang pagbabago sa account. | Walay gihimong pagbag-o sa account. | warning |
+| `menu.currentPasswordRequired` | Enter your current password. | Ilagay ang iyong current password. | Isulod ang imong current password. | warning |
+| `menu.currentPasswordShort` | Current password must be at least 8 characters. | Ang current password ay dapat na hindi bababa sa 8 karakter. | Ang current password kinahanglan dili mominus sa 8 ka karakter. | warning |
+| `menu.updateFailed` | Unable to update your account. | Hindi ma-update ang iyong account. | Dili ma-update ang imong account. | warning fallback |
+| `menu.updateFailedNow` | Unable to update your account. Please try again. | Hindi ma-update ang iyong account. Pakisubukang muli. | Dili ma-update ang imong account. Palihug sulayi pag-usab. | warning |
+| `menu.logoutTitle` | Log Out | Mag-Log Out | Pag-Log Out | alert title + label |
+| `menu.logoutMessage` | Are you sure you want to sign out? | Sigurado ka bang gusto mong mag-sign out? | Sigurado ka nga gusto kang mag-sign out? | alert message |
+| `menu.logoutNo` | No | Hindi | Dili | alert button |
+| `menu.logoutYes` | Yes | Oo | Oo | alert button |
+| `menu.exitTitle` | Exit | Lumabas | Gawas | alert title + label |
+| `menu.exitMessage` | Please close this tab manually to exit AdlaWatt. | Pakisarado ang tab na ito upang lumabas sa AdlaWatt. | Palihug isira kini nga tab aron mogawas sa AdlaWatt. | alert message |
+| `menu.exitWebMessage` | Are you sure you want to exit AdlaWatt? | Sigurado ka bang gusto mong lumabas sa AdlaWatt? | Sigurado ka nga gusto kang mogawas sa AdlaWatt? | alert message |
+| `menu.exitAppTitle` | Exit App | Isara ang App | Isira ang App | alert title |
+| `menu.exitAppMessage` | AdlaWatt will close. Are you sure? | Isasara ang AdlaWatt. Sigurado ka? | Isira ang AdlaWatt. Sigurado ka? | alert message |
+| `menu.exitNo` | No | Hindi | Dili | alert button |
+| `menu.exitYes` | Yes | Oo | Oo | alert button |
+| `menu.englishName` | English | English | English | fallback label |
+
+## Dashboard — Home (6 keys, Phase 1)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.home.title` | Dashboard | Dashboard | Dashboard |  |
+| `dashboard.home.subtitle` | Monitor your AdlaWatt system in real time. | I-monitor ang iyong AdlaWatt system nang real time. | I-monitor ang imong AdlaWatt system nga real time. |  |
+| `dashboard.home.applianceRecommendation` | Appliance Recommendation | Appliance Recommendation | Appliance Recommendation |  |
+| `dashboard.home.realtimeMonitoring` | Real-Time Monitoring | Real-Time Monitoring | Real-Time Monitoring |  |
+| `dashboard.home.goToApplianceRecommendation` | Go to Appliance Recommendation | Pumunta sa Appliance Recommendation | Adto sa Appliance Recommendation | a11y |
+| `dashboard.home.forecastFailed` | Could not load the forecast. | Hindi ma-load ang forecast. | Dili ma-load ang forecast. | error fallback |
+
+## Shared (7 keys, Phase 1)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `shared.close` | Close | Isara | Isira | a11y |
+| `shared.signedInAs` | Signed in as {{username}} | Naka-sign in bilang {{username}} | Naka-sign in isip {{username}} | a11y; username stays as-is |
+| `shared.notifications` | Notifications | Mga Notification | Mga Notification | a11y |
+| `shared.emptyTitle` | No Activity Logs | Walang Activity Logs | Walay Activity Logs | default prop |
+| `shared.emptyDescription` | No activities match the selected filters. | Walang aktibidad na tumutugma sa mga filter. | Walay aktibidad nga motugma sa mga filter. | default prop |
+| `shared.errorTitle` | Couldn't load data | Hindi ma-load ang data | Dili ma-load ang data |  |
+| `shared.retry` | Try Again | Subukang Muli | Sulayi Pag-usab |  |
+
+## Backend-bound (stays English by policy, Phase 1)
+
+- DB status enums: `Online`/`Offline`, `Charging`/`Discharging`/`Idle`, `Safe`/`Unsafe`, solar/temperature statuses — compared with `===` and written by ESP32/cron.
+- Log/notification types: `info`/`warning`/`error`/`critical`, stored activity-log titles, email badge `ALERT`/`NORMAL`.
+- Proper nouns: appliance/catalog names, usernames, emails, brand, units (`W`, `V`, `°C`).
+- Option codes: theme `system`/`light`/`dark`, font-size codes; only display labels translate.
+- `themeLabel()` helper output stays English (feeds activity-log rows).
 
 ## Out of scope (stay English by policy)
 
