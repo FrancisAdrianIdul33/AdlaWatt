@@ -258,6 +258,12 @@ const fil = {
         "{{language}}, malapit na, hindi pa available",
     },
   },
+
+  admin: {
+    title: "Admin Dashboard",
+    subtitle:
+      "Preview ng pangangasiwa ng system — mock data muna.",
+  },
 } as const;
 
 export default fil;

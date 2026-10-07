@@ -236,6 +236,12 @@ const en = {
       comingSoonA11y: "{{language}}, coming soon, not yet available",
     },
   },
+
+  admin: {
+    title: "Admin Dashboard",
+    subtitle:
+      "System oversight preview — mock data until admin reads land.",
+  },
 } as const;
 
 export default en;

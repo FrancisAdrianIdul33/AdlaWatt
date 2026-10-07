@@ -18,4 +18,7 @@ export const Routes = {
   MENU: "/dashboard/menu",
   ABOUT_US: "/dashboard/about-us",
   USER_MANUAL: "/dashboard/user-manual",
+
+  // Admin (hidden, role-gated — no Menu entry)
+  ADMIN: "/admin",
 } as const;

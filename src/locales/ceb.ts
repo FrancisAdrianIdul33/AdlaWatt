@@ -258,6 +258,12 @@ const ceb = {
         "{{language}}, moabotay, dili pa available",
     },
   },
+
+  admin: {
+    title: "Admin Dashboard",
+    subtitle:
+      "Preview sa pagdumala sa system — mock data una.",
+  },
 } as const;
 
 export default ceb;
