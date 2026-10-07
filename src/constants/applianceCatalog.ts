@@ -217,4 +217,9 @@ export const CATALOG_IMAGES: Record<string, number> = {
   "catalog:bedroom:emergency-light": require("@/assets/images/appliances/emergency-light.png"),
   "catalog:bedroom:swatter": require("@/assets/images/appliances/swatter.png"),
   "catalog:bedroom:night-light": require("@/assets/images/appliances/night-light.png"),
+  // Work/Study batch
+  "catalog:work:laptop-adapter": require("@/assets/images/appliances/laptop-charger.png"),
+  "catalog:work:usb-fan": require("@/assets/images/appliances/mini-fan.png"),
+  "catalog:work:desk-lamp": require("@/assets/images/appliances/desk-lamp.png"),
+  "catalog:work:printer": require("@/assets/images/appliances/printer.png"),
 };
