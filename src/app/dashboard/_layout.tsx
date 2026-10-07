@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useHouseholdGuard } from "@/hooks/useHouseholdGuard";
 import { useAlertVibration } from "@/hooks/useAlertVibration";
 import {
   initializeNotificationService,
@@ -16,19 +17,22 @@ import {
 } from "@/services/notificationService";
 
 // ============================================================
-// DASHBOARD LAYOUT
+// DASHBOARD LAYOUT (household-only)
 //
 // Single shared typography + theme instances for the whole
-// dashboard, behind an auth guard (unauthenticated deep-links
-// bounce to login). Save in Menu propagates typography to all
-// dashboard screens; the Dark Mode toggle applies instantly.
-// Auth screens live in their own layout with the saved theme.
+// dashboard, behind an auth + household-role guard. Admin
+// sessions bounce to /admin (see useHouseholdGuard); the
+// mirror useAdminGuard keeps household out of /admin.
+// Save in Menu propagates typography to all dashboard screens;
+// the Dark Mode toggle applies instantly. Auth screens live in
+// their own layout with the saved theme.
 // StatusBar follows the active theme.
 // ============================================================
 
 function ThemedDashboard() {
   const { isDark } = useTheme();
   const { isLoaded, isSignedIn, user } = useAuth();
+  const { canRender: canRenderHousehold } = useHouseholdGuard();
   const userId = user?.id ?? null;
   const initializedUserId = useRef<string | null>(null);
 
@@ -89,7 +93,7 @@ function ThemedDashboard() {
     [],
   );
 
-  if (!isLoaded || !isSignedIn) {
+  if (!isLoaded || !isSignedIn || !canRenderHousehold) {
     return null;
   }
 

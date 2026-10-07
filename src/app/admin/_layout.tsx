@@ -9,21 +9,23 @@ import {
   useTheme,
 } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAdminGuard } from "@/admin/hooks/useAdminGuard";
 
 // ============================================================
-// ADMIN LAYOUT
+// ADMIN LAYOUT (admin-only)
 //
 // Mirrors app/dashboard/_layout.tsx shell (Theme + Settings,
 // StatusBar follows theme) but WITHOUT household bottom tabs
 // and WITHOUT the notification-service lifecycle. Admin uses
 // its own AdminScreenContainer + AdminNavBarBottom from
-// src/admin/. Auth guard only here; role check lives in
-// useAdminGuard (self-readable users.role).
+// src/admin/. Auth + role guard here (see useAdminGuard);
+// the screen keeps its own gate as a second layer.
 // ============================================================
 
 function ThemedAdmin() {
   const { isDark } = useTheme();
   const { isLoaded, isSignedIn } = useAuth();
+  const { canRender: canRenderAdmin } = useAdminGuard();
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -31,7 +33,7 @@ function ThemedAdmin() {
     }
   }, [isLoaded, isSignedIn]);
 
-  if (!isLoaded || !isSignedIn) {
+  if (!isLoaded || !isSignedIn || !canRenderAdmin) {
     return null;
   }
 
