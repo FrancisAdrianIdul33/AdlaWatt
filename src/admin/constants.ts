@@ -7,12 +7,16 @@
 // local until a backend store lands in Phase 2).
 // ============================================================
 
-export type AdminTab = "overview" | "thresholds" | "audit";
+export type AdminTab =
+  | "overview"
+  | "thresholds"
+  | "audit"
+  | "menu";
 
 export const ADMIN_TABS: readonly {
   value: AdminTab;
   label: string;
-  icon: "pulse" | "options" | "list";
+  icon: "pulse" | "options" | "list" | "grid";
   accessibilityLabel: string;
 }[] = [
   {
@@ -32,6 +36,12 @@ export const ADMIN_TABS: readonly {
     label: "Audit",
     icon: "list",
     accessibilityLabel: "Admin audit log",
+  },
+  {
+    value: "menu",
+    label: "Menu",
+    icon: "grid",
+    accessibilityLabel: "Admin menu",
   },
 ] as const;
 

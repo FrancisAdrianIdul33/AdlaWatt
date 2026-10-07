@@ -16,6 +16,7 @@ import { Radius, Spacing } from "@/constants/theme";
 
 import AdminScreenContainer from "@/admin/components/AdminScreenContainer";
 import AdminNavBarTop from "@/admin/components/AdminNavBarTop";
+import AdminMenuSection from "@/admin/components/AdminMenuSection";
 import SystemOverviewSection from "@/admin/components/SystemOverviewSection";
 import ThresholdEditor from "@/admin/components/ThresholdEditor";
 import AuditList from "@/admin/components/AuditList";
@@ -145,6 +146,8 @@ export default function AdminDashboardScreen() {
         {tab === "thresholds" && <ThresholdEditor />}
 
         {tab === "audit" && <AuditList />}
+
+        {tab === "menu" && <AdminMenuSection />}
 
         <Copyright />
       </ScrollView>
