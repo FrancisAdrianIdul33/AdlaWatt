@@ -29,7 +29,13 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 
-import { loginUser, resendConfirmation, signInWithGoogle } from "@/services/auth";
+import {
+  getCurrentUserProfile,
+  loginUser,
+  resendConfirmation,
+  resolvePostLoginRoute,
+  signInWithGoogle,
+} from "@/services/auth";
 import { useTranslation } from "react-i18next";
 
 // Completes the pending auth session on Android when the
@@ -181,7 +187,22 @@ export default function LoginScreen() {
     setUnconfirmedEmail("");
     setConfirmationResent("");
 
-    router.replace(Routes.DASHBOARD);
+    // Hidden admin routing: test admin (users.role admin)
+    // lands on /admin, everyone else on /dashboard. Profile
+    // failures fall back to household (never fail open).
+    try {
+      const profile = await getCurrentUserProfile();
+
+      router.replace(
+        resolvePostLoginRoute(
+          profile.success
+            ? (profile as { role?: unknown }).role
+            : null,
+        ) as never,
+      );
+    } catch {
+      router.replace(Routes.DASHBOARD);
+    }
   } catch {
     setWarning(
       t("common.wentWrong"),
@@ -216,10 +237,22 @@ export default function LoginScreen() {
       if (result.success) {
         // Web redirect unloads the page; native session is
         // already persisted. The auth layout notices the new
-        // session and routes to the dashboard on its own —
-        // replace explicitly in case the event lags.
+        // session and routes on its own — replace explicitly
+        // in case the event lags (role-aware for admin).
         if (!("redirected" in result)) {
-          router.replace(Routes.DASHBOARD);
+          try {
+            const profile = await getCurrentUserProfile();
+
+            router.replace(
+              resolvePostLoginRoute(
+                profile.success
+                  ? (profile as { role?: unknown }).role
+                  : null,
+              ) as never,
+            );
+          } catch {
+            router.replace(Routes.DASHBOARD);
+          }
         }
         return;
       }
@@ -429,6 +462,58 @@ export default function LoginScreen() {
           actionLabel={t("auth.login.footerAction")}
           onAction={handleRegister}
         />
+
+        {/* Test admin hint: static text only (no autofill),
+            dev builds only — never ships to production. The
+            account itself must exist in Supabase with
+            users.role = 'admin' (see user_roles migration);
+            the password below is a test-only credential. */}
+        {__DEV__ ? (
+          <View
+            style={noticeStyles.card}
+            accessibilityRole="text"
+            accessibilityLabel={t(
+              "auth.login.testAdminTitle",
+            )}
+          >
+            <View style={noticeStyles.headerPanel}>
+              <View style={noticeStyles.headerLeft}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={22}
+                  color={colors.headerContent}
+                />
+
+                <AppText
+                  style={noticeStyles.headerTitle}
+                >
+                  {t("auth.login.testAdminTitle")}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={noticeStyles.body}>
+              <AppText style={noticeStyles.bodyText}>
+                {t("auth.login.testAdminHint")}
+              </AppText>
+
+              <AppText style={noticeStyles.status}>
+                {t("auth.login.testAdminEmailLabel")}:{" "}
+                admin_test@adlawatt.test
+              </AppText>
+
+              <AppText style={noticeStyles.status}>
+                {t("auth.login.testAdminUsernameLabel")}:{" "}
+                adlawatt_admin
+              </AppText>
+
+              <AppText style={noticeStyles.bodyText}>
+                {t("auth.login.testAdminPasswordLabel")}:{" "}
+                adlawatt123
+              </AppText>
+            </View>
+          </View>
+        ) : null}
 
         <Copyright />
       </View>

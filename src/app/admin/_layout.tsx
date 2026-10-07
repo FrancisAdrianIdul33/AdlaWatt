@@ -17,8 +17,8 @@ import { useAuth } from "@/context/AuthContext";
 // StatusBar follows theme) but WITHOUT household bottom tabs
 // and WITHOUT the notification-service lifecycle. Admin uses
 // its own AdminScreenContainer + AdminNavBarBottom from
-// src/admin/. UI-only phase: auth guard only; role check lives
-// in useAdminGuard (mock allow, real users.role deferred).
+// src/admin/. Auth guard only here; role check lives in
+// useAdminGuard (self-readable users.role).
 // ============================================================
 
 function ThemedAdmin() {

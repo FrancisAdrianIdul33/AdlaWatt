@@ -123,6 +123,12 @@ const fil = {
         "Muling ipadala ang confirmation email",
       footerPrompt: "Wala ka pang account?",
       footerAction: "Lumikha ng Account",
+      testAdminTitle: "Test admin account (dev only)",
+      testAdminHint:
+        "Mag-sign in gamit ang mga kredensyal na ito upang masilip ang admin dashboard.",
+      testAdminEmailLabel: "Email",
+      testAdminUsernameLabel: "Username",
+      testAdminPasswordLabel: "Password",
     },
 
     register: {

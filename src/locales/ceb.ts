@@ -123,6 +123,12 @@ const ceb = {
         "Ipadala pag-usab ang confirmation email",
       footerPrompt: "Wala pa kay account?",
       footerAction: "Pagbuhat ug Account",
+      testAdminTitle: "Test admin account (dev only)",
+      testAdminHint:
+        "Pag-sign in gamit kini nga mga kredensyal aron masilip ang admin dashboard.",
+      testAdminEmailLabel: "Email",
+      testAdminUsernameLabel: "Username",
+      testAdminPasswordLabel: "Password",
     },
 
     register: {

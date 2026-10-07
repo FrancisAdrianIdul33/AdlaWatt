@@ -112,6 +112,12 @@ const en = {
       resendConfirmation: "Resend confirmation email",
       footerPrompt: "Don't have an account?",
       footerAction: "Create Account",
+      testAdminTitle: "Test admin account (dev only)",
+      testAdminHint:
+        "Sign in with these credentials to preview the admin dashboard.",
+      testAdminEmailLabel: "Email",
+      testAdminUsernameLabel: "Username",
+      testAdminPasswordLabel: "Password",
     },
 
     register: {
