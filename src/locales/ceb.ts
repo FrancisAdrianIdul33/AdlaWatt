@@ -378,6 +378,24 @@ const ceb = {
       title: "User Manual",
       subtitle: "Mga giya sa pagpadagan sa imong AdlaWatt system.",
     },
+    appliances: {
+      title: "Mga Appliance",
+      subtitle: "Dumalaha ug i-monitor ang gisuportahang mga appliance.",
+    },
+    components: {
+      title: "Mga Komponente",
+      subtitle: "I-monitor ang mga component sa AdlaWatt system.",
+    },
+    analytics: {
+      title: "Analytics ug Trends",
+      subtitle:
+        "Susiha ang performance sa system, paggamit sa enerhiya, temperatura, ug datos sa appliance sa paglabay sa panahon.",
+      sectionBattery: "Baterya",
+      sectionSolar: "Solar",
+      sectionEnergy: "Enerhiya",
+      sectionHealth: "Panglawas",
+      sectionUsage: "Paggamit",
+    },
     logs: {
       title: "Activity Logs",
       subtitle: "Dinhi makita ang aktibidad sa system ug mga event sa appliance.",

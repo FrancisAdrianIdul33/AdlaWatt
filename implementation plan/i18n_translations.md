@@ -462,6 +462,22 @@ Codes stay backend-bound; labels map for display. Dates localize in format only 
 | `shared.errorTitle` | Couldn't load data | Hindi ma-load ang data | Dili ma-load ang data |  |
 | `shared.retry` | Try Again | Subukang Muli | Sulayi Pag-usab |  |
 
+## Dashboard — Appliances / Components / Analytics headers
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.appliances.title` | Appliances | Mga Appliance | Mga Appliance |  |
+| `dashboard.appliances.subtitle` | Manage and monitor supported appliances. | Pamahalaan at i-monitor ang mga sinusuportahang appliance. | Dumalaha ug i-monitor ang gisuportahang mga appliance. |  |
+| `dashboard.components.title` | Components | Mga Komponente | Mga Komponente |  |
+| `dashboard.components.subtitle` | Monitor AdlaWatt system components. | I-monitor ang mga component ng AdlaWatt system. | I-monitor ang mga component sa AdlaWatt system. |  |
+| `dashboard.analytics.title` | Analytics & Trends | Analytics at Trends | Analytics ug Trends |  |
+| `dashboard.analytics.subtitle` | Analyze system performance, energy usage, temperature, and appliance data over time. | Suriin ang performance ng system, paggamit ng enerhiya, temperatura, at datos ng appliance sa paglipas ng panahon. | Susiha ang performance sa system, paggamit sa enerhiya, temperatura, ug datos sa appliance sa paglabay sa panahon. |  |
+| `dashboard.analytics.sectionBattery` | Battery | Baterya | Baterya | section header |
+| `dashboard.analytics.sectionSolar` | Solar | Solar | Solar | section header |
+| `dashboard.analytics.sectionEnergy` | Energy | Enerhiya | Enerhiya | section header |
+| `dashboard.analytics.sectionHealth` | Health | Kalusugan | Panglawas | section header |
+| `dashboard.analytics.sectionUsage` | Usage | Paggamit | Paggamit | section header |
+
 ## Backend-bound (stays English by policy, Phase 1)
 
 - DB status enums: `Online`/`Offline`, `Charging`/`Discharging`/`Idle`, `Safe`/`Unsafe`, solar/temperature statuses — compared with `===` and written by ESP32/cron.

@@ -22,6 +22,7 @@ import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import { useTranslation } from "react-i18next";
 import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -179,6 +180,7 @@ const areaMap: Record<
 };
 
 export default function AppliancesScreen() {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Advisable");
 
@@ -535,14 +537,14 @@ export default function AppliancesScreen() {
             variant="heading"
             style={styles.title}
           >
-            Appliances
+            {t("dashboard.appliances.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
-            Manage and monitor supported appliances.
+            {t("dashboard.appliances.subtitle")}
           </AppText>
         </View>
 

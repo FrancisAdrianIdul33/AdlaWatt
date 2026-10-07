@@ -33,6 +33,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 import {
   AnalyticsRange,
   ApplianceUsageHistoryRow,
@@ -94,6 +95,7 @@ import {
    ============================================================ */
 
 export default function AnalyticsScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -807,7 +809,7 @@ export default function AnalyticsScreen() {
               styles.headerTitle
             }
           >
-            Analytics & Trends
+            {t("dashboard.analytics.title")}
           </AppText>
 
           <AppText
@@ -816,9 +818,7 @@ export default function AnalyticsScreen() {
               styles.headerSubtitle
             }
           >
-            Analyze system performance,
-            energy usage, temperature,
-            and appliance data over time.
+            {t("dashboard.analytics.subtitle")}
           </AppText>
         </View>
 
@@ -829,7 +829,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Battery
+          {t("dashboard.analytics.sectionBattery")}
         </AppText>
 
         <AnalyticsChartCard
@@ -877,7 +877,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Solar
+          {t("dashboard.analytics.sectionSolar")}
         </AppText>
 
         <AnalyticsChartCard
@@ -939,7 +939,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Energy
+          {t("dashboard.analytics.sectionEnergy")}
         </AppText>
 
         <AnalyticsChartCard
@@ -1006,7 +1006,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Health
+          {t("dashboard.analytics.sectionHealth")}
         </AppText>
 
         <AnalyticsChartCard
@@ -1070,7 +1070,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Usage
+          {t("dashboard.analytics.sectionUsage")}
         </AppText>
 
         <AnalyticsChartCard

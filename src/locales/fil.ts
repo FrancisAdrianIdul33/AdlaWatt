@@ -378,6 +378,24 @@ const fil = {
       title: "User Manual",
       subtitle: "Mga gabay sa pagpapatakbo ng iyong AdlaWatt system.",
     },
+    appliances: {
+      title: "Mga Appliance",
+      subtitle: "Pamahalaan at i-monitor ang mga sinusuportahang appliance.",
+    },
+    components: {
+      title: "Mga Komponente",
+      subtitle: "I-monitor ang mga component ng AdlaWatt system.",
+    },
+    analytics: {
+      title: "Analytics at Trends",
+      subtitle:
+        "Suriin ang performance ng system, paggamit ng enerhiya, temperatura, at datos ng appliance sa paglipas ng panahon.",
+      sectionBattery: "Baterya",
+      sectionSolar: "Solar",
+      sectionEnergy: "Enerhiya",
+      sectionHealth: "Kalusugan",
+      sectionUsage: "Paggamit",
+    },
     logs: {
       title: "Activity Logs",
       subtitle: "Dito lilitaw ang aktibidad ng system at mga event ng appliance.",

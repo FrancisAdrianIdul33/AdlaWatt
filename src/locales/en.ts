@@ -361,6 +361,24 @@ const en = {
       title: "User Manual",
       subtitle: "Guides for operating your AdlaWatt system.",
     },
+    appliances: {
+      title: "Appliances",
+      subtitle: "Manage and monitor supported appliances.",
+    },
+    components: {
+      title: "Components",
+      subtitle: "Monitor AdlaWatt system components.",
+    },
+    analytics: {
+      title: "Analytics & Trends",
+      subtitle:
+        "Analyze system performance, energy usage, temperature, and appliance data over time.",
+      sectionBattery: "Battery",
+      sectionSolar: "Solar",
+      sectionEnergy: "Energy",
+      sectionHealth: "Health",
+      sectionUsage: "Usage",
+    },
     logs: {
       title: "Activity Logs",
       subtitle:
