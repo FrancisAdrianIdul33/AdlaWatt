@@ -218,12 +218,12 @@ by hand.
 |---|---|---|---|---|
 | `menu.title` | Menu | Menu | Menu |  |
 | `menu.subtitle` | Browse and manage your AdlaWatt application. | I-browse at pamahalaan ang iyong AdlaWatt application. | Tan-awa ug dumalaha ang imong AdlaWatt application. |  |
-| `menu.accountProfile` | Account Profile | Account Profile | Account Profile |  |
-| `menu.preferences` | Preferences | Preferences | Preferences |  |
-| `menu.userManual` | User Manual | User Manual | User Manual |  |
-| `menu.components` | Components | Components | Components |  |
-| `menu.activityLogs` | Activity Logs | Activity Logs | Activity Logs |  |
-| `menu.aboutUs` | About Us | About Us | About Us |  |
+| `menu.accountProfile` | Account Profile | Profile ng Account | Profile sa Account |  |
+| `menu.preferences` | Preferences | Mga Kagustuhan | Mga Kagustuhan |  |
+| `menu.userManual` | User Manual | Manwal ng Gumagamit | Manwal sa Gumagamit |  |
+| `menu.components` | Components | Mga Komponente | Mga Komponente |  |
+| `menu.activityLogs` | Activity Logs | Mga Tala ng Aktibidad | Mga Tala sa Aktibidad |  |
+| `menu.aboutUs` | About Us | Tungkol sa Amin | Mahitungod Kanamo |  |
 | `menu.openAccountProfile` | Open Account Profile | Buksan ang Account Profile | Ablihi ang Account Profile | a11y |
 | `menu.openPreferences` | Open Preferences | Buksan ang Preferences | Ablihi ang Preferences | a11y |
 | `menu.openUserManual` | Open User Manual | Buksan ang User Manual | Ablihi ang User Manual | a11y |
