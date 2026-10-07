@@ -210,4 +210,11 @@ export const CATALOG_IMAGES: Record<string, number> = {
   "catalog:living:tv-box": require("@/assets/images/appliances/tv-box.png"),
   "catalog:living:speaker": require("@/assets/images/appliances/speaker.png"),
   "catalog:living:bulb": require("@/assets/images/appliances/bulb.png"),
+  // Bedroom batch (charger photo shared by phone + tablet keys)
+  "catalog:bedroom:wall-fan": require("@/assets/images/appliances/clip-fan.png"),
+  "catalog:bedroom:phone-charger": require("@/assets/images/appliances/charger.png"),
+  "catalog:bedroom:tablet-charger": require("@/assets/images/appliances/charger.png"),
+  "catalog:bedroom:emergency-light": require("@/assets/images/appliances/emergency-light.png"),
+  "catalog:bedroom:swatter": require("@/assets/images/appliances/swatter.png"),
+  "catalog:bedroom:night-light": require("@/assets/images/appliances/night-light.png"),
 };
