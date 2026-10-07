@@ -22,8 +22,10 @@ import {
 import { Touch } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 export default function ActivityCard() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -114,7 +116,7 @@ export default function ActivityCard() {
           variant="body"
           style={styles.title}
         >
-          Recent Activity
+          {t("activityCard.recentActivity")}
         </AppText>
 
         <Pressable
@@ -123,14 +125,14 @@ export default function ActivityCard() {
           }
           style={styles.viewAllButton}
           accessibilityRole="link"
-          accessibilityLabel="View all activity"
+          accessibilityLabel={t("activityCard.viewAllActivity")}
           hitSlop={8}
         >
           <AppText
             variant="caption"
             style={styles.viewAll}
           >
-            View All
+            {t("activityCard.viewAll")}
           </AppText>
         </Pressable>
       </View>

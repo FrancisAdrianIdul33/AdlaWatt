@@ -10,6 +10,7 @@ import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import { useTranslation } from "react-i18next";
 
 import {
   useAppColors,
@@ -24,6 +25,7 @@ import {
 // ============================================================
 
 export default function UserManualScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -47,15 +49,14 @@ export default function UserManualScreen() {
             variant="heading"
             style={styles.title}
           >
-            User Manual
+            {t("dashboard.manual.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
-            Guides for operating your
-            AdlaWatt system.
+            {t("dashboard.manual.subtitle")}
           </AppText>
         </View>
 

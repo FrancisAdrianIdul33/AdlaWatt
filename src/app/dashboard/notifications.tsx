@@ -46,6 +46,7 @@ import { OptionRow } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 import { stopAlertVibration } from "@/services/alertVibration";
+import { useTranslation } from "react-i18next";
 
 type TimeFilter =
   | "All"
@@ -68,7 +69,29 @@ type NotificationData = NotificationCardData & {
 const PAGE_TURN_SCROLL_MS = 1500;
 
 export default function NotificationsScreen() {
+  const { t, i18n } = useTranslation();
   const colors = useAppColors();
+
+  // Locale-aware date/time formatting (format only per policy).
+  const localeTag =
+    i18n.language === "fil"
+      ? "fil-PH"
+      : i18n.language === "ceb"
+        ? "ceb-PH"
+        : "en-US";
+
+  // Display map: filter codes stay backend-bound English;
+  // only the rendered label translates.
+  const timeLabel = (option: TimeFilter): string =>
+    option === "Last Hour"
+      ? t("dashboard.notifications.timeLastHour")
+      : option === "Today"
+        ? t("dashboard.notifications.timeToday")
+        : option === "This Week"
+          ? t("dashboard.notifications.timeThisWeek")
+          : option === "This Year"
+            ? t("dashboard.notifications.timeThisYear")
+            : t("dashboard.notifications.timeAll");
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -156,9 +179,7 @@ export default function NotificationsScreen() {
         });
 
       if (error) {
-        throw new Error(
-          "We couldn't load your notifications. Check your connection and try again.",
-        );
+        throw new Error(t("dashboard.notifications.loadFailed"));
       }
 
       // Dedupe by content (title + description), keeping the
@@ -182,7 +203,7 @@ export default function NotificationsScreen() {
             message: notification.description,
 
             date: dateObject.toLocaleDateString(
-              "en-US",
+              localeTag,
               {
                 month: "short",
                 day: "2-digit",
@@ -191,7 +212,7 @@ export default function NotificationsScreen() {
             ),
 
             time: dateObject.toLocaleTimeString(
-              "en-US",
+              localeTag,
               {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -233,7 +254,7 @@ export default function NotificationsScreen() {
     error: loadError,
     loading: isLoading,
     retry: retryLoad,
-  } = useSafeAsync(loadNotifications, []);
+  } = useSafeAsync(loadNotifications, [i18n.language]);
 
   // Optimistic read-all: flips the list instantly on tap;
   // the refetch after a successful update is authoritative
@@ -457,13 +478,13 @@ export default function NotificationsScreen() {
   const getTypeLabel = () => {
     switch (typeFilter) {
       case "normal":
-        return "Normal";
+        return t("dashboard.notifications.typeNormal");
 
       case "alert":
-        return "Alert";
+        return t("dashboard.notifications.typeAlert");
 
       default:
-        return "All";
+        return t("dashboard.notifications.typeAll");
     }
   };
 
@@ -502,9 +523,7 @@ export default function NotificationsScreen() {
       const user = await getAuthenticatedUserSafe();
 
       if (!user) {
-        throw new Error(
-          "No authenticated user found.",
-        );
+        throw new Error(t("common.authRequired"));
       }
 
       const { error } = await supabase
@@ -527,7 +546,7 @@ export default function NotificationsScreen() {
       const message =
         thrown instanceof Error
           ? thrown.message
-          : "Couldn't mark notifications as read. Please try again.";
+          : t("dashboard.notifications.markFailed");
 
       console.error(
         "Error marking notifications as read:",
@@ -538,7 +557,7 @@ export default function NotificationsScreen() {
       // true server state, and tell the user it failed.
       setReadOverride(false);
       setMarkError(
-        "Couldn't mark as read. Check your connection and try again.",
+        t("dashboard.notifications.markError"),
       );
     } finally {
       setIsMarkingRead(false);
@@ -571,15 +590,14 @@ export default function NotificationsScreen() {
             variant="heading"
             style={styles.title}
           >
-            Notifications
+            {t("dashboard.notifications.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
-            System notifications and important
-            alerts will appear here.
+            {t("dashboard.notifications.subtitle")}
           </AppText>
         </View>
 
@@ -589,7 +607,7 @@ export default function NotificationsScreen() {
             variant="caption"
             style={styles.totalText}
           >
-            Total Notifications:{" "}
+            {t("dashboard.notifications.total")}{" "}
 
             <AppText
               style={styles.totalNumber}
@@ -621,7 +639,7 @@ export default function NotificationsScreen() {
                 variant="caption"
                 style={styles.dropdownButtonText}
               >
-                {timeFilter}
+                {timeLabel(timeFilter)}
               </AppText>
 
               <Ionicons
@@ -677,7 +695,7 @@ export default function NotificationsScreen() {
             onPress={handleMarkAsRead}
             disabled={isMarkingRead}
             accessibilityRole="button"
-            accessibilityLabel="Mark all as read"
+            accessibilityLabel={t("dashboard.notifications.markAllAsRead")}
             accessibilityState={{
               disabled: isMarkingRead,
             }}
@@ -693,8 +711,8 @@ export default function NotificationsScreen() {
               style={styles.markReadText}
             >
               {isMarkingRead
-                ? "Marking..."
-                : "Mark as Read"}
+                ? t("dashboard.notifications.marking")
+                : t("dashboard.notifications.markAsRead")}
             </AppText>
           </Pressable>
         </View>
@@ -741,7 +759,7 @@ export default function NotificationsScreen() {
                 variant="body"
                 style={styles.sectionTitle}
               >
-                Recent
+                {t("dashboard.notifications.recent")}
               </AppText>
 
               <View style={styles.countPill}>
@@ -784,7 +802,7 @@ export default function NotificationsScreen() {
                 variant="body"
                 style={styles.sectionTitle}
               >
-                Earlier
+                {t("dashboard.notifications.earlier")}
               </AppText>
 
               <View
@@ -822,8 +840,8 @@ export default function NotificationsScreen() {
           currentPageNotifications.length === 0 && (
             <EmptyState
               icon="notifications-off-outline"
-              title="No Notifications"
-              description="No notifications found for the selected filters."
+              title={t("dashboard.notifications.noNotifications")}
+              description={t("dashboard.notifications.noNotificationsDesc")}
             />
           )}
 
@@ -847,7 +865,7 @@ export default function NotificationsScreen() {
       ======================================================== */}
       <DropdownModal
         visible={timeModalVisible}
-        title="Time Range"
+        title={t("dashboard.notifications.timeRange")}
         onClose={() =>
           setTimeModalVisible(false)
         }
@@ -863,7 +881,7 @@ export default function NotificationsScreen() {
         ).map((option) => (
           <RadioOptionRow
             key={option}
-            label={option}
+            label={timeLabel(option)}
             selected={timeFilter === option}
             onPress={() =>
               handleTimeFilter(option)
@@ -877,7 +895,7 @@ export default function NotificationsScreen() {
       ======================================================== */}
       <DropdownModal
         visible={typeModalVisible}
-        title="Notification Type"
+        title={t("dashboard.notifications.notificationType")}
         onClose={() =>
           setTypeModalVisible(false)
         }
@@ -885,19 +903,19 @@ export default function NotificationsScreen() {
         {[
           {
             value: "All" as const,
-            label: "All",
+            label: t("dashboard.notifications.typeAll"),
             icon: "list-outline" as const,
             color: colors.accentContent,
           },
           {
             value: "normal" as const,
-            label: "Normal",
+            label: t("dashboard.notifications.typeNormal"),
             icon: "notifications-outline" as const,
             color: colors.accentContent,
           },
           {
             value: "alert" as const,
-            label: "Alert",
+            label: t("dashboard.notifications.typeAlert"),
             icon: "alert-circle-outline" as const,
             color: colors.error,
           },

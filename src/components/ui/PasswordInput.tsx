@@ -7,6 +7,8 @@ import React, {
   type Ref,
 } from "react";
 import {
+  Animated,
+  Easing,
   Pressable,
   StyleSheet,
   TextInput,
@@ -69,11 +71,20 @@ export default function PasswordInput({
     placeholder ?? t("passwordInput.placeholderPassword");
 
   const [showPassword, setShowPassword] = useState(false);
-  // 5s visibility window: remaining seconds shown under
-  // the field while the password is visible.
+  // 5s visibility window: `remaining` drives screen-reader
+  // announcements (1s steps); the green bar itself slides
+  // continuously via `progress` so it never steps frame-by-frame.
   const [remaining, setRemaining] = useState(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progress = useRef(new Animated.Value(0)).current;
+  const barAnim =
+    useRef<Animated.CompositeAnimation | null>(null);
+
+  const stopBar = () => {
+    barAnim.current?.stop();
+    barAnim.current = null;
+  };
 
   const clearTimers = () => {
     if (hideTimer.current) {
@@ -84,9 +95,22 @@ export default function PasswordInput({
       clearInterval(tickTimer.current);
       tickTimer.current = null;
     }
+    stopBar();
   };
 
   useEffect(() => clearTimers, []);
+
+  const startBar = () => {
+    stopBar();
+    progress.setValue(1);
+    barAnim.current = Animated.timing(progress, {
+      toValue: 0,
+      duration: 5000,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    barAnim.current.start();
+  };
 
   const handleToggle = () => {
     if (showPassword) {
@@ -99,6 +123,7 @@ export default function PasswordInput({
     setShowPassword(true);
     setRemaining(5);
     clearTimers();
+    startBar();
 
     tickTimer.current = setInterval(() => {
       setRemaining((value) => Math.max(0, value - 1));
@@ -183,28 +208,42 @@ export default function PasswordInput({
         </Pressable>
       </View>
 
-      {showPassword ? (
+      {/* Fixed timer slot: always occupies the same space so
+          content below (e.g. "forgot password?") never shifts.
+          The countdown text is intentionally not rendered;
+          screen readers still get it via accessibilityLabel. */}
+      <View
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={
+          showPassword
+            ? t("passwordInput.visibleLive", {
+                seconds: remaining,
+              })
+            : undefined
+        }
+      >
         <View
-          accessibilityLiveRegion="polite"
-          accessibilityLabel={t("passwordInput.visibleLive", {
-            seconds: remaining,
-          })}
+          style={[
+            styles.timerTrack,
+            !showPassword && styles.timerHidden,
+          ]}
+          aria-hidden={!showPassword}
         >
-          <AppText variant="caption" style={styles.hint}>
-            {t("passwordInput.visibleHint", {
-              seconds: remaining,
-            })}
-          </AppText>
-          <View style={styles.timerTrack}>
-            <View
+          {showPassword ? (
+            <Animated.View
               style={[
                 styles.timerFill,
-                { width: `${(remaining / 5) * 100}%` },
+                {
+                  width: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0%", "100%"],
+                  }),
+                },
               ]}
             />
-          </View>
+          ) : null}
         </View>
-      ) : null}
+      </View>
 
       {error && (
         <AppText variant="caption" style={styles.error}>
@@ -279,6 +318,10 @@ const getStyles = (colors: AppColors, bottomGap?: number) =>
       borderRadius: 999,
       backgroundColor: colors.border,
       overflow: "hidden",
+    },
+
+    timerHidden: {
+      opacity: 0,
     },
 
     timerFill: {

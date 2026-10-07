@@ -25,6 +25,7 @@ import {
 import { Radius } from "@/constants/theme";
 import { Control } from "@/constants/sizing";
 import { MAX_PHOTO_BYTES } from "@/services/appliancePhotoService";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // MEDIA PICKER MODAL (LIBRARY ONLY)
@@ -63,6 +64,7 @@ export default function MediaPickerModal({
   onRemove,
   onClose,
 }: MediaPickerModalProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -95,9 +97,7 @@ export default function MediaPickerModal({
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        setError(
-          "AdlaWatt needs photo access to attach a picture. Allow access in your device Settings, then try again.",
-        );
+        setError(t("media.permissionDenied"));
         return;
       }
 
@@ -117,9 +117,7 @@ export default function MediaPickerModal({
       const asset = result.assets?.[0];
 
       if (!asset?.uri) {
-        setError(
-          "Could not read that photo. Try another one.",
-        );
+        setError(t("media.unreadable"));
         return;
       }
 
@@ -127,9 +125,7 @@ export default function MediaPickerModal({
         typeof asset.fileSize === "number" &&
         asset.fileSize > MAX_PHOTO_BYTES
       ) {
-        setError(
-          "That photo is over 5 MB. Choose a smaller one.",
-        );
+        setError(t("media.tooBig"));
         return;
       }
 
@@ -168,9 +164,7 @@ export default function MediaPickerModal({
         );
 
         if (!normalized?.uri) {
-          setError(
-            "Could not process that photo. Try another one.",
-          );
+          setError(t("media.processFailed"));
           return;
         }
 
@@ -186,9 +180,7 @@ export default function MediaPickerModal({
         mimeType: asset.mimeType ?? undefined,
       });
     } catch {
-      setError(
-        "Could not open your photo library. Try again.",
-      );
+      setError(t("media.libraryFailed"));
     } finally {
       setBusy(false);
     }
@@ -197,7 +189,7 @@ export default function MediaPickerModal({
   return (
     <DropdownModal
       visible={visible}
-      title="Choose Photo"
+      title={t("media.title")}
       onClose={onClose}
     >
       <Pressable
@@ -209,8 +201,8 @@ export default function MediaPickerModal({
           busy && styles.disabled,
         ]}
         accessibilityRole="button"
-        accessibilityLabel="Choose from library"
-        accessibilityHint="Opens your photo library"
+        accessibilityLabel={t("media.chooseA11y")}
+        accessibilityHint={t("media.chooseHint")}
       >
         {busy ? (
           <ActivityIndicator
@@ -229,7 +221,7 @@ export default function MediaPickerModal({
           variant="caption"
           style={styles.optionText}
         >
-          {busy ? "Opening…" : "Choose from Library"}
+          {busy ? t("media.opening") : t("media.chooseFromLibrary")}
         </AppText>
       </Pressable>
 
@@ -243,8 +235,8 @@ export default function MediaPickerModal({
             pressed && !busy && styles.pressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Remove photo"
-          accessibilityHint="Removes the current photo and restores the default icon"
+          accessibilityLabel={t("media.removeA11y")}
+          accessibilityHint={t("media.removeHint")}
         >
           <Ionicons
             name="trash-outline"
@@ -256,7 +248,7 @@ export default function MediaPickerModal({
             variant="caption"
             style={styles.removeText}
           >
-            Remove Photo
+            {t("media.removePhoto")}
           </AppText>
         </Pressable>
       ) : null}
@@ -279,13 +271,13 @@ export default function MediaPickerModal({
             pressed && !busy && styles.pressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Cancel photo choice"
+          accessibilityLabel={t("media.cancelChoiceA11y")}
         >
           <AppText
             variant="caption"
             style={styles.cancelText}
           >
-            Cancel
+            {t("shared.cancel")}
           </AppText>
         </Pressable>
       </View>

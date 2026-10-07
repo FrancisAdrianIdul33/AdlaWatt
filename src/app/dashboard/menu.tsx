@@ -65,7 +65,6 @@ import {
 } from "@/services/settings";
 import {
   ACTIVE_LANGUAGES,
-  COMING_SOON_LANGUAGES,
   setAppLanguage,
   type AppLanguage,
 } from "@/services/i18n";
@@ -186,7 +185,7 @@ export default function SettingsScreen() {
   const languageLabel =
     ACTIVE_LANGUAGES.find(
       (item) => item.code === languageCode,
-    )?.label ?? "English";
+    )?.label ?? tMenu("menu.englishName");
 
   const [vibration, setVibration] =
     useState(true);
@@ -533,20 +532,20 @@ export default function SettingsScreen() {
     // --------------------------------------------
 
     if (!cleanUsername) {
-      setWarning("Please enter a username.");
+      setWarning(tMenu("validation.usernameRequired"));
       return;
     }
 
     if (cleanUsername.length < 3) {
       setWarning(
-        "Username must be at least 3 characters.",
+        tMenu("validation.usernameShort"),
       );
       return;
     }
 
     if (cleanUsername.length > 30) {
       setWarning(
-        "Username must not exceed 30 characters.",
+        tMenu("validation.usernameLong"),
       );
       return;
     }
@@ -557,7 +556,7 @@ export default function SettingsScreen() {
       )
     ) {
       setWarning(
-        "Username can only contain letters, numbers, and underscores.",
+        tMenu("validation.usernameChars"),
       );
       return;
     }
@@ -568,7 +567,7 @@ export default function SettingsScreen() {
 
     if (!cleanEmail) {
       setWarning(
-        "Please enter your email address.",
+        tMenu("validation.emailRequired"),
       );
       return;
     }
@@ -579,7 +578,7 @@ export default function SettingsScreen() {
       )
     ) {
       setWarning(
-        "Enter a valid email address.",
+        tMenu("validation.emailInvalid"),
       );
       return;
     }
@@ -594,14 +593,14 @@ export default function SettingsScreen() {
     ) {
       if (newPassword.length < 8) {
         setWarning(
-          "Password must be at least 8 characters.",
+          tMenu("validation.passwordShort"),
         );
         return;
       }
 
       if (newPassword.length > 72) {
         setWarning(
-          "Password must not exceed 72 characters.",
+          tMenu("validation.passwordLong"),
         );
         return;
       }
@@ -611,7 +610,7 @@ export default function SettingsScreen() {
         confirmNewPassword
       ) {
         setWarning(
-          "Passwords do not match.",
+          tMenu("validation.passwordsMismatch"),
         );
         return;
       }
@@ -636,7 +635,7 @@ export default function SettingsScreen() {
       !passwordChanged
     ) {
       setWarning(
-        "No account changes were made.",
+        tMenu("menu.noChanges"),
       );
       return;
     }
@@ -669,14 +668,14 @@ export default function SettingsScreen() {
 
     if (!password) {
       setConfirmationWarning(
-        "Enter your current password.",
+        tMenu("menu.currentPasswordRequired"),
       );
       return;
     }
 
     if (password.length < 8) {
       setConfirmationWarning(
-        "Current password must be at least 8 characters.",
+        tMenu("menu.currentPasswordShort"),
       );
       return;
     }
@@ -695,7 +694,7 @@ export default function SettingsScreen() {
       if (!result.success) {
         setConfirmationWarning(
           result.error ??
-            "Unable to update your account.",
+            tMenu("menu.updateFailed"),
         );
         return;
       }
@@ -743,14 +742,14 @@ export default function SettingsScreen() {
 
       if (result.emailChangePending) {
         Alert.alert(
-          "Account Updated",
+          tMenu("menu.accountUpdated"),
           result.message ??
-            "Your username was updated. Please confirm your new email address.",
+            tMenu("menu.accountUpdatedEmailPending"),
         );
       } else {
         Alert.alert(
-          "Changes Saved",
-          "Your account information has been updated successfully.",
+          tMenu("menu.changesSaved"),
+          tMenu("menu.changesSavedMessage"),
         );
       }
     } catch (error) {
@@ -760,7 +759,7 @@ export default function SettingsScreen() {
       );
 
       setConfirmationWarning(
-        "Unable to update your account. Please try again.",
+        tMenu("menu.updateFailedNow"),
       );
     } finally {
       setConfirmingAccountUpdate(false);
@@ -825,7 +824,7 @@ export default function SettingsScreen() {
 
     if (Platform.OS === "web") {
       const confirmed = window.confirm(
-        "Are you sure you want to sign out?",
+        tMenu("menu.logoutMessage"),
       );
 
       if (confirmed) {
@@ -836,15 +835,15 @@ export default function SettingsScreen() {
     }
 
     Alert.alert(
-      "Log Out",
-      "Are you sure you want to sign out?",
+      tMenu("menu.logoutTitle"),
+      tMenu("menu.logoutMessage"),
       [
         {
-          text: "No",
+          text: tMenu("menu.logoutNo"),
           style: "cancel",
         },
         {
-          text: "Yes",
+          text: tMenu("menu.logoutYes"),
           style: "destructive",
           onPress: logout,
         },
@@ -871,15 +870,15 @@ export default function SettingsScreen() {
         window.close();
 
         Alert.alert(
-          "Exit",
-          "Please close this tab manually to exit AdlaWatt.",
+          tMenu("menu.exitTitle"),
+          tMenu("menu.exitMessage"),
         );
       }
     };
 
     if (Platform.OS === "web") {
       const confirmed = window.confirm(
-        "Are you sure you want to exit AdlaWatt?",
+        tMenu("menu.exitWebMessage"),
       );
 
       if (confirmed) {
@@ -890,15 +889,15 @@ export default function SettingsScreen() {
     }
 
     Alert.alert(
-      "Exit App",
-      "AdlaWatt will close. Are you sure?",
+      tMenu("menu.exitAppTitle"),
+      tMenu("menu.exitAppMessage"),
       [
         {
-          text: "No",
+          text: tMenu("menu.exitNo"),
           style: "cancel",
         },
         {
-          text: "Yes",
+          text: tMenu("menu.exitYes"),
           style: "destructive",
           onPress: exitApp,
         },
@@ -921,14 +920,14 @@ export default function SettingsScreen() {
             variant="heading"
             style={styles.headerTitle}
           >
-            Menu
+            {tMenu("menu.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.headerSubtitle}
           >
-            Browse and manage your AdlaWatt application.
+            {tMenu("menu.subtitle")}
           </AppText>
         </View>
 
@@ -940,7 +939,7 @@ export default function SettingsScreen() {
               setAccountExpanded(true)
             }
             accessibilityRole="button"
-            accessibilityLabel="Open Account Profile"
+            accessibilityLabel={tMenu("menu.openAccountProfile")}
             style={({ pressed }) => [
               styles.menuBox,
               accountExpanded &&
@@ -958,7 +957,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              Account Profile
+              {tMenu("menu.accountProfile")}
             </AppText>
           </Pressable>
 
@@ -967,7 +966,7 @@ export default function SettingsScreen() {
               setPreferencesExpanded(true)
             }
             accessibilityRole="button"
-            accessibilityLabel="Open Preferences"
+            accessibilityLabel={tMenu("menu.openPreferences")}
             style={({ pressed }) => [
               styles.menuBox,
               preferencesExpanded &&
@@ -985,7 +984,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              Preferences
+              {tMenu("menu.preferences")}
             </AppText>
           </Pressable>
 
@@ -996,7 +995,7 @@ export default function SettingsScreen() {
               )
             }
             accessibilityRole="button"
-            accessibilityLabel="Open User Manual"
+            accessibilityLabel={tMenu("menu.openUserManual")}
             style={({ pressed }) => [
               styles.menuBox,
               pressed && styles.pressed,
@@ -1012,7 +1011,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              User Manual
+              {tMenu("menu.userManual")}
             </AppText>
           </Pressable>
 
@@ -1023,7 +1022,7 @@ export default function SettingsScreen() {
               )
             }
             accessibilityRole="button"
-            accessibilityLabel="Open Components"
+            accessibilityLabel={tMenu("menu.openComponents")}
             style={({ pressed }) => [
               styles.menuBox,
               pressed && styles.pressed,
@@ -1039,7 +1038,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              Components
+              {tMenu("menu.components")}
             </AppText>
           </Pressable>
 
@@ -1050,7 +1049,7 @@ export default function SettingsScreen() {
               )
             }
             accessibilityRole="button"
-            accessibilityLabel="Open Activity Logs"
+            accessibilityLabel={tMenu("menu.openActivityLogs")}
             style={({ pressed }) => [
               styles.menuBox,
               pressed && styles.pressed,
@@ -1066,7 +1065,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              Activity Logs
+              {tMenu("menu.activityLogs")}
             </AppText>
           </Pressable>
 
@@ -1077,7 +1076,7 @@ export default function SettingsScreen() {
               )
             }
             accessibilityRole="button"
-            accessibilityLabel="Open About Us"
+            accessibilityLabel={tMenu("menu.openAboutUs")}
             style={({ pressed }) => [
               styles.menuBox,
               pressed && styles.pressed,
@@ -1093,7 +1092,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.menuBoxText}
             >
-              About Us
+              {tMenu("menu.aboutUs")}
             </AppText>
           </Pressable>
         </View>
@@ -1102,7 +1101,7 @@ export default function SettingsScreen() {
 
         <DropdownModal
           visible={accountExpanded}
-          title="Account Profile"
+          title={tMenu("menu.accountProfile")}
           onClose={handleCloseAccountModal}
         >
           <ScrollView
@@ -1122,7 +1121,7 @@ export default function SettingsScreen() {
                   variant="caption"
                   style={styles.infoValue}
                 >
-                  Loading account information...
+                    {tMenu("menu.loadingAccount")}
                 </AppText>
               ) : !isEditingAccount ? (
                 <>
@@ -1132,7 +1131,7 @@ export default function SettingsScreen() {
                       variant="caption"
                       style={styles.infoLabel}
                     >
-                      Username
+                      {tMenu("menu.username")}
                     </AppText>
 
                     <AppText
@@ -1149,7 +1148,7 @@ export default function SettingsScreen() {
                       variant="caption"
                       style={styles.infoLabel}
                     >
-                      Email
+                      {tMenu("menu.email")}
                     </AppText>
 
                     <AppText
@@ -1173,7 +1172,7 @@ export default function SettingsScreen() {
                         styles.primaryButtonText
                       }
                     >
-                      Update
+                      {tMenu("menu.update")}
                     </AppText>
                   </Pressable>
                 </>
@@ -1185,7 +1184,7 @@ export default function SettingsScreen() {
                       variant="caption"
                       style={styles.inputLabel}
                     >
-                      Username
+                      {tMenu("menu.username")}
                     </AppText>
 
                     <TextInput
@@ -1199,7 +1198,7 @@ export default function SettingsScreen() {
                         styles.input,
                         inputFontStyle,
                       ]}
-                      placeholder="Enter username"
+                      placeholder={tMenu("menu.enterUsername")}
                       placeholderTextColor={
                         colors.textSecondary
                       }
@@ -1214,7 +1213,7 @@ export default function SettingsScreen() {
                       variant="caption"
                       style={styles.inputLabel}
                     >
-                      Email
+                      {tMenu("menu.email")}
                     </AppText>
 
                     <TextInput
@@ -1228,7 +1227,7 @@ export default function SettingsScreen() {
                         styles.input,
                         inputFontStyle,
                       ]}
-                      placeholder="Enter email"
+                      placeholder={tMenu("menu.enterEmail")}
                       placeholderTextColor={
                         colors.textSecondary
                       }
@@ -1240,25 +1239,25 @@ export default function SettingsScreen() {
 
                   {/* New Password */}
                   <PasswordInput
-                    label="New Password"
+                    label={tMenu("passwordInput.labelNewPassword")}
                     value={newPassword}
                     onChangeText={(text) => {
                       setNewPassword(text);
                       setWarning("");
                     }}
-                    placeholder="Leave blank to keep current"
+                    placeholder={tMenu("menu.keepCurrentPassword")}
                     autoComplete="password-new"
                   />
 
                   {/* Confirm New Password */}
                   <PasswordInput
-                    label="Confirm New Password"
+                    label={tMenu("passwordInput.labelConfirmNewPassword")}
                     value={confirmNewPassword}
                     onChangeText={(text) => {
                       setConfirmNewPassword(text);
                       setWarning("");
                     }}
-                    placeholder="Confirm new password"
+                    placeholder={tMenu("menu.confirmNewPasswordPlaceholder")}
                     autoComplete="password-new"
                   />
 
@@ -1298,7 +1297,7 @@ export default function SettingsScreen() {
                   confirmingAccountUpdate
                 }
                 accessibilityRole="button"
-                accessibilityLabel="Cancel account changes"
+                accessibilityLabel={tMenu("menu.cancelAccountChanges")}
                 style={({ pressed }) => [
                   styles.modalFooterButton,
                   styles.modalCancelButton,
@@ -1311,7 +1310,7 @@ export default function SettingsScreen() {
                     styles.modalCancelButtonText
                   }
                 >
-                  Cancel
+                  {tMenu("menu.cancel")}
                 </AppText>
               </Pressable>
 
@@ -1323,7 +1322,7 @@ export default function SettingsScreen() {
                   confirmingAccountUpdate
                 }
                 accessibilityRole="button"
-                accessibilityLabel="Submit account changes"
+                accessibilityLabel={tMenu("menu.submitAccountChanges")}
                 style={({ pressed }) => [
                   styles.modalFooterButton,
                   styles.modalSubmitButton,
@@ -1336,7 +1335,7 @@ export default function SettingsScreen() {
                     styles.modalSubmitButtonText
                   }
                 >
-                  Submit
+                  {tMenu("menu.submit")}
                 </AppText>
               </Pressable>
             </View>
@@ -1347,7 +1346,7 @@ export default function SettingsScreen() {
 
         <DropdownModal
           visible={preferencesExpanded}
-          title="Preferences"
+          title={tMenu("menu.preferences")}
           onClose={handleClosePreferences}
         >
           <View style={styles.modalBody}>
@@ -1356,13 +1355,13 @@ export default function SettingsScreen() {
               <View
                 style={styles.preferenceBlock}
                 accessibilityRole="radiogroup"
-                accessibilityLabel="Themes"
+                accessibilityLabel={tMenu("menu.themesA11y")}
               >
                 <AppText
                   variant="caption"
                   style={styles.groupLabel}
                 >
-                  Themes
+                  {tMenu("menu.themes")}
                 </AppText>
 
                 <View style={styles.optionRow}>
@@ -1377,7 +1376,7 @@ export default function SettingsScreen() {
                         selected:
                           themeDraft === option,
                       }}
-                      accessibilityLabel={`Theme ${themeLabel(option)}`}
+                      accessibilityLabel={tMenu("menu.themeOptionA11y", { option: themeLabel(option) })}
                       style={[
                         styles.optionButton,
                         themeDraft === option &&
@@ -1393,10 +1392,10 @@ export default function SettingsScreen() {
                         ]}
                       >
                         {option === "system"
-                          ? "System"
+                          ? tMenu("menu.themeSystem")
                           : option === "dark"
-                            ? "Dark"
-                            : "Light"}
+                            ? tMenu("menu.themeDark")
+                            : tMenu("menu.themeLight")}
                       </AppText>
                     </Pressable>
                   ))}
@@ -1413,7 +1412,7 @@ export default function SettingsScreen() {
                       styles.preferenceTitle
                     }
                   >
-                    Color Blind Mode
+                    {tMenu("menu.colorBlindMode")}
                   </AppText>
 
                   <AppText
@@ -1422,7 +1421,7 @@ export default function SettingsScreen() {
                       styles.preferenceDescription
                     }
                   >
-                    Adjust colors for better accessibility.
+                    {tMenu("menu.colorBlindHint")}
                   </AppText>
                 </View>
 
@@ -1440,7 +1439,7 @@ export default function SettingsScreen() {
                   variant="caption"
                   style={styles.groupLabel}
                 >
-                  Font Size
+                  {tMenu("menu.fontSize")}
                 </AppText>
 
                 <View style={styles.optionRow}>
@@ -1464,7 +1463,7 @@ export default function SettingsScreen() {
                         selected:
                           fontSize === option,
                       }}
-                      accessibilityLabel={`Font size ${option}`}
+                      accessibilityLabel={tMenu("menu.fontSizeOptionA11y", { option })}
                       style={[
                         styles.optionButton,
                         fontSize === option &&
@@ -1479,7 +1478,11 @@ export default function SettingsScreen() {
                             styles.selectedOptionText,
                         ]}
                       >
-                        {option}
+                        {option === "Small"
+                          ? tMenu("menu.fontSmall")
+                          : option === "Medium"
+                            ? tMenu("menu.fontMedium")
+                            : tMenu("menu.fontBig")}
                       </AppText>
                     </Pressable>
                   ))}
@@ -1494,7 +1497,7 @@ export default function SettingsScreen() {
                   variant="caption"
                   style={styles.groupLabel}
                 >
-                  Font Family
+                  {tMenu("menu.fontFamily")}
                 </AppText>
 
                 <Pressable
@@ -1503,8 +1506,8 @@ export default function SettingsScreen() {
                     setLanguageOpen(false);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Choose font family"
-                  accessibilityHint={`Current: ${fontFamily}`}
+                  accessibilityLabel={tMenu("menu.chooseFontFamily")}
+                  accessibilityHint={tMenu("menu.currentFont", { font: fontFamily })}
                   style={
                     styles.dropdownInput
                   }
@@ -1571,7 +1574,7 @@ export default function SettingsScreen() {
                       styles.preferenceTitle
                     }
                   >
-                    Vibration
+                    {tMenu("menu.vibration")}
                   </AppText>
 
                   <AppText
@@ -1580,7 +1583,7 @@ export default function SettingsScreen() {
                       styles.preferenceDescription
                     }
                   >
-                    Vibrate when important alerts are received.
+                    {tMenu("menu.vibrationHint")}
                   </AppText>
                 </View>
 
@@ -1600,7 +1603,7 @@ export default function SettingsScreen() {
                       styles.preferenceTitle
                     }
                   >
-                    Email Notifications
+                    {tMenu("menu.emailNotifications")}
                   </AppText>
 
                   <AppText
@@ -1609,7 +1612,7 @@ export default function SettingsScreen() {
                       styles.preferenceDescription
                     }
                   >
-                    Allow AdlaWatt to send alerts and notifications through your email.
+                    {tMenu("menu.emailNotificationsHint")}
                   </AppText>
                 </View>
 
@@ -1625,7 +1628,7 @@ export default function SettingsScreen() {
               onPress={handleClosePreferences}
               disabled={isSavingPreferences}
               accessibilityRole="button"
-              accessibilityLabel="Cancel Preferences"
+              accessibilityLabel={tMenu("menu.cancelPreferences")}
               style={({ pressed }) => [
                 styles.modalFooterButton,
                 styles.modalCancelButton,
@@ -1638,7 +1641,7 @@ export default function SettingsScreen() {
                   styles.modalCancelButtonText
                 }
               >
-                Cancel
+                {tMenu("menu.cancel")}
               </AppText>
             </Pressable>
 
@@ -1646,7 +1649,7 @@ export default function SettingsScreen() {
               onPress={handleSavePreferences}
               disabled={isSavingPreferences}
               accessibilityRole="button"
-              accessibilityLabel="Save Preferences"
+              accessibilityLabel={tMenu("menu.savePreferences")}
               style={({ pressed }) => [
                 styles.modalFooterButton,
                 styles.modalSubmitButton,
@@ -1660,8 +1663,8 @@ export default function SettingsScreen() {
                 }
               >
                 {isSavingPreferences
-                  ? "Saving..."
-                  : "Save"}
+                  ? tMenu("menu.saving")
+                  : tMenu("menu.save")}
               </AppText>
             </Pressable>
           </View>
@@ -1671,7 +1674,7 @@ export default function SettingsScreen() {
 
         <DropdownModal
           visible={fontFamilyOpen}
-          title="Font Family"
+          title={tMenu("menu.fontFamily")}
           onClose={() =>
             setFontFamilyOpen(false)
           }
@@ -1710,17 +1713,6 @@ export default function SettingsScreen() {
               }}
             />
           ))}
-
-          {COMING_SOON_LANGUAGES.map((item) => (
-            <RadioOptionRow
-              key={item}
-              label={item}
-              selected={false}
-              onPress={() => {}}
-              disabled
-              note={tMenu("menu.language.comingSoon")}
-            />
-          ))}
         </DropdownModal>
 
         <View
@@ -1747,7 +1739,7 @@ export default function SettingsScreen() {
           <Pressable
             onPress={handleLogout}
             accessibilityRole="button"
-            accessibilityLabel="Log out"
+            accessibilityLabel={tMenu("menu.logoutA11y")}
             style={({ pressed }) => [
               styles.authActionButton,
               styles.logOutButton,
@@ -1764,7 +1756,7 @@ export default function SettingsScreen() {
               variant="body"
               style={styles.logOutButtonText}
             >
-              Log Out
+              {tMenu("menu.logoutTitle")}
             </AppText>
           </Pressable>
 
@@ -1772,7 +1764,7 @@ export default function SettingsScreen() {
             <Pressable
               onPress={handleExit}
               accessibilityRole="button"
-              accessibilityLabel="Exit app"
+              accessibilityLabel={tMenu("menu.exitAppA11y")}
               style={({ pressed }) => [
                 styles.authActionButton,
                 styles.exitButton,
@@ -1789,7 +1781,7 @@ export default function SettingsScreen() {
                 variant="body"
                 style={styles.exitButtonText}
               >
-                Exit
+                {tMenu("menu.exitTitle")}
               </AppText>
             </Pressable>
           )}
@@ -1819,14 +1811,14 @@ export default function SettingsScreen() {
               variant="heading"
               style={styles.modalTitle}
             >
-              Confirm Changes
+              {tMenu("menu.confirmChanges")}
             </AppText>
 
             <AppText
               variant="caption"
               style={styles.modalDescription}
             >
-              Enter your current password to confirm these account changes.
+              {tMenu("menu.confirmChangesBody")}
             </AppText>
 
             {confirmationWarning ? (
@@ -1852,13 +1844,13 @@ export default function SettingsScreen() {
             ) : null}
 
             <PasswordInput
-              label="Current Password"
+              label={tMenu("menu.currentPassword")}
               value={currentPassword}
               onChangeText={(text) => {
                 setCurrentPassword(text);
                 setConfirmationWarning("");
               }}
-              placeholder="Enter current password"
+              placeholder={tMenu("menu.enterCurrentPassword")}
               autoComplete="current-password"
               editable={!confirmingAccountUpdate}
             />
@@ -1890,7 +1882,7 @@ export default function SettingsScreen() {
                     styles.secondaryButtonText
                   }
                 >
-                  Cancel
+                  {tMenu("menu.cancel")}
                 </AppText>
               </Pressable>
 
@@ -1914,8 +1906,8 @@ export default function SettingsScreen() {
                   }
                 >
                   {confirmingAccountUpdate
-                    ? "Saving..."
-                    : "Confirm"}
+                    ? tMenu("menu.saving")
+                    : tMenu("menu.confirm")}
                 </AppText>
               </Pressable>
             </View>

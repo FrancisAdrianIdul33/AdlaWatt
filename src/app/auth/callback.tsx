@@ -18,6 +18,10 @@ import Copyright from "@/components/ui/Copyright";
 import { Routes } from "@/constants/routes";
 import { useAppColors } from "@/hooks/useAppColors";
 import { supabase } from "@/lib/supabase";
+import {
+  getCurrentUserProfile,
+  resolvePostLoginRoute,
+} from "@/services/auth";
 import { useTranslation } from "react-i18next";
 
 // ============================================================
@@ -384,13 +388,31 @@ export default function AuthCallbackScreen() {
                   ? t("auth.callback.continueToDashboard")
                   : t("auth.callback.backToSignIn")
               }
-              onPress={() =>
-                router.replace(
-                  status === "success"
-                    ? Routes.DASHBOARD
-                    : Routes.LOGIN,
-                )
-              }
+              onPress={async () => {
+                if (status !== "success") {
+                  router.replace(Routes.LOGIN);
+                  return;
+                }
+
+                try {
+                  const profile =
+                    await getCurrentUserProfile();
+
+                  router.replace(
+                    resolvePostLoginRoute(
+                      profile.success
+                        ? (
+                            profile as {
+                              role?: unknown;
+                            }
+                          ).role
+                        : null,
+                    ) as never,
+                  );
+                } catch {
+                  router.replace(Routes.DASHBOARD);
+                }
+              }}
             />
 
             {status === "error" && isMissingCode && (

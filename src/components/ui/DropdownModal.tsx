@@ -16,6 +16,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Touch } from "@/constants/sizing";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // STANDARD DROPDOWN MODAL
@@ -44,6 +45,7 @@ export function DropdownModal({
   showCloseButton = true,
   dismissOnOverlayPress = true,
 }: DropdownModalProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
   const dropdownModalStyles = useMemo(
     () => getDropdownModalStyles(colors),
@@ -94,7 +96,7 @@ export function DropdownModal({
                 onPress={onClose}
                 style={dropdownModalStyles.closeButton}
                 accessibilityRole="button"
-                accessibilityLabel="Close"
+                accessibilityLabel={t("shared.close")}
               >
                 <Ionicons
                   name="close-outline"
@@ -121,8 +123,7 @@ interface RadioOptionRowProps {
   label: string;
   selected: boolean;
   onPress: () => void;
-  // Disabled rows render muted with an optional note
-  // (used for coming-soon languages): not pressable.
+  // Disabled rows render muted with an optional note: not pressable.
   disabled?: boolean;
   note?: string;
 }

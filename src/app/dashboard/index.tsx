@@ -48,6 +48,7 @@ import {
 import {
   useMonitoring,
 } from "@/services/monitoringService";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // WEATHER AUTO-REFRESH
@@ -71,6 +72,7 @@ const QUICK_NAV_SCROLL_INSET = 12;
 // ============================================================
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -239,7 +241,7 @@ export default function DashboardScreen() {
           setForecastError(
             error instanceof Error
               ? error.message
-              : "Could not load the forecast."
+              : t("dashboard.home.forecastFailed"),
           );
         }
       } finally {
@@ -248,7 +250,7 @@ export default function DashboardScreen() {
         }
       }
     },
-    []
+    [t]
   );
 
   useEffect(() => {
@@ -396,14 +398,14 @@ export default function DashboardScreen() {
             variant="heading"
             style={styles.headerTitle}
           >
-            Dashboard
+            {t("dashboard.home.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.headerSubtitle}
           >
-            Monitor your AdlaWatt system in real time.
+            {t("dashboard.home.subtitle")}
           </AppText>
         </View>
 
@@ -421,7 +423,9 @@ export default function DashboardScreen() {
               )
             }
             accessibilityRole="button"
-            accessibilityLabel="Go to Appliance Recommendation"
+            accessibilityLabel={t(
+              "dashboard.home.goToApplianceRecommendation",
+            )}
             style={({ pressed }) => [
               styles.quickNavButton,
               pressed &&
@@ -432,7 +436,7 @@ export default function DashboardScreen() {
               variant="caption"
               style={styles.quickNavButtonText}
             >
-              Appliance Recommendation
+              {t("dashboard.home.applianceRecommendation")}
             </AppText>
 
             <Ionicons
@@ -455,7 +459,7 @@ export default function DashboardScreen() {
             variant="body"
             style={styles.sectionTitle}
           >
-            Real-Time Monitoring
+            {t("dashboard.home.realtimeMonitoring")}
           </AppText>
 
           <View
@@ -570,7 +574,7 @@ export default function DashboardScreen() {
             variant="body"
             style={styles.sectionTitle}
           >
-            Appliance Recommendation
+            {t("dashboard.home.applianceRecommendation")}
           </AppText>
 
           <AppRecCard

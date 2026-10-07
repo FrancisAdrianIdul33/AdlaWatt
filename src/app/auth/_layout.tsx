@@ -14,6 +14,10 @@ import {
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import {
+  getCurrentUserProfile,
+  resolvePostLoginRoute,
+} from "@/services/auth";
+import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
@@ -91,13 +95,32 @@ function ThemedAuth() {
 
   useEffect(() => {
     if (
-      isLoaded &&
-      isSignedIn &&
-      !(isRecoverySession && onForgotPassword) &&
-      !arrivingWithRecoveryLink
+      !isLoaded ||
+      !isSignedIn ||
+      (isRecoverySession && onForgotPassword) ||
+      arrivingWithRecoveryLink
     ) {
-      router.replace("/dashboard");
+      return;
     }
+
+    // Signed-in users have no business on login/register —
+    // route role-aware so the admin test account lands on
+    // /admin instead of /dashboard.
+    void (async () => {
+      try {
+        const profile = await getCurrentUserProfile();
+
+        router.replace(
+          resolvePostLoginRoute(
+            profile.success
+              ? (profile as { role?: unknown }).role
+              : null,
+          ) as never,
+        );
+      } catch {
+        router.replace("/dashboard");
+      }
+    })();
   }, [
     isLoaded,
     isSignedIn,

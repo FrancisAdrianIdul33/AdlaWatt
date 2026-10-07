@@ -13,6 +13,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 export type NotificationType =
   "normal" | "alert";
@@ -34,6 +35,7 @@ interface NotificationCardProps {
 export default function NotificationCard({
   notification,
 }: NotificationCardProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -44,9 +46,8 @@ export default function NotificationCard({
   const safeNotification: NotificationCardData =
     notification ?? {
       id: "unknown",
-      title: "Notification",
-      message:
-        "No notification details available.",
+      title: t("notificationCard.fallbackTitle"),
+      message: t("notificationCard.fallbackDetails"),
       date: "",
       time: "",
       type: "normal",

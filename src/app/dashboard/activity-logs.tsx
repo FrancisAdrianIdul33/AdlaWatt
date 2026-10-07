@@ -33,6 +33,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 type TimeFilter =
   | "All"
@@ -67,7 +68,30 @@ type ActivityLog = {
 const PAGE_TURN_SCROLL_MS = 1500;
 
 export default function ActivityLogsScreen() {
+  const { t, i18n } = useTranslation();
   const colors = useAppColors();
+
+  // Locale-aware date/time formatting (device language,
+  // never translated content — format only per policy).
+  const localeTag =
+    i18n.language === "fil"
+      ? "fil-PH"
+      : i18n.language === "ceb"
+        ? "ceb-PH"
+        : "en-US";
+
+  // Display map: filter codes stay backend-bound English;
+  // only the rendered label translates.
+  const timeLabel = (option: TimeFilter): string =>
+    option === "Last Hour"
+      ? t("dashboard.logs.timeLastHour")
+      : option === "Today"
+        ? t("dashboard.logs.timeToday")
+        : option === "This Week"
+          ? t("dashboard.logs.timeThisWeek")
+          : option === "This Year"
+            ? t("dashboard.logs.timeThisYear")
+            : t("dashboard.logs.timeAll");
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -164,9 +188,7 @@ export default function ActivityLogsScreen() {
         });
 
       if (error) {
-        throw new Error(
-          "We couldn't load your activity logs. Check your connection and try again.",
-        );
+        throw new Error(t("dashboard.logs.loadFailed"));
       }
 
       const logs: ActivityLog[] = (data ?? []).map(
@@ -188,7 +210,7 @@ export default function ActivityLogsScreen() {
             details: log.description,
             type,
             date: dateObject.toLocaleDateString(
-              "en-US",
+              localeTag,
               {
                 month: "short",
                 day: "2-digit",
@@ -196,7 +218,7 @@ export default function ActivityLogsScreen() {
               },
             ),
             time: dateObject.toLocaleTimeString(
-              "en-US",
+              localeTag,
               {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -219,7 +241,7 @@ export default function ActivityLogsScreen() {
     error: loadError,
     loading: isLoading,
     retry: retryLoad,
-  } = useSafeAsync(loadActivityLogs, []);
+  } = useSafeAsync(loadActivityLogs, [i18n.language]);
 
   const activityLogs = useMemo(
     () => loadedLogs ?? [],
@@ -367,19 +389,19 @@ export default function ActivityLogsScreen() {
   const getTypeLabel = () => {
     switch (typeFilter) {
       case "info":
-        return "Info";
+        return t("dashboard.logs.typeInfo");
 
       case "warning":
-        return "Warning";
+        return t("dashboard.logs.typeWarning");
 
       case "error":
-        return "Error";
+        return t("dashboard.logs.typeError");
 
       case "critical":
-        return "Critical";
+        return t("dashboard.logs.typeCritical");
 
       default:
-        return "All";
+        return t("dashboard.logs.typeAll");
     }
   };
 
@@ -431,15 +453,14 @@ export default function ActivityLogsScreen() {
             variant="heading"
             style={styles.title}
           >
-            Activity Logs
+            {t("dashboard.logs.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
-            System activity and appliance events will
-            appear here.
+            {t("dashboard.logs.subtitle")}
           </AppText>
         </View>
 
@@ -450,7 +471,7 @@ export default function ActivityLogsScreen() {
             variant="caption"
             style={styles.totalLabel}
           >
-            Total Activity Logs:{" "}
+            {t("dashboard.logs.total")}{" "}
 
             <AppText style={styles.totalValue}>
               {totalActivityLogs}
@@ -486,7 +507,7 @@ export default function ActivityLogsScreen() {
                 variant="caption"
                 style={styles.filterText}
               >
-                {timeFilter}
+                {timeLabel(timeFilter)}
               </AppText>
 
               <Ionicons
@@ -566,8 +587,8 @@ export default function ActivityLogsScreen() {
             {currentPageLogs.length === 0 ? (
               <EmptyState
                 icon="document-text-outline"
-                title="No Activity Logs"
-                description="No activities match the selected filters."
+                title={t("shared.emptyTitle")}
+                description={t("shared.emptyDescription")}
               />
             ) : (
               currentPageLogs.map((activity) => (
@@ -605,7 +626,7 @@ export default function ActivityLogsScreen() {
       ======================================================== */}
       <DropdownModal
         visible={timeModalVisible}
-        title="Time Range"
+        title={t("dashboard.logs.timeRange")}
         onClose={() =>
           setTimeModalVisible(false)
         }
@@ -621,7 +642,7 @@ export default function ActivityLogsScreen() {
         ).map((option) => (
           <RadioOptionRow
             key={option}
-            label={option}
+            label={timeLabel(option)}
             selected={timeFilter === option}
             onPress={() =>
               handleTimeFilter(option)
@@ -635,7 +656,7 @@ export default function ActivityLogsScreen() {
       ======================================================== */}
       <DropdownModal
         visible={typeModalVisible}
-        title="Activity Type"
+        title={t("dashboard.logs.activityType")}
         onClose={() =>
           setTypeModalVisible(false)
         }
@@ -643,31 +664,31 @@ export default function ActivityLogsScreen() {
         {[
           {
             value: "all" as const,
-            label: "All",
+            label: t("dashboard.logs.typeAll"),
             icon: "list-outline" as const,
             color: colors.accentContent,
           },
           {
             value: "info" as const,
-            label: "Info",
+            label: t("dashboard.logs.typeInfo"),
             icon: "information-circle-outline" as const,
             color: colors.accentContent,
           },
           {
             value: "warning" as const,
-            label: "Warning",
+            label: t("dashboard.logs.typeWarning"),
             icon: "warning-outline" as const,
             color: colors.secondary,
           },
           {
             value: "error" as const,
-            label: "Error",
+            label: t("dashboard.logs.typeError"),
             icon: "alert-circle-outline" as const,
             color: colors.error,
           },
           {
             value: "critical" as const,
-            label: "Critical",
+            label: t("dashboard.logs.typeCritical"),
             icon: "alert-circle-outline" as const,
             color: colors.error,
           },

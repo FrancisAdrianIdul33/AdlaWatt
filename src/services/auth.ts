@@ -76,6 +76,25 @@ const isAlreadyRegisteredMessage = (message: string): boolean => {
 };
 
 // ============================================================
+// ROLES + POST-LOGIN ROUTING
+// ============================================================
+//
+// Hidden admin dashboard: users.role 'admin' lands on
+// Routes.ADMIN, everyone else on Routes.DASHBOARD. Unknown
+// roles fall back to household (never fail open to admin).
+// ============================================================
+
+export type UserRole = "household" | "admin";
+
+export function resolvePostLoginRoute(
+    role: unknown,
+): string {
+    return role === "admin"
+        ? Routes.ADMIN
+        : Routes.DASHBOARD;
+}
+
+// ============================================================
 // EMAIL REDIRECT
 // ============================================================
 //
@@ -502,7 +521,7 @@ export async function getCurrentUserProfile() {
             await supabase
                 .from("users")
                 .select(
-                    "id, username, email, terms_agreed, created_at, email_notifications",
+                    "id, username, email, terms_agreed, created_at, email_notifications, role",
                 )
                 .eq("id", user.id)
                 .single();
@@ -531,6 +550,14 @@ export async function getCurrentUserProfile() {
             // legacy rows where the column reads null.
             emailNotifications:
                 profile?.email_notifications ?? true,
+            // Hidden admin dashboard gating. Unknown/missing
+            // values fall back to household (never fail open
+            // to admin). Phase 1: self-readable users.role.
+            role: (
+                profile as { role?: unknown } | null
+            )?.role === "admin"
+                ? ("admin" as const)
+                : ("household" as const),
         };
     } catch (error) {
         if (isAuthSessionMissingError(error)) {

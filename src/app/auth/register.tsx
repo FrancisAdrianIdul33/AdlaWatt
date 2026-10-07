@@ -30,8 +30,10 @@ import Copyright from "@/components/ui/Copyright";
 
 import {
   EMAIL_PATTERN,
+  getCurrentUserProfile,
   registerUser,
   resendConfirmation,
+  resolvePostLoginRoute,
   signInWithGoogle,
 } from "@/services/auth";
 import { useTranslation } from "react-i18next";
@@ -196,8 +198,20 @@ export default function RegisterScreen() {
       setWarning("");
 
       // Confirm-off projects hand back a live session, so
-      // skip login and go straight to the dashboard.
-      router.replace(Routes.DASHBOARD);
+      // skip login and route role-aware (admin to /admin).
+      try {
+        const profile = await getCurrentUserProfile();
+
+        router.replace(
+          resolvePostLoginRoute(
+            profile.success
+              ? (profile as { role?: unknown }).role
+              : null,
+          ) as never,
+        );
+      } catch {
+        router.replace(Routes.DASHBOARD);
+      }
     } catch (error) {
       showWarning(
         error instanceof Error
@@ -228,10 +242,22 @@ export default function RegisterScreen() {
       if (result.success) {
         // Web redirect unloads the page; native session is
         // already persisted. The auth layout notices the new
-        // session and routes to the dashboard on its own —
+        // session and routes role-aware on its own —
         // replace explicitly in case the event lags.
         if (!("redirected" in result)) {
-          router.replace(Routes.DASHBOARD);
+          try {
+            const profile = await getCurrentUserProfile();
+
+            router.replace(
+              resolvePostLoginRoute(
+                profile.success
+                  ? (profile as { role?: unknown }).role
+                  : null,
+              ) as never,
+            );
+          } catch {
+            router.replace(Routes.DASHBOARD);
+          }
         }
         return;
       }

@@ -34,14 +34,7 @@ export const ACTIVE_LANGUAGES: {
   { code: "fil", label: "Tagalog" },
 ];
 
-export const COMING_SOON_LANGUAGES: string[] = [
-  "Español",
-  "中文",
-  "Français",
-  "Deutsch",
-  "日本語",
-  "Português",
-];
+// Supported languages are English, Cebuano (Bisaya) and Tagalog only.
 
 export type { AppLanguage };
 

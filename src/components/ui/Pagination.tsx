@@ -11,12 +11,18 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 type PaginationProps = {
   currentPage: number;
   totalPages: number;
   onPrevious: () => void;
   onNext: () => void;
+  // English-only callers (admin) pass literals; household
+  // defaults follow the user language via t().
+  prevLabel?: string;
+  nextLabel?: string;
+  pageLabel?: string;
 };
 
 export default function Pagination({
@@ -24,8 +30,20 @@ export default function Pagination({
   totalPages,
   onPrevious,
   onNext,
+  prevLabel,
+  nextLabel,
+  pageLabel,
 }: PaginationProps) {
+  const { t } = useTranslation();
   const colors = useAppColors();
+  const resolvedPrev = prevLabel ?? t("shared.paginationPrev");
+  const resolvedNext = nextLabel ?? t("shared.paginationNext");
+  const resolvedPage =
+    pageLabel ??
+    t("shared.paginationPage", {
+      current: currentPage,
+      total: totalPages,
+    });
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -63,7 +81,7 @@ export default function Pagination({
             isFirstPage && styles.disabledText,
           ]}
         >
-          Prev
+          {resolvedPrev}
         </AppText>
       </Pressable>
 
@@ -73,7 +91,7 @@ export default function Pagination({
           variant="caption"
           style={styles.pageText}
         >
-          Page {currentPage} of {totalPages}
+          {resolvedPage}
         </AppText>
       </View>
 
@@ -103,7 +121,7 @@ export default function Pagination({
             isLastPage && styles.disabledText,
           ]}
         >
-          Next
+          {resolvedNext}
         </AppText>
       </Pressable>
     </View>

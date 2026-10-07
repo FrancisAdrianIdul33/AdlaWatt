@@ -26,6 +26,7 @@ import {
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
 import { Touch } from "@/constants/sizing";
+import { useTranslation } from "react-i18next";
 
 type ApplianceBoxProps = {
   name: string;
@@ -77,6 +78,7 @@ export default function ApplianceBox({
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [archiveMode, setArchiveMode] = useState(false);
+  const { t } = useTranslation();
 
   // Silent 3s auto-close: any tap inside the menu or its
   // confirmations re-arms the clock; full inactivity closes
@@ -233,7 +235,7 @@ export default function ApplianceBox({
           onPress={pressAndPoke(onEdit)}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel="Edit appliance"
+          accessibilityLabel={t("applianceBox.editAppliance")}
           style={({ pressed }) => [
             styles.iconButton,
             pressed && styles.actionPressed,
@@ -256,8 +258,8 @@ export default function ApplianceBox({
           accessibilityRole="button"
           accessibilityLabel={
             isUnarchive
-              ? "Unarchive appliance"
-              : "Archive appliance"
+              ? t("applianceBox.unarchiveAppliance")
+              : t("applianceBox.archiveAppliance")
           }
           style={({ pressed }) => [
             styles.iconButton,
@@ -283,7 +285,7 @@ export default function ApplianceBox({
           )}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel="Delete appliance"
+          accessibilityLabel={t("applianceBox.deleteAppliance")}
           style={({ pressed }) => [
             styles.iconButton,
             pressed && styles.actionPressed,
@@ -303,7 +305,7 @@ export default function ApplianceBox({
       {/* ================================================= */}
 
       <View style={styles.dotsRow}>
-        {renderDotsToggle("Hide appliance options")}
+        {renderDotsToggle(t("applianceBox.hideOptions"))}
       </View>
     </>
   );
@@ -320,7 +322,7 @@ export default function ApplianceBox({
         variant="caption"
         style={styles.deleteQuestion}
       >
-        You want to delete this?
+        {t("applianceBox.deleteQuestion")}
       </AppText>
 
       <View style={styles.confirmActions}>
@@ -330,7 +332,7 @@ export default function ApplianceBox({
           onPress={handleDeleteCancel}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Do not delete appliance"
+          accessibilityLabel={t("applianceBox.doNotDelete")}
           style={({ pressed }) => [
             styles.confirmButton,
             styles.noButton,
@@ -341,7 +343,7 @@ export default function ApplianceBox({
             variant="caption"
             style={styles.noButtonText}
           >
-            No
+            {t("shared.no")}
           </AppText>
         </Pressable>
 
@@ -351,7 +353,7 @@ export default function ApplianceBox({
           onPress={handleDeleteConfirm}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Confirm delete appliance"
+          accessibilityLabel={t("applianceBox.confirmDelete")}
           style={({ pressed }) => [
             styles.confirmButton,
             styles.yesButton,
@@ -362,7 +364,7 @@ export default function ApplianceBox({
             variant="caption"
             style={styles.yesButtonText}
           >
-            Yes
+            {t("shared.yes")}
           </AppText>
         </Pressable>
       </View>
@@ -386,8 +388,8 @@ export default function ApplianceBox({
         style={styles.deleteQuestion}
       >
         {isUnarchive
-          ? "Unarchive this appliance?"
-          : "Archive this appliance?"}
+          ? t("applianceBox.unarchiveQuestion")
+          : t("applianceBox.archiveQuestion")}
       </AppText>
 
       <View style={styles.confirmActions}>
@@ -399,8 +401,8 @@ export default function ApplianceBox({
           accessibilityRole="button"
           accessibilityLabel={
             isUnarchive
-              ? "Do not unarchive appliance"
-              : "Do not archive appliance"
+              ? t("applianceBox.doNotUnarchive")
+              : t("applianceBox.doNotArchive")
           }
           style={({ pressed }) => [
             styles.confirmButton,
@@ -412,7 +414,7 @@ export default function ApplianceBox({
             variant="caption"
             style={styles.noButtonText}
           >
-            No
+            {t("shared.no")}
           </AppText>
         </Pressable>
 
@@ -424,8 +426,8 @@ export default function ApplianceBox({
           accessibilityRole="button"
           accessibilityLabel={
             isUnarchive
-              ? "Confirm unarchive appliance"
-              : "Confirm archive appliance"
+              ? t("applianceBox.confirmUnarchive")
+              : t("applianceBox.confirmArchive")
           }
           style={({ pressed }) => [
             styles.confirmButton,
@@ -437,7 +439,7 @@ export default function ApplianceBox({
             variant="caption"
             style={styles.archiveButtonText}
           >
-            Yes
+            {t("shared.yes")}
           </AppText>
         </Pressable>
       </View>
@@ -520,7 +522,7 @@ export default function ApplianceBox({
 
       {isCustom ? (
         <View style={styles.dotsRow}>
-          {renderDotsToggle("Show appliance options")}
+          {renderDotsToggle(t("applianceBox.showOptions"))}
         </View>
       ) : null}
     </>

@@ -30,7 +30,9 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import {
   EMAIL_PATTERN,
+  getCurrentUserProfile,
   requestPasswordReset,
+  resolvePostLoginRoute,
   updateRecoveryPassword,
 } from "@/services/auth";
 import { useTranslation } from "react-i18next";
@@ -357,7 +359,19 @@ export default function ForgotPasswordScreen() {
       }
 
       clearRecoverySession();
-      router.replace(Routes.DASHBOARD);
+      try {
+        const profile = await getCurrentUserProfile();
+
+        router.replace(
+          resolvePostLoginRoute(
+            profile.success
+              ? (profile as { role?: unknown }).role
+              : null,
+          ) as never,
+        );
+      } catch {
+        router.replace(Routes.DASHBOARD);
+      }
     } catch {
       setUpdateWarning(
         t("common.wentWrong"),
