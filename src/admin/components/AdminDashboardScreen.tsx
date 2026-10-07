@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   View,
@@ -21,16 +22,22 @@ import ThresholdEditor from "@/admin/components/ThresholdEditor";
 import AuditList from "@/admin/components/AuditList";
 import { useAdminGuard } from "@/admin/hooks/useAdminGuard";
 import type { AdminTab } from "@/admin/constants";
-import { getMockAdminOverview } from "@/admin/services/adminService";
+import {
+  getAdminFleetHealth,
+  getMockAdminOverview,
+  type AdminFleetHealth,
+} from "@/admin/services/adminService";
+import { logActivity } from "@/services/activityLogService";
 
 // ============================================================
-// ADMIN DASHBOARD SCREEN (UI-first)
+// ADMIN DASHBOARD SCREEN
 //
 // Same shell + tokens as household DashboardScreen:
 // NavBar top, ScrollView, headerCard, sections, Copyright,
-// bottom nav in flow. Goal/elements differ: oversight
-// (system health, thresholds, audit) instead of personal use.
-// All data is mock until Phase 2 admin reads land.
+// bottom nav in flow. Purpose-driven tabs: each tab answers
+// one question (health now / what limits / who did what).
+// Fleet aggregates load async with loading + stale states so
+// the UI never looks broken; thresholds stay staged-mock.
 // ============================================================
 
 export default function AdminDashboardScreen() {
@@ -41,13 +48,49 @@ export default function AdminDashboardScreen() {
 
   const [tab, setTab] = useState<AdminTab>("overview");
   const overview = useMemo(() => getMockAdminOverview(), []);
+  const [fleet, setFleet] = useState<AdminFleetHealth | null>(null);
+  const [fleetLoading, setFleetLoading] = useState(true);
+
+  // Aggregates-only fleet read (no per-user rows). Falls back
+  // to mock with stale=true inside the service — never blank.
+  useEffect(() => {
+    let cancelled = false;
+    setFleetLoading(true);
+
+    void getAdminFleetHealth().then((health) => {
+      if (cancelled) {
+        return;
+      }
+
+      setFleet(health);
+      setFleetLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleTabChange = (next: AdminTab) => {
+    setTab(next);
+    // Accountability: record admin navigation, fire-and-forget.
+    logActivity({
+      title: "Admin tab viewed",
+      description: `Admin opened the ${next} tab.`,
+      type: "info",
+    });
+  };
 
   if (!canRender) {
     return null;
   }
 
+  const fleetSummary = fleet
+    ? `${fleet.deviceCount} device${fleet.deviceCount === 1 ? "" : "s"} · ${fleet.onlineCount} online · ${fleet.totalSolarWh24h}Wh solar/24h`
+    : undefined;
+
   return (
-    <AdminScreenContainer activeTab={tab} onTabChange={setTab}>
+    <AdminScreenContainer activeTab={tab} onTabChange={handleTabChange}>
       <NavBar deviceStatus={overview.deviceStatus} />
 
       <ScrollView
@@ -64,15 +107,39 @@ export default function AdminDashboardScreen() {
           </AppText>
         </View>
 
-        {(tab === "overview" || tab === "thresholds") && (
-          <SystemOverviewSection overview={overview} />
+        {tab === "overview" && (
+          <>
+            {fleetLoading && !fleet ? (
+              <View
+                style={styles.loadingCard}
+                accessibilityRole="progressbar"
+                accessibilityLiveRegion="polite"
+                accessibilityLabel="Loading fleet health"
+              >
+                <ActivityIndicator
+                  size="small"
+                  color={colors.textSecondary}
+                />
+                <AppText
+                  variant="caption"
+                  style={styles.loadingText}
+                >
+                  Loading fleet aggregates…
+                </AppText>
+              </View>
+            ) : (
+              <SystemOverviewSection
+                overview={overview}
+                stale={fleet?.stale ?? true}
+                fleetSummary={fleetSummary}
+              />
+            )}
+          </>
         )}
 
-        {(tab === "thresholds" || tab === "overview") && (
-          <ThresholdEditor />
-        )}
+        {tab === "thresholds" && <ThresholdEditor />}
 
-        {(tab === "audit" || tab === "overview") && <AuditList />}
+        {tab === "audit" && <AuditList />}
 
         <Copyright />
       </ScrollView>
@@ -105,5 +172,22 @@ const getStyles = (colors: AppColors) =>
     headerSub: {
       color: colors.headerContent,
       opacity: 0.85,
+    },
+
+    loadingCard: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: colors.glass.white,
+      borderWidth: 3,
+      borderColor: colors.cardBorder,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+    },
+
+    loadingText: {
+      color: colors.textSecondary,
     },
   });

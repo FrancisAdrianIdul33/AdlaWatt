@@ -14,14 +14,19 @@ import {
 } from "@/hooks/useAppColors";
 import { Radius, Spacing } from "@/constants/theme";
 import type { AdminThresholds } from "@/admin/constants";
-import { getDefaultThresholds } from "@/admin/services/adminService";
+import {
+  getDefaultThresholds,
+} from "@/admin/services/adminService";
+import { logActivity } from "@/services/activityLogService";
 
 // ============================================================
 // THRESHOLD EDITOR (admin-only elements)
 //
 // Staged Save/Cancel draft flow mirrors Menu preferences:
-// edits stay local until Save. UI-first: no backend write,
-// publishing is a mock confirmation row.
+// edits stay local until Save. No backend write yet — Save
+// stages locally with a v1 version stamp (change-management
+// honesty). Ranges mirror validate_admin_thresholds() so a
+// future store cannot be bypassed from the client.
 // ============================================================
 
 interface Row {
@@ -72,9 +77,17 @@ export default function ThresholdEditor() {
   return (
     <AnalyticsChartCard
       title="Alert thresholds"
-      subtitle="Staged drafts, Save publishes (mock)"
+      subtitle="Staged drafts · v1 staged locally, not published"
       icon="options-outline"
     >
+      <AppText
+        variant="caption"
+        style={styles.versionStamp}
+      >
+        Change-managed draft v1 — Save stages locally, publish
+        lands with a future backend store.
+      </AppText>
+
       <View style={styles.list}>
         {ROWS.map((row) => (
           <View key={row.key} style={styles.row}>
@@ -85,6 +98,14 @@ export default function ThresholdEditor() {
 
               <AppText variant="heading" style={styles.value}>
                 {draft[row.key]}
+                {row.unit}
+              </AppText>
+
+              <AppText
+                variant="caption"
+                style={styles.range}
+              >
+                Allowed {row.min}–{row.max}
                 {row.unit}
               </AppText>
             </View>
@@ -131,6 +152,13 @@ export default function ThresholdEditor() {
           onPress={() => {
             setDraft(saved);
             setNotice(null);
+            // Accountability: record the discard, fire-and-forget.
+            logActivity({
+              title: "Threshold draft discarded",
+              description:
+                "Admin discarded staged alert-threshold edits.",
+              type: "info",
+            });
           }}
           disabled={!isDirty}
           accessibilityRole="button"
@@ -149,7 +177,15 @@ export default function ThresholdEditor() {
         <Pressable
           onPress={() => {
             setSaved(draft);
-            setNotice("Thresholds staged locally (mock publish).");
+            setNotice(
+              "Thresholds staged locally (v1 draft, not published).",
+            );
+            // Accountability: record the stage, fire-and-forget.
+            logActivity({
+              title: "Threshold draft saved",
+              description: `High-load cap staged at ${draft.highLoadWatts}W (v1 draft, not published).`,
+              type: "info",
+            });
           }}
           disabled={!isDirty}
           accessibilityRole="button"
@@ -207,6 +243,17 @@ const getStyles = (colors: AppColors) =>
     value: {
       color: colors.text,
       fontSize: 18,
+    },
+
+    range: {
+      color: colors.textSecondary,
+    },
+
+    versionStamp: {
+      color: colors.textSecondary,
+      textAlign: "center",
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.md,
     },
 
     stepper: {

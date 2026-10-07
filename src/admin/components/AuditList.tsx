@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 
@@ -24,8 +25,9 @@ import {
 // AUDIT LIST (admin goal: oversight trail)
 //
 // Same ActivityLogCard + Pagination + EmptyState primitives as
-// household Activity Logs, filtered by a SlidingToggle. Mock
-// entries until admin reads land.
+// household Activity Logs, with type filter + text search.
+// Mock entries until admin-scoped activity_logs reads land;
+// search and pagination run client-side over the loaded page.
 // ============================================================
 
 type AuditFilter = "all" | "info" | "warning" | "error";
@@ -35,23 +37,35 @@ export default function AuditList() {
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [filter, setFilter] = useState<AuditFilter>("all");
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
   const all = useMemo(() => getMockAuditLogs(), []);
 
   const filtered = useMemo(() => {
-    if (filter === "all") {
-      return all;
+    const byType =
+      filter === "all"
+        ? all
+        : filter === "error"
+          ? all.filter(
+              (log) =>
+                log.type === "error" ||
+                log.type === "critical",
+            )
+          : all.filter((log) => log.type === filter);
+
+    const needle = query.trim().toLowerCase();
+
+    if (!needle) {
+      return byType;
     }
 
-    if (filter === "error") {
-      return all.filter(
-        (log) => log.type === "error" || log.type === "critical",
-      );
-    }
-
-    return all.filter((log) => log.type === filter);
-  }, [all, filter]);
+    return byType.filter((log) =>
+      `${log.title} ${log.details ?? ""}`
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [all, filter, query]);
 
   const { items, totalPages } = useMemo(
     () => paginateAudit(filtered, page),
@@ -61,9 +75,27 @@ export default function AuditList() {
   return (
     <AnalyticsChartCard
       title="Audit trail"
-      subtitle="Latest system events (mock)"
+      subtitle="Latest system events · searchable"
       icon="list-outline"
     >
+      <View style={styles.searchRow}>
+        <TextInput
+          value={query}
+          onChangeText={(text) => {
+            setQuery(text);
+            setPage(1);
+          }}
+          placeholder="Search audit events"
+          placeholderTextColor={colors.textSecondary}
+          autoCapitalize="none"
+          autoCorrect={false}
+          allowFontScaling={false}
+          accessibilityRole="search"
+          accessibilityLabel="Search audit events"
+          style={styles.searchInput}
+        />
+      </View>
+
       <View style={styles.filterRow}>
         <SlidingToggle<AuditFilter>
           value={filter}
@@ -107,8 +139,14 @@ export default function AuditList() {
       <View style={styles.list}>
         {items.length === 0 ? (
           <EmptyState
-            title="No audit events"
-            description="No audit events for this filter yet."
+            title={
+              query.trim() ? "No matching events" : "No audit events"
+            }
+            description={
+              query.trim()
+                ? `Nothing matches "${query.trim()}" for this filter yet.`
+                : "No audit events for this filter yet."
+            }
           />
         ) : (
           items.map((item) => (
@@ -127,8 +165,8 @@ export default function AuditList() {
       />
 
       <AppText variant="caption" style={styles.footnote}>
-        Mock trail — Phase 2 wires this to admin-scoped
-        activity_logs reads.
+        Mock trail — admin-scoped activity_logs reads land next;
+        search runs over the loaded page.
       </AppText>
     </AnalyticsChartCard>
   );
@@ -136,9 +174,25 @@ export default function AuditList() {
 
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
-    filterRow: {
+    searchRow: {
       paddingHorizontal: Spacing.md,
       paddingTop: Spacing.md,
+    },
+
+    searchInput: {
+      minHeight: 48,
+      borderWidth: 2,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      color: colors.text,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+
+    filterRow: {
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
     },
 
     list: {

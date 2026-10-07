@@ -18,14 +18,21 @@ import type { AdminOverview } from "@/admin/services/adminService";
 // SYSTEM OVERVIEW SECTION (admin goal, household UI)
 //
 // Same card shell + tokens as household analytics cards.
-// Elements differ: fleet/device health snapshot for oversight
-// instead of personal usage. UI-first: mock AdminOverview.
+// Answers one question: "is the fleet healthy right now?"
+// Aggregates-only (no per-user rows); stale banner + source
+// label keep the UI honest when the RPC is unreachable.
 // ============================================================
 
 export default function SystemOverviewSection({
   overview,
+  stale = true,
+  fleetSummary,
 }: {
   overview: AdminOverview;
+  /** False once the get_admin_fleet_health RPC succeeds. */
+  stale?: boolean;
+  /** Short aggregate line, e.g. "1 device · 1 online". */
+  fleetSummary?: string;
 }) {
   const colors = useAppColors();
 
@@ -80,6 +87,32 @@ export default function SystemOverviewSection({
       subtitle={`Last sync ${overview.lastSync}`}
       icon="pulse-outline"
     >
+      {stale ? (
+        <AppText
+          variant="caption"
+          style={styles.staleBanner}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          Showing cached snapshot — fleet RPC unreachable.
+        </AppText>
+      ) : null}
+
+      {fleetSummary ? (
+        <AppText
+          variant="caption"
+          style={styles.source}
+        >
+          {fleetSummary} · Fleet aggregate · no per-user rows
+        </AppText>
+      ) : (
+        <AppText
+          variant="caption"
+          style={styles.source}
+        >
+          Fleet aggregate · no per-user rows
+        </AppText>
+      )}
       <View style={styles.grid}>
         {cells.map((cell) => (
           <View key={cell.label} style={styles.cell}>
@@ -126,8 +159,7 @@ export default function SystemOverviewSection({
         style={styles.footnote}
       >
         Solar {overview.solarTemp}°C · Interior{" "}
-        {overview.interiorTemp}°C · Mock data until admin
-        reads land.
+        {overview.interiorTemp}°C
       </AppText>
     </AnalyticsChartCard>
   );
@@ -192,5 +224,20 @@ const getStyles = (colors: AppColors) =>
       paddingHorizontal: Spacing.md,
       paddingBottom: Spacing.md,
       textAlign: "center",
+    },
+
+    staleBanner: {
+      color: colors.error,
+      textAlign: "center",
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+      fontWeight: "600",
+    },
+
+    source: {
+      color: colors.textSecondary,
+      textAlign: "center",
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
     },
   });

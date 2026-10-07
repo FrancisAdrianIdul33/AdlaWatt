@@ -1,4 +1,5 @@
 import type { ActivityLogItem } from "@/components/ActivityLogCard";
+import { supabase } from "@/lib/supabase";
 
 import {
   ADMIN_AUDIT_PAGE_SIZE,
@@ -7,12 +8,33 @@ import {
 } from "@/admin/constants";
 
 // ============================================================
-// ADMIN SERVICE (UI-first, mock data)
+// ADMIN SERVICE
 //
-// No Supabase calls here on purpose: RLS is strictly
-// user_id = auth.uid() and users.role does not exist yet.
-// Phase 2 will replace these mocks with admin-scoped reads.
+// UI-first with privacy-safe real reads where possible.
+// - Fleet health comes from the aggregates-only RPC
+//   get_admin_fleet_health() (no per-user rows, admin-only,
+//   see 20261010000000_admin_fleet_health.sql). On RPC failure
+//   (offline, not yet pushed, RLS) callers fall back to the
+//   mocks below with stale=true so the UI shows a "stale data"
+//   banner instead of a blank page.
+// - Threshold Save stays staged-mock (no backend table yet);
+//   ranges are validated server-side by
+//   validate_admin_thresholds() for future use.
 // ============================================================
+
+export interface AdminFleetHealth {
+  deviceCount: number;
+  onlineCount: number;
+  avgBattery: number | null;
+  avgVoltage: number | null;
+  totalSolarWh24h: number;
+  lowBatteryCount: number;
+  lastUpdated: string | null;
+  /** True when the RPC failed and mock data is shown. */
+  stale: boolean;
+  /** RPC round-trip ms (latency budget: sub-3s per principles). */
+  latencyMs: number;
+}
 
 export interface AdminOverview {
   deviceStatus: "Online" | "Offline";
@@ -101,6 +123,65 @@ const MOCK_AUDIT: ActivityLogItem[] = [
 
 export function getMockAdminOverview(): AdminOverview {
   return { ...MOCK_OVERVIEW };
+}
+
+export async function getAdminFleetHealth(): Promise<AdminFleetHealth> {
+  const started = Date.now();
+
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_admin_fleet_health",
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const row = (data ?? {}) as {
+      device_count?: number;
+      online_count?: number;
+      avg_battery?: number | null;
+      avg_voltage?: number | null;
+      total_solar_wh_24h?: number;
+      low_battery_count?: number;
+      last_updated?: string | null;
+    };
+
+    return {
+      deviceCount: row.device_count ?? 0,
+      onlineCount: row.online_count ?? 0,
+      avgBattery:
+        typeof row.avg_battery === "number"
+          ? row.avg_battery
+          : null,
+      avgVoltage:
+        typeof row.avg_voltage === "number"
+          ? row.avg_voltage
+          : null,
+      totalSolarWh24h: row.total_solar_wh_24h ?? 0,
+      lowBatteryCount: row.low_battery_count ?? 0,
+      lastUpdated: row.last_updated ?? null,
+      stale: false,
+      latencyMs: Date.now() - started,
+    };
+  } catch (thrown) {
+    console.warn(
+      "Admin fleet health RPC failed, showing mock:",
+      thrown instanceof Error ? thrown.message : thrown,
+    );
+
+    return {
+      deviceCount: 1,
+      onlineCount: 1,
+      avgBattery: MOCK_OVERVIEW.batteryLevel,
+      avgVoltage: MOCK_OVERVIEW.batteryVoltage,
+      totalSolarWh24h: 0,
+      lowBatteryCount: 0,
+      lastUpdated: null,
+      stale: true,
+      latencyMs: Date.now() - started,
+    };
+  }
 }
 
 export function getMockAuditLogs(): ActivityLogItem[] {

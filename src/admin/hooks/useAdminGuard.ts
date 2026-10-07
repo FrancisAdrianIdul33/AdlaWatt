@@ -13,6 +13,42 @@ import { getCurrentUserProfile } from "@/services/auth";
 // Unknown/error roles fall back to household (never fail open).
 // ============================================================
 
+// Per-principles rate limiting: repeated role checks (e.g. fast
+// remounts, deep-link spam) share one in-flight request and
+// observe a 5s cooldown so /admin cannot hammer the profile
+// endpoint. Server-side Supabase rate limits remain the real
+// gate; this only trims client chatter.
+let lastRoleCheckAt = 0;
+let inFlightRoleCheck: Promise<boolean> | null = null;
+const ROLE_CHECK_COOLDOWN_MS = 5000;
+
+async function checkIsAdmin(): Promise<boolean> {
+  const now = Date.now();
+
+  if (
+    inFlightRoleCheck &&
+    now - lastRoleCheckAt < ROLE_CHECK_COOLDOWN_MS
+  ) {
+    return inFlightRoleCheck;
+  }
+
+  lastRoleCheckAt = now;
+  inFlightRoleCheck = (async () => {
+    try {
+      const profile = await getCurrentUserProfile();
+
+      return (
+        profile.success &&
+        (profile as { role?: unknown }).role === "admin"
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  return inFlightRoleCheck;
+}
+
 export function useAdminGuard() {
   const { isLoaded, isSignedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -35,10 +71,7 @@ export function useAdminGuard() {
 
     void (async () => {
       try {
-        const profile = await getCurrentUserProfile();
-        const admin =
-          profile.success &&
-          (profile as { role?: unknown }).role === "admin";
+        const admin = await checkIsAdmin();
 
         if (cancelled) {
           return;
