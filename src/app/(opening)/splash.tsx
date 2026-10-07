@@ -31,7 +31,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require("../../assets/images/adlawatt-logo.png")}
+        source={require("../../../assets/images/adlawatt-logo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
