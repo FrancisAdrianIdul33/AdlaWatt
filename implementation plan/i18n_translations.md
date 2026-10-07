@@ -307,7 +307,150 @@ by hand.
 | `dashboard.home.goToApplianceRecommendation` | Go to Appliance Recommendation | Pumunta sa Appliance Recommendation | Adto sa Appliance Recommendation | a11y |
 | `dashboard.home.forecastFailed` | Could not load the forecast. | Hindi ma-load ang forecast. | Dili ma-load ang forecast. | error fallback |
 
-## Shared (7 keys, Phase 1)
+## Shared (13 keys, Phase 1–2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `shared.close` | Close | Isara | Isira | a11y |
+| `shared.signedInAs` | Signed in as {{username}} | Naka-sign in bilang {{username}} | Naka-sign in isip {{username}} | a11y; username stays as-is |
+| `shared.notifications` | Notifications | Mga Notification | Mga Notification | a11y |
+| `shared.emptyTitle` | No Activity Logs | Walang Activity Logs | Walay Activity Logs | default prop |
+| `shared.emptyDescription` | No activities match the selected filters. | Walang aktibidad na tumutugma sa mga filter. | Walay aktibidad nga motugma sa mga filter. | default prop |
+| `shared.errorTitle` | Couldn't load data | Hindi ma-load ang data | Dili ma-load ang data |  |
+| `shared.retry` | Try Again | Subukang Muli | Sulayi Pag-usab |  |
+| `shared.paginationPrev` | Prev | Nakaraan | Miagi | Phase 2 |
+| `shared.paginationNext` | Next | Susunod | Sunod | Phase 2 |
+| `shared.paginationPage` | Page {{current}} of {{total}} | Pahina {{current}} ng {{total}} | Pahina {{current}} sa {{total}} | Phase 2 |
+| `shared.no` | No | Hindi | Dili | Phase 2; confirm buttons |
+| `shared.yes` | Yes | Oo | Oo | Phase 2; confirm buttons |
+| `shared.cancel` | Cancel | Cancel | Cancel | Phase 2 |
+
+## Media Picker (14 keys, Phase 2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `media.title` | Choose Photo | Pumili ng Larawan | Pagpili ug Hulagway |  |
+| `media.chooseFromLibrary` | Choose from Library | Pumili mula sa Library | Pagpili gikan sa Library |  |
+| `media.opening` | Opening… | Binubuksan… | Giablihan… |  |
+| `media.chooseA11y` | Choose from library | Pumili mula sa library | Pagpili gikan sa library | a11y |
+| `media.chooseHint` | Opens your photo library | Binubuksan ang iyong photo library | Giablihan ang imong photo library | a11y hint |
+| `media.removePhoto` | Remove Photo | Alisin ang Larawan | Tangtangon ang Hulagway |  |
+| `media.removeA11y` | Remove photo | Alisin ang larawan | Tangtangon ang hulagway | a11y |
+| `media.removeHint` | Removes the current photo and restores the default icon | Inaalis ang kasalukuyang larawan at ibinabalik ang default icon | Gitangtang ang karon nga hulagway ug gibalik ang default icon | a11y hint |
+| `media.cancelChoiceA11y` | Cancel photo choice | Kanselahin ang pagpili ng larawan | Kanselahon ang pagpili ug hulagway | a11y |
+| `media.permissionDenied` | AdlaWatt needs photo access to attach a picture. Allow access in your device Settings, then try again. | Kailangan ng AdlaWatt ng photo access upang maglakip ng larawan. Payagan ang access sa Settings ng iyong device, pagkatapos ay subukang muli. | Kinahanglan sa AdlaWatt ug photo access aron maglakip ug hulagway. Tugoti ang access sa Settings sa imong device, dayon sulayi pag-usab. |  |
+| `media.unreadable` | Could not read that photo. Try another one. | Hindi mabasa ang larawang iyon. Sumubok ng iba. | Dili mabasa kana nga hulagway. Sulayi ug lain. |  |
+| `media.tooBig` | That photo is over 5 MB. Choose a smaller one. | Ang larawang iyon ay lumampas sa 5 MB. Pumili ng mas maliit. | Kana nga hulagway milapas sa 5 MB. Pagpili ug mas gamay. | 5 MB stays in sync with MAX_PHOTO_BYTES |
+| `media.processFailed` | Could not process that photo. Try another one. | Hindi ma-process ang larawang iyon. Sumubok ng iba. | Dili ma-process kana nga hulagway. Sulayi ug lain. |  |
+| `media.libraryFailed` | Could not open your photo library. Try again. | Hindi mabuksan ang iyong photo library. Subukang muli. | Dili maablihan ang imong photo library. Sulayi pag-usab. |  |
+
+## Appliance Box (15 keys, Phase 2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `applianceBox.editAppliance` | Edit appliance | I-edit ang appliance | I-edit ang appliance | a11y |
+| `applianceBox.archiveAppliance` | Archive appliance | I-archive ang appliance | I-archive ang appliance | a11y |
+| `applianceBox.unarchiveAppliance` | Unarchive appliance | I-unarchive ang appliance | I-unarchive ang appliance | a11y |
+| `applianceBox.deleteAppliance` | Delete appliance | Burahin ang appliance | Papason ang appliance | a11y |
+| `applianceBox.showOptions` | Show appliance options | Ipakita ang mga opsyon ng appliance | Ipakita ang mga opsyon sa appliance | a11y |
+| `applianceBox.hideOptions` | Hide appliance options | Itago ang mga opsyon ng appliance | Tagoa ang mga opsyon sa appliance | a11y |
+| `applianceBox.deleteQuestion` | You want to delete this? | Gusto mo ba itong burahin? | Gusto ba nimong papason kini? |  |
+| `applianceBox.doNotDelete` | Do not delete appliance | Huwag burahin ang appliance | Ayaw papasa ang appliance | a11y |
+| `applianceBox.confirmDelete` | Confirm delete appliance | Kumpirmahin ang pagbura ng appliance | Kumpirmahi ang pagpapasa sa appliance | a11y |
+| `applianceBox.archiveQuestion` | Archive this appliance? | I-archive ang appliance na ito? | I-archive kini nga appliance? |  |
+| `applianceBox.unarchiveQuestion` | Unarchive this appliance? | I-unarchive ang appliance na ito? | I-unarchive kini nga appliance? |  |
+| `applianceBox.doNotArchive` | Do not archive appliance | Huwag i-archive ang appliance | Ayaw i-archive ang appliance | a11y |
+| `applianceBox.doNotUnarchive` | Do not unarchive appliance | Huwag i-unarchive ang appliance | Ayaw i-unarchive ang appliance | a11y |
+| `applianceBox.confirmArchive` | Confirm archive appliance | Kumpirmahin ang pag-archive ng appliance | Kumpirmahi ang pag-archive sa appliance | a11y |
+| `applianceBox.confirmUnarchive` | Confirm unarchive appliance | Kumpirmahin ang pag-unarchive ng appliance | Kumpirmahi ang pag-unarchive sa appliance | a11y |
+
+## Activity Card (6 keys, Phase 2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `activityCard.recentActivity` | Recent Activity | Kamakailang Aktibidad | Bag-ong Aktibidad |  |
+| `activityCard.viewAll` | View All | Tingnan Lahat | Tan-awa Tanan |  |
+| `activityCard.viewAllActivity` | View all activity | Tingnan ang lahat ng aktibidad | Tan-awa ang tanan nga aktibidad | a11y |
+| `activityCard.fallbackDetails` | No activity details available. | Walang detalye ng aktibidad. | Walay detalye sa aktibidad. | fallback |
+| `activityCard.fallbackTitle` | Activity | Aktibidad | Aktibidad | fallback |
+| `activityCard.typeA11y` | Type {{label}} | Uri: {{label}} | Matang: {{label}} | a11y; label stays backend-bound |
+
+## Notification Card (4 keys, Phase 2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `notificationCard.fallbackTitle` | Notification | Notification | Notification | fallback |
+| `notificationCard.fallbackDetails` | No notification details available. | Walang detalye ng notification. | Walay detalye sa notification. | fallback |
+| `notificationCard.newTypeA11y` | New, Type {{label}} | Bago, Uri: {{label}} | Bag-o, Matang: {{label}} | a11y; label stays backend-bound |
+| `notificationCard.typeA11y` | Type {{label}} | Uri: {{label}} | Matang: {{label}} | a11y; label stays backend-bound |
+
+## Dashboard — About (14 keys, Phase 2)
+
+Names, contact values stay as-is.
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.about.title` | About Us | About Us | About Us |  |
+| `dashboard.about.subtitle` | Learn more about AdlaWatt and its purpose. | Alamin ang tungkol sa AdlaWatt at sa layunin nito. | Pagkat-on bahin sa AdlaWatt ug sa katuyoan niini. |  |
+| `dashboard.about.tagline` | An IoT-Based Off-Grid Solar Backup Power System with Real-Time Energy Monitoring and Appliance Recommendation | Isang IoT-Based Off-Grid Solar Backup Power System na may Real-Time Energy Monitoring at Appliance Recommendation | Usa ka IoT-Based Off-Grid Solar Backup Power System nga adunay Real-Time Energy Monitoring ug Appliance Recommendation |  |
+| `dashboard.about.overview` | AdlaWatt is a transportable, off-grid solar backup power system … maintain power during blackouts. | Ang AdlaWatt ay isang nadadalang off-grid solar backup power system … magkaroon ng kuryente tuwing blackout. | Ang AdlaWatt usa ka madalang off-grid solar backup power system … magpabilin ang kuryente panahon sa blackout. | long paragraph; see locale modules for full text |
+| `dashboard.about.developers` | Developers | Mga Developer | Mga Developer |  |
+| `dashboard.about.roleProgrammer` | Programmer | Programmer | Programmer |  |
+| `dashboard.about.roleDocumenter` | Documenter | Documenter | Documenter |  |
+| `dashboard.about.roleDataAnalyst` | Data Analyst | Data Analyst | Data Analyst |  |
+| `dashboard.about.dev1Bio` | Develops and maintains software and system firmware … | Nagde-develop at nagme-maintain ng software at system firmware … | Nag-develop ug nag-maintain sa software ug system firmware … | see locale modules |
+| `dashboard.about.dev2Bio` | Authors user manuals, system setup guides … | Sumusulat ng user manuals, system setup guides … | Nagsulat ug user manuals, system setup guides … | see locale modules |
+| `dashboard.about.dev3Bio` | Analyzes incoming sensor telemetry … | Sinusuri ang pumapasok na sensor telemetry … | Nag-analisar sa mosulod nga sensor telemetry … | see locale modules |
+| `dashboard.about.contactDetails` | Contact Details | Contact Details | Contact Details |  |
+
+`dashboard.manual.*` (2 keys): `title` User Manual, `subtitle` Guides for operating your AdlaWatt system. (fil/ceb in modules)
+
+## Dashboard — Activity Logs (15 keys, Phase 2)
+
+Codes stay backend-bound; labels map for display. Dates localize in format only (`en-US`/`fil-PH`/`ceb-PH`).
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.logs.title` | Activity Logs | Activity Logs | Activity Logs |  |
+| `dashboard.logs.subtitle` | System activity and appliance events will appear here. | Dito lilitaw ang aktibidad ng system at mga event ng appliance. | Dinhi makita ang aktibidad sa system ug mga event sa appliance. |  |
+| `dashboard.logs.total` | Total Activity Logs: | Kabuuang Activity Logs: | Tibuok Activity Logs: |  |
+| `dashboard.logs.loadFailed` | We couldn't load your activity logs. Check your connection and try again. | Hindi ma-load ang iyong activity logs. Suriin ang iyong koneksyon at subukang muli. | Dili ma-load ang imong activity logs. Susiha ang imong koneksyon ug sulayi pag-usab. | thrown error |
+| `dashboard.logs.timeRange` | Time Range | Saklaw ng Oras | Sakop sa Oras |  |
+| `dashboard.logs.activityType` | Activity Type | Uri ng Aktibidad | Matang sa Aktibidad |  |
+| `dashboard.logs.timeAll` | All | Lahat | Tanan | display map |
+| `dashboard.logs.timeLastHour` | Last Hour | Nakaraang Oras | Miaging Oras | display map |
+| `dashboard.logs.timeToday` | Today | Ngayon | Karon | display map |
+| `dashboard.logs.timeThisWeek` | This Week | Linggong Ito | Kining Semanaha | display map |
+| `dashboard.logs.timeThisYear` | This Year | Taong Ito | Kining Tuiga | display map |
+| `dashboard.logs.typeAll` | All | Lahat | Tanan | display map |
+| `dashboard.logs.typeInfo` | Info | Info | Info | display map |
+| `dashboard.logs.typeWarning` | Warning | Babala | Pahimangno | display map |
+| `dashboard.logs.typeError` | Error | Error | Error | display map |
+| `dashboard.logs.typeCritical` | Critical | Kritikal | Kritikal | display map |
+
+## Dashboard — Notifications (24 keys, Phase 2)
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.notifications.title` | Notifications | Mga Notification | Mga Notification |  |
+| `dashboard.notifications.subtitle` | System notifications and important alerts will appear here. | Dito lilitaw ang mga notification ng system at mahahalagang alerto. | Dinhi makita ang mga notification sa system ug importanteng mga alerto. |  |
+| `dashboard.notifications.total` | Total Notifications: | Kabuuang Notification: | Tibuok Notification: |  |
+| `dashboard.notifications.loadFailed` | We couldn't load your notifications. Check your connection and try again. | Hindi ma-load ang iyong mga notification. Suriin ang iyong koneksyon at subukang muli. | Dili ma-load ang imong mga notification. Susiha ang imong koneksyon ug sulayi pag-usab. | thrown error |
+| `dashboard.notifications.markFailed` | Couldn't mark notifications as read. Please try again. | Hindi ma-mark as read ang mga notification. Pakisubukang muli. | Dili ma-mark as read ang mga notification. Palihug sulayi pag-usab. | fallback |
+| `dashboard.notifications.markError` | Couldn't mark as read. Check your connection and try again. | Hindi ma-mark as read. Suriin ang iyong koneksyon at subukang muli. | Dili ma-mark as read. Susiha ang imong koneksyon ug sulayi pag-usab. |  |
+| `dashboard.notifications.marking` | Marking... | Mini-mark... | Gina-mark... |  |
+| `dashboard.notifications.markAsRead` | Mark as Read | Mark as Read | Mark as Read |  |
+| `dashboard.notifications.markAllAsRead` | Mark all as read | I-mark lahat as read | I-mark tanan as read | a11y |
+| `dashboard.notifications.recent` | Recent | Kamakailan | Bag-o |  |
+| `dashboard.notifications.earlier` | Earlier | Mas Maaga | Kaniadto |  |
+| `dashboard.notifications.noNotifications` | No Notifications | Walang Notification | Walay Notification |  |
+| `dashboard.notifications.noNotificationsDesc` | No notifications found for the selected filters. | Walang notification para sa mga napiling filter. | Walay notification para sa napiling mga filter. |  |
+| `dashboard.notifications.timeRange` | Time Range | Saklaw ng Oras | Sakop sa Oras |  |
+| `dashboard.notifications.notificationType` | Notification Type | Uri ng Notification | Matang sa Notification |  |
+| `dashboard.notifications.timeAll` … `timeThisYear` | All / Last Hour / Today / This Week / This Year | Lahat / Nakaraang Oras / Ngayon / Linggong Ito / Taong Ito | Tanan / Miaging Oras / Karon / Kining Semanaha / Kining Tuiga | display maps |
+| `dashboard.notifications.typeAll` | All | Lahat | Tanan | display map |
+| `dashboard.notifications.typeNormal` | Normal | Normal | Normal | display map |
+| `dashboard.notifications.typeAlert` | Alert | Alerto | Alerto | display map |
 
 | Key | English | Filipino | Cebuano | Notes |
 |---|---|---|---|---|

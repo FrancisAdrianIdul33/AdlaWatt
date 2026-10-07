@@ -338,6 +338,79 @@ const en = {
         "Go to Appliance Recommendation",
       forecastFailed: "Could not load the forecast.",
     },
+    about: {
+      title: "About Us",
+      subtitle: "Learn more about AdlaWatt and its purpose.",
+      tagline:
+        "An IoT-Based Off-Grid Solar Backup Power System with Real-Time Energy Monitoring and Appliance Recommendation",
+      overview:
+        "AdlaWatt is a transportable, off-grid solar backup power system designed to provide households with an affordable and reliable source of electricity during power interruptions. The system collects solar energy using a solar panel, stores it in a battery inside a secure lockable enclosure, and supplies backup power to everyday appliances through a built-in AC outlet. Through real-time sensors and a simple mobile application, users can view live battery levels, incoming solar power, energy consumption, and safety temperatures, while receiving smart appliance recommendations based on their remaining battery capacity. By bringing real-time monitoring and energy guidance together, AdlaWatt empowers families to easily control their energy usage, keep essential devices running safely, and maintain power during blackouts.",
+      developers: "Developers",
+      roleProgrammer: "Programmer",
+      roleDocumenter: "Documenter",
+      roleDataAnalyst: "Data Analyst",
+      dev1Bio:
+        "Develops and maintains software and system firmware, integrating real-time sensor data, including battery levels, solar input, and temperature, into the mobile app and programming recommendation algorithms.",
+      dev2Bio:
+        "Authors user manuals, system setup guides, technical documentation, and safety instructions for operating the AdlaWatt hardware and mobile application.",
+      dev3Bio:
+        "Analyzes incoming sensor telemetry, including solar generation patterns, appliance power consumption, and battery performance, to optimize system efficiency and refine smart appliance recommendations.",
+      contactDetails: "Contact Details",
+    },
+    manual: {
+      title: "User Manual",
+      subtitle: "Guides for operating your AdlaWatt system.",
+    },
+    logs: {
+      title: "Activity Logs",
+      subtitle:
+        "System activity and appliance events will appear here.",
+      total: "Total Activity Logs:",
+      loadFailed:
+        "We couldn't load your activity logs. Check your connection and try again.",
+      timeRange: "Time Range",
+      activityType: "Activity Type",
+      timeAll: "All",
+      timeLastHour: "Last Hour",
+      timeToday: "Today",
+      timeThisWeek: "This Week",
+      timeThisYear: "This Year",
+      typeAll: "All",
+      typeInfo: "Info",
+      typeWarning: "Warning",
+      typeError: "Error",
+      typeCritical: "Critical",
+    },
+    notifications: {
+      title: "Notifications",
+      subtitle:
+        "System notifications and important alerts will appear here.",
+      total: "Total Notifications:",
+      loadFailed:
+        "We couldn't load your notifications. Check your connection and try again.",
+      markFailed:
+        "Couldn't mark notifications as read. Please try again.",
+      markError:
+        "Couldn't mark as read. Check your connection and try again.",
+      marking: "Marking...",
+      markAsRead: "Mark as Read",
+      markAllAsRead: "Mark all as read",
+      recent: "Recent",
+      earlier: "Earlier",
+      noNotifications: "No Notifications",
+      noNotificationsDesc:
+        "No notifications found for the selected filters.",
+      timeRange: "Time Range",
+      notificationType: "Notification Type",
+      timeAll: "All",
+      timeLastHour: "Last Hour",
+      timeToday: "Today",
+      timeThisWeek: "This Week",
+      timeThisYear: "This Year",
+      typeAll: "All",
+      typeNormal: "Normal",
+      typeAlert: "Alert",
+    },
   },
 
   shared: {
@@ -349,6 +422,67 @@ const en = {
       "No activities match the selected filters.",
     errorTitle: "Couldn't load data",
     retry: "Try Again",
+    paginationPrev: "Prev",
+    paginationNext: "Next",
+    paginationPage: "Page {{current}} of {{total}}",
+    no: "No",
+    yes: "Yes",
+    cancel: "Cancel",
+  },
+
+  media: {
+    title: "Choose Photo",
+    chooseFromLibrary: "Choose from Library",
+    opening: "Opening…",
+    chooseA11y: "Choose from library",
+    chooseHint: "Opens your photo library",
+    removePhoto: "Remove Photo",
+    removeA11y: "Remove photo",
+    removeHint:
+      "Removes the current photo and restores the default icon",
+    cancelChoiceA11y: "Cancel photo choice",
+    permissionDenied:
+      "AdlaWatt needs photo access to attach a picture. Allow access in your device Settings, then try again.",
+    unreadable: "Could not read that photo. Try another one.",
+    tooBig: "That photo is over 5 MB. Choose a smaller one.",
+    processFailed:
+      "Could not process that photo. Try another one.",
+    libraryFailed:
+      "Could not open your photo library. Try again.",
+  },
+
+  applianceBox: {
+    editAppliance: "Edit appliance",
+    archiveAppliance: "Archive appliance",
+    unarchiveAppliance: "Unarchive appliance",
+    deleteAppliance: "Delete appliance",
+    showOptions: "Show appliance options",
+    hideOptions: "Hide appliance options",
+    deleteQuestion: "You want to delete this?",
+    doNotDelete: "Do not delete appliance",
+    confirmDelete: "Confirm delete appliance",
+    archiveQuestion: "Archive this appliance?",
+    unarchiveQuestion: "Unarchive this appliance?",
+    doNotArchive: "Do not archive appliance",
+    doNotUnarchive: "Do not unarchive appliance",
+    confirmArchive: "Confirm archive appliance",
+    confirmUnarchive: "Confirm unarchive appliance",
+  },
+
+  activityCard: {
+    recentActivity: "Recent Activity",
+    viewAll: "View All",
+    viewAllActivity: "View all activity",
+    fallbackDetails: "No activity details available.",
+    fallbackTitle: "Activity",
+    typeA11y: "Type {{label}}",
+  },
+
+  notificationCard: {
+    fallbackTitle: "Notification",
+    fallbackDetails: "No notification details available.",
+    newTypeA11y: "New, Type {{label}}",
+    typeA11y: "Type {{label}}",
   },
 
   admin: {

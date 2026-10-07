@@ -16,6 +16,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 // ============================================================
 // ACTIVITY LOG CARD
@@ -114,6 +115,7 @@ export default function ActivityLogCard({
 }: {
   item?: ActivityLogItem | null;
 }) {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -125,9 +127,8 @@ export default function ActivityLogCard({
     item ?? {
       id: "unknown",
       type: "info",
-      title: "Activity",
-      details:
-        "No activity details available.",
+      title: t("activityCard.fallbackTitle"),
+      details: t("activityCard.fallbackDetails"),
       date: "",
       time: "",
     };
@@ -178,7 +179,9 @@ export default function ActivityLogCard({
             size={24}
             color={color}
             accessibilityRole="text"
-            accessibilityLabel={`Type ${typeLabel}`}
+            accessibilityLabel={t("activityCard.typeA11y", {
+              label: typeLabel,
+            })}
           />
 
           {/* Activity Content: single full-width text

@@ -16,8 +16,10 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 
 export default function AboutUsScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -42,14 +44,14 @@ export default function AboutUsScreen() {
             variant="heading"
             style={styles.headerTitle}
           >
-            About Us
+            {t("dashboard.about.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.headerSubtitle}
           >
-            Learn more about AdlaWatt and its purpose.
+            {t("dashboard.about.subtitle")}
           </AppText>
         </View>
 
@@ -66,35 +68,14 @@ export default function AboutUsScreen() {
             variant="caption"
             style={styles.adlawattSubtitle}
           >
-            An IoT-Based Off-Grid Solar Backup Power
-            System with Real-Time Energy Monitoring and
-            Appliance Recommendation
+            {t("dashboard.about.tagline")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.overview}
           >
-            AdlaWatt is a transportable, off-grid solar
-            backup power system designed to provide
-            households with an affordable and reliable
-            source of electricity during power
-            interruptions. The system collects solar
-            energy using a solar panel, stores it in a
-            battery inside a secure lockable enclosure,
-            and supplies backup power to everyday
-            appliances through a built-in AC outlet.
-            Through real-time sensors and a simple
-            mobile application, users can view live
-            battery levels, incoming solar power, energy
-            consumption, and safety temperatures, while
-            receiving smart appliance recommendations
-            based on their remaining battery capacity.
-            By bringing real-time monitoring and energy
-            guidance together, AdlaWatt empowers
-            families to easily control their energy usage,
-            keep essential devices running safely, and
-            maintain power during blackouts.
+            {t("dashboard.about.overview")}
           </AppText>
         </View>
 
@@ -103,34 +84,34 @@ export default function AboutUsScreen() {
           variant="body"
           style={styles.sectionTitle}
         >
-          Developers
+          {t("dashboard.about.developers")}
         </AppText>
 
         {/* Developer 1 */}
         <DeveloperProfile
           image={require("@/assets/images/developers/d1.jpg")}
           name="Francis Adrian Idul"
-          role="Programmer"
+          role={t("dashboard.about.roleProgrammer")}
           roleColor= {colors.primary}
-          description="Develops and maintains software and system firmware, integrating real-time sensor data, including battery levels, solar input, and temperature, into the mobile app and programming recommendation algorithms."
+          description={t("dashboard.about.dev1Bio")}
         />
 
         {/* Developer 2 */}
         <DeveloperProfile
           image={require("@/assets/images/developers/d2.jpg")}
           name="Rhics T. Geonzon"
-          role="Documenter"
+          role={t("dashboard.about.roleDocumenter")}
           roleColor={colors.areas.study}
-          description="Authors user manuals, system setup guides, technical documentation, and safety instructions for operating the AdlaWatt hardware and mobile application."
+          description={t("dashboard.about.dev2Bio")}
         />
 
         {/* Developer 3 */}
         <DeveloperProfile
           image={require("@/assets/images/developers/d3.jpg")}
           name="Troy M. Rojo"
-          role="Data Analyst"
+          role={t("dashboard.about.roleDataAnalyst")}
           roleColor={colors.secondary}
-          description="Analyzes incoming sensor telemetry, including solar generation patterns, appliance power consumption, and battery performance, to optimize system efficiency and refine smart appliance recommendations."
+          description={t("dashboard.about.dev3Bio")}
         />
 
         {/* Contact Details */}
@@ -141,7 +122,7 @@ export default function AboutUsScreen() {
             styles.contactTitle,
           ]}
         >
-          Contact Details
+          {t("dashboard.about.contactDetails")}
         </AppText>
 
         <View style={styles.contactList}>
