@@ -492,12 +492,6 @@ const fil = {
     newTypeA11y: "Bago, Uri: {{label}}",
     typeA11y: "Uri: {{label}}",
   },
-
-  admin: {
-    title: "Admin Dashboard",
-    subtitle:
-      "Preview ng pangangasiwa ng system — mock data muna.",
-  },
 } as const;
 
 export default fil;

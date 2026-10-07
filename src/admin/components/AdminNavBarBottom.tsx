@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, usePathname } from "expo-router";
 import React, { useMemo } from "react";
 import {
   Pressable,
@@ -13,7 +12,6 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Bar, Type } from "@/constants/sizing";
-import { Routes } from "@/constants/routes";
 import {
   ADMIN_TABS,
   type AdminTab,
@@ -25,7 +23,8 @@ import {
 // Same shell + tokens as household NavBarBottom (accent line,
 // bar background, 24px+ targets) but admin tabs only:
 // Overview / Thresholds / Audit. Controlled by the admin
-// screen so UI-first needs no extra routes.
+// screen so UI-first needs no extra routes. Strictly no
+// cross-role switch: role guards own all routing.
 // ============================================================
 
 interface AdminNavBarBottomProps {
@@ -37,7 +36,6 @@ export default function AdminNavBarBottom({
   value,
   onChange,
 }: AdminNavBarBottomProps) {
-  const pathname = usePathname();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -88,31 +86,6 @@ export default function AdminNavBarBottom({
           );
         })}
       </View>
-
-      {/* Hidden escape hatch: admin can still reach household.
-          Cast needed until `npx expo start` regenerates typed
-          routes to include /admin. */}
-      <Pressable
-        onPress={() =>
-          router.navigate(
-            (pathname === Routes.ADMIN
-              ? Routes.DASHBOARD
-              : Routes.ADMIN) as never,
-          )
-        }
-        accessibilityRole="button"
-        accessibilityLabel="Switch between admin and household dashboard"
-        style={styles.switchRow}
-      >
-        <AppText
-          variant="caption"
-          style={styles.switchText}
-        >
-          {pathname === Routes.ADMIN
-            ? "View household dashboard"
-            : "Back to admin"}
-        </AppText>
-      </Pressable>
     </View>
   );
 }
@@ -160,17 +133,5 @@ const getStyles = (colors: AppColors) =>
 
     pressed: {
       opacity: 0.7,
-    },
-
-    switchRow: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 8,
-      backgroundColor: colors.bar.background,
-    },
-
-    switchText: {
-      color: colors.textSecondary,
-      textDecorationLine: "underline",
     },
   });

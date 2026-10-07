@@ -162,6 +162,9 @@ export default function AuditList() {
         onNext={() =>
           setPage((p) => Math.min(totalPages, p + 1))
         }
+        prevLabel="Prev"
+        nextLabel="Next"
+        pageLabel={`Page ${page} of ${totalPages}`}
       />
 
       <AppText variant="caption" style={styles.footnote}>

@@ -492,12 +492,6 @@ const ceb = {
     newTypeA11y: "Bag-o, Matang: {{label}}",
     typeA11y: "Matang: {{label}}",
   },
-
-  admin: {
-    title: "Admin Dashboard",
-    subtitle:
-      "Preview sa pagdumala sa system — mock data una.",
-  },
 } as const;
 
 export default ceb;

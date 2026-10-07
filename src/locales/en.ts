@@ -484,12 +484,6 @@ const en = {
     newTypeA11y: "New, Type {{label}}",
     typeA11y: "Type {{label}}",
   },
-
-  admin: {
-    title: "Admin Dashboard",
-    subtitle:
-      "System oversight preview — mock data until admin reads land.",
-  },
 } as const;
 
 export default en;

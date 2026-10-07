@@ -5,9 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useTranslation } from "react-i18next";
 
-import NavBar from "@/components/layout/Navbar";
 import Copyright from "@/components/ui/Copyright";
 import AppText from "@/components/ui/AppText";
 import {
@@ -17,6 +15,7 @@ import {
 import { Radius, Spacing } from "@/constants/theme";
 
 import AdminScreenContainer from "@/admin/components/AdminScreenContainer";
+import AdminNavBarTop from "@/admin/components/AdminNavBarTop";
 import SystemOverviewSection from "@/admin/components/SystemOverviewSection";
 import ThresholdEditor from "@/admin/components/ThresholdEditor";
 import AuditList from "@/admin/components/AuditList";
@@ -30,20 +29,22 @@ import {
 import { logActivity } from "@/services/activityLogService";
 
 // ============================================================
-// ADMIN DASHBOARD SCREEN
+// ADMIN DASHBOARD SCREEN (English-only, pinned light)
 //
-// Same shell + tokens as household DashboardScreen:
-// NavBar top, ScrollView, headerCard, sections, Copyright,
-// bottom nav in flow. Purpose-driven tabs: each tab answers
-// one question (health now / what limits / who did what).
-// Fleet aggregates load async with loading + stale states so
-// the UI never looks broken; thresholds stay staged-mock.
+// Fixed light palette + default type (no Theme/Settings
+// providers in app/admin/_layout) and hardcoded English so
+// household theme/font/language changes never affect admin.
+// English-only top status bar below replaces the household
+// NavBar (whose a11y strings translate). Purpose-driven tabs:
+// each tab answers one question (health now / what limits /
+// who did what). Fleet aggregates load async with loading +
+// stale states so the UI never looks broken; thresholds stay
+// staged-mock.
 // ============================================================
 
 export default function AdminDashboardScreen() {
   const colors = useAppColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const { t } = useTranslation();
   const { canRender } = useAdminGuard();
 
   const [tab, setTab] = useState<AdminTab>("overview");
@@ -91,7 +92,10 @@ export default function AdminDashboardScreen() {
 
   return (
     <AdminScreenContainer activeTab={tab} onTabChange={handleTabChange}>
-      <NavBar deviceStatus={overview.deviceStatus} />
+      {/* Same green header + yellow accent as the household
+          upper navbar, admin name only: no online/offline
+          capsule, no notification bell. */}
+      <AdminNavBarTop />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -99,11 +103,12 @@ export default function AdminDashboardScreen() {
       >
         <View style={styles.headerCard}>
           <AppText variant="title" style={styles.headerTitle}>
-            {t("admin.title")}
+            Admin Dashboard
           </AppText>
 
           <AppText variant="body" style={styles.headerSub}>
-            {t("admin.subtitle")}
+            System oversight preview — mock data until
+            admin reads land.
           </AppText>
         </View>
 
