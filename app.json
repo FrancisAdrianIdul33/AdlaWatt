@@ -47,11 +47,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F0EAD6",
-          "android": {
-            "image": "./assets/images/adlawatt-logo.png",
-            "imageWidth": 76
-          }
+          "backgroundColor": "#F0EAD6"
         }
       ],
       [
