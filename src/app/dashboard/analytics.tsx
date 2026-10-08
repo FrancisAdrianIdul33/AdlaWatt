@@ -39,7 +39,6 @@ import {
   REPORT_FREQUENCIES,
   ReportFrequency,
   ReportType,
-  createAnalyticsReportContent,
   downloadCsvOnWeb,
   downloadPdfOnWeb,
   generateAdlaWattCsv,
@@ -71,6 +70,10 @@ import {
   type BatteryActivitySlice,
   type UnsafeBarPoint,
 } from "@/services/analyticsService";
+import {
+  printAndSharePdf,
+  saveAndShareCsv,
+} from "@/services/reportPrint";
 import React, {
   useCallback,
   useEffect,
@@ -81,7 +84,6 @@ import {
   Alert,
   Platform,
   ScrollView,
-  Share,
   StyleSheet,
   View,
 } from "react-native";
@@ -103,6 +105,11 @@ export default function AnalyticsScreen() {
     monitoringHistory,
     setMonitoringHistory,
   ] = useState<MonitoringHistoryRow[]>([]);
+
+  const [
+    isExporting,
+    setIsExporting,
+  ] = useState(false);
 
   const [
     reportFrequency,
@@ -548,6 +555,10 @@ export default function AnalyticsScreen() {
       async (
         reportType: ReportType,
       ) => {
+        if (isExporting) {
+          return;
+        }
+
         if (
           monitoringHistory.length ===
           0
@@ -561,7 +572,7 @@ export default function AnalyticsScreen() {
         }
 
         /* ======================================================
-           WEB EXPORT
+           WEB EXPORT (jsPDF template)
            ====================================================== */
 
         if (
@@ -629,48 +640,50 @@ export default function AnalyticsScreen() {
 
         /* ======================================================
            NATIVE ANDROID / IOS EXPORT
+           Real files: PDF via expo-print HTML, CSV via the
+           shared CSV generator written to the cache directory.
+           Both are handed to the system share sheet.
            ====================================================== */
 
-        const {
-          reportHeader,
-          reportContent,
-        } =
-          createAnalyticsReportContent(
-            monitoringHistory,
-            reportFrequency,
-            range,
+        setIsExporting(true);
+
+        try {
+          const reportData =
+            prepareReportData(
+              monitoringHistory,
+              reportFrequency,
+              range,
+            );
+
+          if (
+            reportType === "CSV"
+          ) {
+            await saveAndShareCsv(
+              reportData,
+            );
+
+            return;
+          }
+
+          await printAndSharePdf(
+            reportData,
+          );
+        } catch (error) {
+          console.error(
+            "Native report export error:",
+            error,
           );
 
-        if (
-          reportType === "CSV"
-        ) {
-          await Share.share({
-            message:
-              reportContent,
-
-            title:
-              "AdlaWatt Analytics CSV Report",
-          });
-
-          return;
+          Alert.alert(
+            "Export Error",
+            "The report could not be generated.",
+          );
+        } finally {
+          setIsExporting(false);
         }
-
-        await Share.share({
-          message: [
-            reportHeader,
-            "",
-            "PDF export preparation",
-            "",
-            `Monitoring records: ${monitoringHistory.length}`,
-            "",
-            "This report contains the selected historical analytics data.",
-          ].join("\n"),
-
-          title:
-            "AdlaWatt Analytics Report",
-        });
       },
       [
+        isExporting,
         monitoringHistory,
         reportFrequency,
         range,
@@ -1088,6 +1101,9 @@ export default function AnalyticsScreen() {
           }
           generateReport={
             generateReport
+          }
+          exporting={
+            isExporting
           }
         />
 

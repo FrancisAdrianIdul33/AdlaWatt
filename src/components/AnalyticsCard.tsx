@@ -121,6 +121,7 @@ export interface AnalyticsCardsProps {
   generateReport: (
     reportType: ReportType,
   ) => Promise<void>;
+  exporting?: boolean;
 }
 
 /* ============================================================
@@ -134,6 +135,7 @@ export default function AnalyticsCards({
   onFromDateChange,
   onToDateChange,
   generateReport,
+  exporting = false,
 }: AnalyticsCardsProps) {
   const colors = useAppColors();
 
@@ -270,7 +272,10 @@ export default function AnalyticsCards({
                 styles.exportPrimaryButton,
                 pressed &&
                   styles.buttonPressed,
+                exporting &&
+                  styles.buttonDisabled,
               ]}
+              disabled={exporting}
               onPress={() =>
                 generateReport(
                   "CSV",
@@ -289,7 +294,9 @@ export default function AnalyticsCards({
                   styles.exportPrimaryText
                 }
               >
-                Export CSV
+                {exporting
+                  ? "Exporting..."
+                  : "Export CSV"}
               </AppText>
             </Pressable>
 
@@ -298,7 +305,10 @@ export default function AnalyticsCards({
                 styles.exportPrimaryButton,
                 pressed &&
                   styles.buttonPressed,
+                exporting &&
+                  styles.buttonDisabled,
               ]}
+              disabled={exporting}
               onPress={() =>
                 generateReport(
                   "PDF",
@@ -317,7 +327,9 @@ export default function AnalyticsCards({
                   styles.exportPrimaryText
                 }
               >
-                Export PDF
+                {exporting
+                  ? "Exporting..."
+                  : "Export PDF"}
               </AppText>
             </Pressable>
           </View>
@@ -341,10 +353,14 @@ export const analyticsDimensions = {
    STYLES
    ============================================================ */
 
-const getStyles = (colors: AppColors) =>
+  const getStyles = (colors: AppColors) =>
   StyleSheet.create({
     buttonPressed: {
       opacity: 0.72,
+    },
+
+    buttonDisabled: {
+      opacity: 0.55,
     },
 
     /* ========================================================
