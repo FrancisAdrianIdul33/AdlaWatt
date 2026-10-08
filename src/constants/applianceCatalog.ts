@@ -222,4 +222,7 @@ export const CATALOG_IMAGES: Record<string, number> = {
   "catalog:work:usb-fan": require("@/assets/images/appliances/mini-fan.png"),
   "catalog:work:desk-lamp": require("@/assets/images/appliances/desk-lamp.png"),
   "catalog:work:printer": require("@/assets/images/appliances/printer.png"),
+  // Porch batch
+  "catalog:porch:bulb": require("@/assets/images/appliances/porch-lantern.png"),
+  "catalog:porch:cctv": require("@/assets/images/appliances/cctv-camera.png"),
 };
