@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   getAuthenticatedUserSafe,
   supabase,
@@ -300,6 +302,96 @@ const normalizeMonitoringData = (
 };
 
 // ============================================================
+// LAST-READING CACHE (offline resilience)
+// ============================================================
+//
+// The last successful monitoring row, per user. The dashboard
+// paints it instantly on cold start (flagged stale) so an
+// offline open shows real readings instead of nulls, then the
+// live fetch overwrites it. Best-effort like every other
+// AsyncStorage cache in this codebase: failures stay silent.
+// ============================================================
+
+const MONITORING_CACHE_KEY =
+  "adlawatt.monitoring.last.v1";
+
+const scopedMonitoringKey = (
+  userId: string,
+): string =>
+  `${MONITORING_CACHE_KEY}:${userId}`;
+
+interface CachedMonitoring {
+  data: MonitoringData;
+  savedAt: number;
+}
+
+export const saveCachedMonitoring = async (
+  data: MonitoringData,
+  userId?: string | null,
+): Promise<void> => {
+  if (!userId) {
+    return;
+  }
+
+  try {
+    await AsyncStorage.setItem(
+      scopedMonitoringKey(userId),
+      JSON.stringify({
+        data,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+};
+
+export const loadCachedMonitoring = async (
+  userId?: string | null,
+): Promise<CachedMonitoring | null> => {
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    const raw = await AsyncStorage.getItem(
+      scopedMonitoringKey(userId),
+    );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as {
+      data?: unknown;
+      savedAt?: unknown;
+    };
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !Number.isFinite(
+        (parsed as { savedAt?: unknown })
+          .savedAt,
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      // Re-normalized on load so corrupt or legacy shapes
+      // can never leak untrusted values into the UI.
+      data: normalizeMonitoringData(
+        parsed.data,
+      ),
+      savedAt: Number(parsed.savedAt),
+    };
+  } catch {
+    return null;
+  }
+};
+
+// ============================================================
 // FETCH MONITORING DATA
 // ============================================================
 
@@ -361,9 +453,19 @@ export const getMonitoringData =
       return null;
     }
 
-    return normalizeMonitoringData(
-      data,
+    const normalized =
+      normalizeMonitoringData(
+        data,
+      );
+
+    // Fire-and-forget: the dashboard must never wait on
+    // storage, and a blocked store must not break reads.
+    void saveCachedMonitoring(
+      normalized,
+      user.id,
     );
+
+    return normalized;
   };
 
 // ============================================================
@@ -671,11 +773,32 @@ export const useMonitoring =
       setLoading,
     ] = useState(true);
 
+    // True while the shown row may not be live: painted from
+    // the offline cache, or the live fetch failed leaving the
+    // cache on screen. False after any successful network or
+    // Realtime row. Additive to the return shape — existing
+    // { monitoring, loading } destructurings keep compiling.
+    const [
+      stale,
+      setStale,
+    ] = useState(false);
+
+    const [
+      cachedAt,
+      setCachedAt,
+    ] = useState<number | null>(null);
+
     useEffect(
       () => {
 
         let mounted =
           true;
+
+        // Tracks whether anything is already on screen
+        // (cache paint or live row) so an error never wipes
+        // a painted cache back to nulls. Closure-local on
+        // purpose: `monitoring` state would be stale here.
+        let painted = false;
 
         let channel:
           | ReturnType<
@@ -687,6 +810,41 @@ export const useMonitoring =
           async () => {
 
             try {
+
+              const cachedUser =
+                await getAuthenticatedUserSafe();
+
+              // ------------------------------------------------
+              // PAINT LAST READING INSTANTLY (flagged stale)
+              // ------------------------------------------------
+              //
+              // Cold start with no connection would otherwise
+              // show nulls until the network times out. The
+              // live fetch below overwrites this on success.
+              // ------------------------------------------------
+
+              const cached =
+                await loadCachedMonitoring(
+                  cachedUser?.id ?? null,
+                );
+
+              if (
+                mounted &&
+                cached
+              ) {
+
+                setMonitoring(
+                  cached.data,
+                );
+
+                setStale(true);
+
+                setCachedAt(
+                  cached.savedAt,
+                );
+
+                painted = true;
+              }
 
               // ------------------------------------------------
               // GET INITIAL MONITORING DATA
@@ -702,9 +860,28 @@ export const useMonitoring =
                 return;
               }
 
-              setMonitoring(
-                data,
-              );
+              if (data) {
+
+                setMonitoring(
+                  data,
+                );
+
+                setStale(false);
+
+                setCachedAt(
+                  Date.now(),
+                );
+
+                painted = true;
+
+              } else if (
+                !cached
+              ) {
+
+                setMonitoring(
+                  null,
+                );
+              }
 
               // ------------------------------------------------
               // SUBSCRIBE TO REALTIME MONITORING
@@ -726,6 +903,23 @@ export const useMonitoring =
                     setMonitoring(
                       updatedData,
                     );
+
+                    if (
+                      updatedData
+                    ) {
+
+                      setStale(false);
+
+                      setCachedAt(
+                        Date.now(),
+                      );
+
+                      void saveCachedMonitoring(
+                        updatedData,
+                        cachedUser?.id ??
+                          null,
+                      );
+                    }
                   },
                 );
 
@@ -739,7 +933,8 @@ export const useMonitoring =
               );
 
               if (
-                mounted
+                mounted &&
+                !painted
               ) {
 
                 setMonitoring(
@@ -783,6 +978,8 @@ export const useMonitoring =
     return {
       monitoring,
       loading,
+      stale,
+      cachedAt,
     };
   };
 

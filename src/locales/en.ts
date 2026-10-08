@@ -337,6 +337,10 @@ const en = {
       subtitle: "Monitor your AdlaWatt system in real time.",
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
+      offlineBanner:
+        "You're offline — showing last readings.",
+      lastUpdated:
+        "Last updated {{time}}.",
       goToApplianceRecommendation:
         "Go to Appliance Recommendation",
       forecastFailed: "Could not load the forecast.",

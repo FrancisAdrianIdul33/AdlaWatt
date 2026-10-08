@@ -356,6 +356,10 @@ const ceb = {
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
       goToApplianceRecommendation: "Adto sa Appliance Recommendation",
+      offlineBanner:
+        "Wala kay koneksyon — katapusang readings ang gipakita.",
+      lastUpdated:
+        "Katapusang na-update {{time}}.",
       forecastFailed: "Dili ma-load ang forecast.",
     },
     about: {

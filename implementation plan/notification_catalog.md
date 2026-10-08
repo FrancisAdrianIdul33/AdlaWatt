@@ -32,7 +32,7 @@ Scope boundary with activity logs: **notifications record what the hardware did;
 | `UPDATE_NOTIFICATION_COOLDOWN_MS` | 5 min | High-frequency field updates via `WithCooldown` |
 | `SOLAR_INPUT_MILESTONE_WATTS` | 50 W | Upward-crossing milestones, stateful, reset at 0, follows down on decrease |
 | `CURRENT_LOAD_MILESTONE_WATTS` | 50 W | Same pattern for consumption |
-| `STALE_MONITORING_INTERVAL_MS` | 10 s | `last_seen` freshness + watcher period |
+| `STALE_MONITORING_INTERVAL_MS` | 60 s | `last_seen` freshness + watcher period (raised from 10 s: ESP32 posts every few seconds, phone-side jitter rarely exceeds half a minute) |
 | Runtime hourly bucket | 1 h | `Runtime Updated` fires on hour-bucket change of `time_remaining` |
 
 ---

@@ -297,7 +297,7 @@ Theme, fonts, language, vibration, and the email toggle survive restarts and hol
 ## 13. Troubleshooting and FAQs
 
 **Dashboard data is frozen or the device shows Offline.**
-Check your phone's internet first. If the phone is online, the unit has likely lost Wi-Fi or power — confirm the unit is powered and within Wi-Fi range, then wait a few minutes for it to reconnect. A *Monitoring Data Stale* alert confirms the app side is working and the unit side is silent.
+First look for the offline banner: if your *phone* has no connection, the Dashboard shows your last readings with their time — reconnect and it goes live by itself. If the phone is online but the device reads Offline, the unit has likely lost Wi-Fi or power — confirm the unit is powered and within Wi-Fi range, then wait a few minutes for it to reconnect. A *Monitoring Data Stale* alert (fires after 60 seconds without fresh data) confirms the app side is working and the unit side is silent.
 
 **My appliance says Not advisable but I need it.**
 That badge means the battery cannot safely cover it right now (low charge, over the safe draw limit, or too costly per hour). Options: recharge via solar, switch to a lighter appliance, or run it briefly and watch the battery gauge. Do not repeatedly override the warning below 20%.

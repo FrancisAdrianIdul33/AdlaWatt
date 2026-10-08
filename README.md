@@ -5,7 +5,7 @@ An IoT-based transportable off-grid solar energy harvesting system with a mobile
 AdlaWatt is designed to provide households with an alternative backup power source by harvesting solar energy, storing it in a battery, and supplying electricity through a built-in AC outlet. The mobile application allows users to monitor battery status, solar energy, power consumption, temperature, system status, energy history, and appliance recommendations.
 
 > **Project Status:** In Development
-> The mobile application is integrated with Supabase — authentication, database, Edge Functions, and real-time streaming — for live monitoring, notifications (in-app + email), activity logs, appliances, and analytics report export. Implemented: battery chart rendering (`BatteryLevelChart` via `react-native-gifted-charts`), 5-day solar forecast, branded alert emails via AgentMail, slim appliance catalog (`GIVEN_CATALOG` + `appliancesService`), and persisted theme/typography/email preferences. Still in progress: additional historical charts, notification threshold tuning, and the end-to-end ESP32 hardware feed.
+> The mobile application is integrated with Supabase — authentication, database, Edge Functions, and real-time streaming — for live monitoring, notifications (in-app + email + Android push), activity logs, appliances, and analytics report export. Implemented: 17 analytics charts across Battery/Solar/Energy/Health/Usage (`AnalyticsChartCard` + `charts/` via `react-native-gifted-charts`) with CSV/PDF export (real files on native via expo-print, jsPDF binary on web), 5-day solar forecast, branded alert emails via AgentMail, slim appliance catalog (`GIVEN_CATALOG` + `appliancesService`), in-app User Manual (15 EN sections), fixed safety thresholds (800 W / 11.6 V / 14.6 V), and persisted theme/typography/language/preference stores. Still in progress: end-to-end ESP32 hardware feed, offline hardening beyond the last-reading cache, and push on-device verification.
 
 ---
 
@@ -141,13 +141,12 @@ The Components screen provides live status information for the IoT and power com
 
 ### Analytics & Reports
 
-The Analytics screen loads historical data from the `monitoring_history` and `appliance_usage_history` tables for a selected date range and frequency (daily, weekly, monthly, yearly). It generates:
+The Analytics screen loads historical data from the `monitoring_history` table for a selected date range and frequency (Daily, Weekly, Monthly, Yearly). It renders 17 charts in 5 sections — **Battery** (level over time with 20% safety floor, unsafe-discharge events, activity), **Solar** (vs load, best sun days, sun hours, curve by hour), **Energy** (in/out, net, running balance, solar coverage), **Health** (temperatures, temp alerts, uptime, online/offline share), **Usage** (average vs peak load, power by hour) — all through the reusable `AnalyticsChartCard` shell (header + optional frequency `SlidingToggle` + `{children}`) with data via `groupMonitoringHistory` + range shapers in `src/services/analyticsService.ts` and shared constants in `src/services/chartMath.ts`. It generates:
 
-- **Battery Level Over Time chart** (`AnalyticsChartCard` + `charts/BatteryLevelChart.tsx` via `react-native-gifted-charts` `LineChart`, curved area chart, fixed 0–100 Y axis, dashed red 20% safety floor, theme-aware grid, text legend so the floor never relies on color alone, dark-mode softened fill). Data flows through `groupMonitoringHistory` → `getBatteryChartRangeData` in `src/services/analyticsService.ts` with shared colors/helpers in `src/services/chartMath.ts` (`CHART_HEIGHT 190`, `clampPercent`, `useChartColors`). `AnalyticsChartCard` is a generic wrapper (header + frequency `SlidingToggle` + `{children}`) — currently only the battery chart is wired; additional metrics are future work.
-- **PDF reports** (jsPDF + jspdf-autotable) with brand header, embedded AdlaWatt logo, summary statistics, energy summary, monitoring history, appliance usage history, and chart data tables
-- **CSV exports** for raw data
+- **PDF reports**: jsPDF + jspdf-autotable binary download on web; expo-print HTML template (500-row cap, logo embed) shared to a real file on native
+- **CSV exports**: full dataset download on web, real `.csv` file via share sheet on native
 
-Reports use the real jsPDF binary download on web and the native share sheet on mobile (`Share.share` text preparation on native). Chart axes always render, even without enough history (empty → zero points).
+Chart axes always render, even without enough history (empty → zero points).
 
 ### Settings (Menu)
 
@@ -155,10 +154,10 @@ The Menu screen (`SettingsScreen`, staged Save/Cancel draft flow) provides accou
 
 - Edit username and email
 - Change password (with current-password verification)
-- Dark mode toggle (system / light / dark, instant apply), color-blind mode, font size (Small / Medium / Big, 0.875 / 1 / 1.15 scale), font family (Inter / Roboto / Times New Roman / Monospace / System Default via `expo-font` + `useAppFonts`), language, vibration, and global per-user email-notification preference
+- Dark mode toggle (system / light / dark, instant apply), color-blind mode, font size (Small / Medium / Big, 0.875 / 1 / 1.15 scale), font family (Inter / Roboto / Times New Roman / Monospace / System Default via `expo-font` + `useAppFonts`), language (English / Filipino / Cebuano), vibration, global per-user email-notification preference, and push-notification preference (Android)
 - Logout with confirmation
 
-> Persistence: theme (`adlawatt.theme.v2`, with v1 migration), typography (`adlawatt.typography.v1`), and email-notifications (server `users.email_notifications` + per-user `AsyncStorage` cache) survive app restarts and offline. Color-blind mode, language, and vibration are session-only by design. `fontWeight` was removed — old saves carrying it are ignored without migration. A single shared `SettingsProvider` + `ThemeProvider` in `app/dashboard/_layout.tsx` propagates typography/theme to all dashboard screens (auth screens intentionally render light).
+> Persistence: theme (`adlawatt.theme.v2`, with v1 migration), typography (`adlawatt.typography.v1`), language (`adlawatt.language.v1`), vibration (`adlawatt.vibration.v1`), email-notifications (server `users.email_notifications` + per-user `AsyncStorage` cache), and push-notifications (server `users.push_notifications` + cache) survive app restarts and offline. Color-blind mode is session-only by design. `fontWeight` was removed — old saves carrying it are ignored without migration. A single shared `SettingsProvider` + `ThemeProvider` in `app/dashboard/_layout.tsx` propagates typography/theme to all dashboard screens (auth screens intentionally render light).
 
 ### About Us
 
@@ -172,11 +171,11 @@ The application uses Supabase authentication with:
 - Login by username or email (60s resend throttle, mapped error messages)
 - Auth callback (`/auth/callback`, `adlawatt://auth/callback` for PKCE on native, `/auth/callback` on web)
 - Persistent login sessions (`AuthContext` single source via `getSession` + `onAuthStateChange`; AsyncStorage on native, localStorage on web)
-- User profile loading and account updates (username, email, password; `email_notifications` defaults ON)
+- User profile loading and account updates (username, email, password; `email_notifications` and `push_notifications` default ON)
 - Email change handling with confirmation
 - Logout functionality (silences expected Realtime `CLOSED`, guards logout writes; `shutdownNotificationService` on sign-out/user change)
 
-> No forgot-password route or screen exists yet.
+- Password recovery (`/auth/forgot-password`): emailed recovery link verifies in-screen, then sets a new password (60s resend throttle, mapped error messages)
 
 ---
 
@@ -205,11 +204,11 @@ The IoT system collects and processes information from the physical power system
 The software system consists of:
 
 - Cross-platform mobile application for household users
-- Web-based admin dashboard for researchers (planned)
+- Role-gated admin shell for researchers (starting UI: login-gated entry with Log Out / Exit; no operational tabs by final decision)
 - Supabase cloud database with real-time data streaming
 - REST/HTTP communication between the IoT system and cloud services
 
-The capstone identifies the household user and admin as the primary actors. Household users monitor the system through the mobile application, while administrators can monitor data, view historical information, and configure alert thresholds.
+The capstone identifies the household user and admin as the primary actors. Household users monitor the system through the mobile application. Units are researcher-provisioned (no in-app pairing flow); the admin route is a starting shell only, and safety thresholds are fixed engineering constants (800 W / 11.6 V / 14.6 V), not admin-configurable.
 
 ---
 
@@ -223,7 +222,7 @@ The AdlaWatt mobile application is designed as a cross-platform application for 
 |---|---|
 | Dashboard | Displays system overview and real-time monitoring |
 | Appliances | Displays household appliances and recommendations |
-| Analytics | Displays historical data, battery chart, and report export |
+| Analytics | Displays 17 historical charts (Battery/Solar/Energy/Health/Usage) and CSV/PDF report export |
 | Components | Displays IoT and system component status |
 | Notifications | Displays system notifications and alerts |
 | Activity Logs | Displays system activity history |
@@ -264,13 +263,13 @@ The User Manual screen (`src/app/dashboard/user-manual.tsx`, `Routes.USER_MANUAL
 | Supabase (`@supabase/supabase-js`) | Authentication, database, Edge Functions, real-time streaming |
 | React Native StyleSheet | Component styling |
 | `react-native-svg` | SVG battery/solar gauges (dashboard `ChartCard`) |
-| `react-native-gifted-charts` | Analytics `BatteryLevelChart` (`LineChart` area chart) |
+| `react-native-gifted-charts` | Analytics charts (17 across Battery/Solar/Energy/Health/Usage via `AnalyticsChartCard`) |
 | `react-native-reanimated` + `react-native-worklets` | Animations |
 | `expo-linear-gradient` | Gradient navigation interface |
 | `expo-glass-effect` | Glass-style surfaces |
 | `expo-image` | Optimized image rendering |
 | `@expo/vector-icons` / Ionicons | Application icons |
-| `@react-native-async-storage/async-storage` | Session, theme, typography, and email-preference persistence |
+| `@react-native-async-storage/async-storage` | Session, theme, typography, language, vibration, email/push-preference, and last-reading persistence |
 | `expo-location` | Location access for weather/forecast |
 | `expo-font` + `@expo-google-fonts/inter|roboto` | Bundled Inter/Roboto (Light/Regular/Bold) for typography preferences |
 | `expo-device` | Device info |
@@ -283,6 +282,9 @@ The User Manual screen (`src/app/dashboard/user-manual.tsx`, `Routes.USER_MANUAL
 | Supabase | Cloud database (PostgreSQL), authentication, Edge Functions, and real-time streaming |
 | Supabase Realtime | `postgres_changes` live updates for monitoring, notification, and components |
 | Supabase Edge Function `send-alert-email` | Server-side AgentMail proxy (key never ships in app bundle, JWT-gated) |
+| Supabase Edge Function `send-push` | Server-side Expo Push fan-out (no push secrets; JWT-gated, per-user tokens) |
+| `@react-native-community/netinfo` | Phone-side connectivity for the dashboard offline banner |
+| `expo-notifications` | Android push registration, alert channel, tap deep-linking |
 | Supabase Storage (`email-assets` public bucket) | Hosted alert-email logo/assets |
 | OpenWeatherMap API | Live weather + 5-day forecast data |
 | REST/HTTP | Communication between the IoT system and cloud services |
@@ -307,9 +309,10 @@ The User Manual screen (`src/app/dashboard/user-manual.tsx`, `Routes.USER_MANUAL
 
 ### Analytics and Reporting
 
-- **jsPDF + jspdf-autotable** — PDF report generation (real binary on web, share-sheet text on native)
-- **CSV export** — raw data download and sharing
-- **react-native-gifted-charts** — Battery Level Over Time chart rendering
+- **jsPDF + jspdf-autotable** — PDF report generation (real binary download on web)
+- **expo-print HTML template** — native PDF as a real file via share sheet (500-row cap, logo embed)
+- **CSV export** — full-dataset download on web, real `.csv` file via share sheet on native
+- **react-native-gifted-charts** — 17 analytics charts rendering
 
 ### Development Tools
 
@@ -411,11 +414,11 @@ Voltage Sensor ───────┤
                       │
        ┌──────────────┼──────────────┐
        ▼              ▼              ▼
-   Mobile App    Admin Dashboard  ESP32 Status
-   (Realtime)     (planned)       (monitoring)
+    Mobile App    Admin Shell    ESP32 Status
+    (Realtime)   (login/logout)  (monitoring)
 ```
 
-Sensor information is collected by the ESP32, transmitted to Supabase over HTTP, and streamed to the mobile application through Supabase Realtime channels filtered by the authenticated user. Alert-type notifications fan out through the `send-alert-email` Edge Function (AgentMail) gated by the per-user email preference.
+Sensor information is collected by the ESP32, transmitted to Supabase over HTTP, and streamed to the mobile application through Supabase Realtime channels filtered by the authenticated user. Alert-type notifications fan out through the `send-alert-email` Edge Function (AgentMail, gated by the per-user email preference) and the `send-push` Edge Function (Expo Push Service, gated by the per-user push preference).
 
 ---
 
@@ -596,8 +599,8 @@ The Activity Logs screen:
 The Menu screen (`SettingsScreen`) provides:
 
 - Account management (username, email, password change)
-- Preferences staged as drafts (Save commits, Cancel discards): theme (system/light/dark), font size/family, color-blind mode, language, vibration, email notifications
-- Persisted: theme, typography, email-notifications. Session-only: color-blind, language, vibration.
+- Preferences staged as drafts (Save commits, Cancel discards): theme (system/light/dark), font size/family, color-blind mode, language, vibration, email and push notifications
+- Persisted: theme, typography, language, vibration, email/push-notifications. Session-only: color-blind mode.
 - Logout with confirmation
 
 ### About Us
@@ -678,8 +681,7 @@ AGENTMAIL_SENDER_INBOX=<sender inbox, optional>
 
 The following remain pending:
 
-- **Additional analytics charts** — battery chart is implemented; other historical energy metrics are future work
-- **Forgot password** — no route or screen exists yet
+- **Battery band upgrade** — 17 charts wired; min/max lines + unsafe red dots are the remaining gap
 
 ---
 
@@ -697,10 +699,11 @@ Physical Sensors (ESP32)
    Supabase
 (PostgreSQL + Realtime + Edge Functions + Storage)
        │
-       ├──────────────► Admin Dashboard (planned)
-       │
-       ├── Alert Email (AgentMail via Edge Function)
-       │
+        ├──────────────► Admin Shell (login-gated, logout/exit)
+        │
+        ├── Alert Email (AgentMail via Edge Function)
+        ├── Push Banners (Expo Push via Edge Function)
+        │
        ▼ (Realtime postgres_changes)
 AdlaWatt Mobile App
        │
@@ -928,26 +931,26 @@ The final build configuration may change as the project approaches deployment.
 - [x] Android push banners via Edge Function + Expo Push Service (`push_tokens` store, per-user toggle, tap deep-link; needs FCM key + dev-client rebuild + physical device)
 - [x] Notifications screen with filters and pagination
 - [x] Activity logs with pagination (separate list from notifications)
-- [x] Analytics data pipeline (monitoring + appliance history)
-- [x] Battery Level Over Time chart (`gifted-charts` + `chartMath`)
-- [x] CSV and PDF report export (web binary / native share)
+- [x] Analytics data pipeline (monitoring history)
+- [x] 17 analytics charts across Battery/Solar/Energy/Health/Usage (`gifted-charts` + `chartMath` + `AnalyticsChartCard` shell)
+- [x] CSV and PDF report export (web binary download / native real files via share sheet)
 - [x] Light/dark/glass color tokens and theme hooks
 - [x] Full dark-mode adoption across dashboard screens and shared components (auth screens intentionally remain light)
 - [x] Typography preferences (Inter/Roboto via `expo-font`, Small/Medium/Big) with persistence
-- [x] Theme persistence (`system/light/dark` v2) + email-preference persistence
+- [x] Theme persistence (`system/light/dark` v2) + email/push-preference persistence
 - [x] Realtime/web hardening (stable topics, leak guard, staggered startup, silenced CLOSED)
 - [x] EAS build configuration (development, preview, production)
 - [x] ESLint flat config (eslint-config-expo)
 
 ### In Progress
 
-- [ ] Additional historical energy charts (beyond battery level)
+- [ ] Battery band upgrade (avg + min/max lines + unsafe red dots; 17 charts wired, this is the remaining gap)
 - [x] Notification safety threshold configuration (fixed 800 W / 11.6 V / 14.6 V engineering constants; admin has no publishing role)
-- [ ] Forgot password screen (no route yet)
-- [ ] Color-blind / language / vibration persistence (currently session-only)
+- [x] Forgot password screen (`/auth/forgot-password` with in-screen verification + password update)
+- [ ] Color-blind persistence (session-only by design; language and vibration persist)
 - [ ] End-to-end ESP32 → Supabase hardware feed
-- [ ] Admin dashboard
-- [ ] Offline data handling
+- [x] Admin dashboard (starting shell: login-gated entry with Log Out / Exit; no operational tabs by final decision)
+- [ ] Offline data handling (dashboard paints the last cached readings with an offline banner; ESP32 buffering is a firmware handoff)
 
 ---
 
@@ -981,14 +984,13 @@ The ESP32 hardware feed is being integrated. The application consumes data throu
 
 ### Placeholder Modules
 
-- Additional analytics charts are future work (battery chart is implemented; `AnalyticsChartCard` is reusable for other metrics)
+- Analytics charts are implemented (17 across 5 sections); the remaining gap is the battery band upgrade (min/max lines + unsafe dots)
 - Appliance recommendations are battery-aware only while live monitoring data is present; without it, the app falls back to a wattage threshold
 - Notification safety rules for high load and voltage min/max fire on fixed engineering constants (800 W / 11.6 V / 14.6 V)
-- The forgot password screen has no route or implementation yet
 
 ### Settings Persistence
 
-Theme, typography (font size/family), and the global email-notification toggle persist across restarts (AsyncStorage + Supabase). Color-blind mode, language, and vibration are session-only by design.
+Theme, typography (font size/family), language, vibration, and the global email/push-notification toggles persist across restarts (AsyncStorage + Supabase). Color-blind mode is session-only by design.
 
 ### Dark Mode Coverage
 
@@ -1016,7 +1018,7 @@ The capstone documentation identifies the following major system characteristics
 | Weather Data           | OpenWeatherMap API (current + 5-day forecast)     |
 | Mobile Platform        | Android / Cross-platform mobile application       |
 | Mobile Monitoring      | Real-time system information via Supabase Realtime |
-| Report Export          | PDF (jsPDF) and CSV + Battery Level chart (gifted-charts) |
+| Report Export          | PDF (jsPDF web / expo-print native) and CSV + 17 charts (gifted-charts) |
 | Evaluation             | System Usability Scale (SUS)                      |
 
 ---
@@ -1088,13 +1090,13 @@ The research documentation identifies experimental research as the study design 
 
 Future development may include:
 
-- Additional historical energy charts on top of the battery chart
+- Battery band upgrade (min/max lines + unsafe dots on top of the 17 wired charts)
 - Detailed runtime / load-stack recommendation views on top of the recommendation engine
 - End-to-end ESP32 → Supabase integration and real-time sensor data
-- Forgot password and password reset flow
-- Color-blind / language / vibration persistence
-- Offline data handling
-- Admin dashboard for researchers
+- ESP32 offline buffer firmware (handoff spec exists; app side done)
+- Color-blind persistence
+- Offline hardening beyond the last-reading cache
+- Push on-device verification + stale-token pruning
 - Remote monitoring
 - Improved authentication flows
 - Optimized appliance power consumption calculations

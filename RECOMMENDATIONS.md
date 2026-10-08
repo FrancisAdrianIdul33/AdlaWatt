@@ -1,6 +1,6 @@
-As a developer looking at `AdlaWatt-`, here's the updated take: 5 of the original 15 items are now resolved (commits below), and the remaining defense-blocker is down to 2 items — tests and safety thresholds.
+As a developer looking at `AdlaWatt-`, here's the updated take: 8 of the original 15 items are now resolved (commits below) — all P0 defense-blockers plus push, offline, and docs sync are closed. Remaining: analytics perf, history bloat, one profile-polish TODO, and P2 scope.
 
-> **Status as of threshold wiring.** ✅ = done (commit ref), ⏳ = pending. Line refs re-verified this pass.
+> **Status as of docs-sync pass.** ✅ = done (commit ref), ⏳ = pending. Line refs re-verified this pass.
 
 What you do well already:
 
@@ -63,9 +63,12 @@ What you do well already:
 |     |          |                              |            | needs FCM key in EAS credentials + dev-client rebuild +  |
 |     |          |                              |            | physical-device test. iOS/APNs out of scope.             |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
-| 7   | P1       | No offline story             | ⏳ Open    | AsyncStorage cache for last `monitoring` row, ESP32      |
-|     |          |                              |            | buffer + retry, `last_seen` staleness (10s too           |
-|     |          |                              |            | aggressive for WiFi jitter) all still unaddressed.       |
+| 7   | P1       | No offline story             | ✅ Done    | App side: last-reading AsyncStorage cache painted stale  |
+|     |          |                              |            | on cold open, NetInfo offline banner + last-updated on   |
+|     |          |                              |            | Dashboard, stale tripwire 10s → 60s. ESP32 buffer/retry  |
+|     |          |                              |            | is a firmware handoff spec (`esp32_offline_buffer.md`),  |
+|     |          |                              |            | not repo code. Needs dev-client rebuild (NetInfo) +      |
+|     |          |                              |            | airplane-mode manual test.                               |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 | 8   | P1       | Analytics perf               | ⏳ Open    | Slightly improved: appliance grouping gone with #5, but  |
 |     |          |                              |            | ~15 `groupMonitoringHistory` calls + 12 frequency states |
@@ -74,18 +77,19 @@ What you do well already:
 | 9   | P1       | History bloat                | ⏳ Open    | 5-min cron snapshots, no retention/index policy. Add     |
 |     |          |                              |            | 90-day prune + `(user_id, recorded_at)` indexes.         |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
-| 10  | P1       | Docs sync                    | ⏳ Open    | `README.md` now additionally stale on manual ("empty" —  |
-|     |          |                              |            | it isn't), native export ("fake" — it isn't), appliance  |
-|     |          |                              |            | usage (removed), Porch photos, and language persistence  |
-|     |          |                              |            | ( vibrates/persists now — see correction below). Freeze  |
-|     |          |                              |            | one source of truth before submission.                   |
+| 10  | P1       | Docs sync                    | ✅ Done    | `README.md` rewritten to code truth (17 charts + export  |
+|     |          |                              |            | paths, forgot-password flow, admin shell, actors,        |
+|     |          |                              |            | persistence, specs, checklists); `TODO.md` checkboxes    |
+|     |          |                              |            | reconciled; i18n + notification docs current. Remaining: |
+|     |          |                              |            | re-verify on every future feature (drift recurs).        |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
-| 11  | P1       | Small TODOs (partially done) | ⏳ Open    | Navbar username, `menu.tsx` profile fixed-height + black |
-|     |          |                              |            | border still open. CORRECTION to last review: language   |
-|     |          |                              |            | and vibration **do** persist now (`settings.ts`          |
-|     |          |                              |            | `adlawatt.language.v1` / `adlawatt.vibration.v1`); only  |
-|     |          |                              |            | color-blind mode is session-only. Remaining:             |
-|     |          |                              |            | multi-language display wiring per `TODO.md`.             |
+| 11  | P1       | Small TODOs (mostly done)    | ⏳ Open    | CLOSED this pass: navbar username, manual contents (EN), |
+|     |          |                              |            | multi-language display (spot-verified zero hardcoded     |
+|     |          |                              |            | strings). Still open: `menu.tsx` profile fixed-height +  |
+|     |          |                              |            | black border (visual, needs on-device check). Language   |
+|     |          |                              |            | and vibration persist (`adlawatt.language.v1` /          |
+|     |          |                              |            | `adlawatt.vibration.v1`); only color-blind is session-   |
+|     |          |                              |            | only.                                                    |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 | 12  | P2       | No control path              | ⏳ Open    | Monitoring only. Relay already in hardware list; add     |
 |     |          |                              |            | low-battery auto-cutoff / remote fan toggle (ESP32 polls |
@@ -100,4 +104,4 @@ What you do well already:
 | 15  | P2       | No crash reporting           | ⏳ Open    | No Sentry, no OTA strategy, no staging vs prod split.    |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 
-Revised build order: 10 > 11 > 9 > 8 > 7 (P2s only if time remains: 12 > 14 > 15 > 13).
+Revised build order: 11 > 9 > 8 (P2s only if time remains: 12 > 14 > 15 > 13).

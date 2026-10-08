@@ -356,6 +356,10 @@ const fil = {
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
       goToApplianceRecommendation: "Pumunta sa Appliance Recommendation",
+      offlineBanner:
+        "Wala kang koneksyon — huling readings ang ipinapakita.",
+      lastUpdated:
+        "Huling na-update {{time}}.",
       forecastFailed: "Hindi ma-load ang forecast.",
     },
     about: {
