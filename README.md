@@ -107,10 +107,10 @@ A 5-day solar outlook (`src/services/forecast.ts`) groups OpenWeatherMap `/forec
 
 The application generates and displays system notifications in real time via transition-gated `check*()` rules in `src/services/notificationService.ts`:
 
-- Battery alerts (charging, discharging, low level, fully charged, runtime, voltage — voltage rules fire on the admin-published `battery_voltage_min/max` from the `alert_thresholds` store)
+- Battery alerts (charging, discharging, low level, fully charged, runtime, voltage — voltage rules fire on the fixed 11.6 V / 14.6 V safety window)
 - Temperature alerts (battery, solar panel, and interior — Nominal to Critical)
 - Solar alerts (input detected, increased, unavailable, low input during charging)
-- Load alerts (current load detected, no load, consumption increased, high load above the admin-published `high_load_watts`)
+- Load alerts (current load detected, no load, consumption increased, high load above the fixed 800 W safety trip)
 - Depth of discharge alerts (safe, unsafe, returned to safe)
 - Device status alerts (online, offline, status changed)
 - Data health alerts (stale monitoring, missing records, invalid time remaining)
@@ -632,7 +632,6 @@ Static/mock dashboard values have been replaced by live Supabase queries and rea
 | `notifications` | Generated notifications with read state (separate list from activity logs) |
 | `activity_logs` | Recorded system activities via manual `logActivity()` (no triggers/hooks) |
 | `components` | IoT/power component list and live status |
-| `alert_thresholds` | Admin-published safety thresholds (singleton row: voltage min/max, high-load watts, temp highs; admin-write, authenticated-read, `validate_admin_thresholds()` CHECK) |
 | Storage `email-assets` (public) | Hosted alert-email logo/assets |
 
 ### Real-Time Features
@@ -921,7 +920,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Battery-aware appliance recommendation engine (ZENOVA 720 Wh / 144 Wh reserve)
 - [x] Component monitoring with real-time status (INA228, DS18B20, DHT22, SPI TFT)
 - [x] Notification service (auto-generated alerts, transition-gated rules, cooldowns)
-- [x] Admin-published safety thresholds (`alert_thresholds` singleton + cached watcher rules + ThresholdEditor publish flow)
+- [x] Safety threshold rules live on fixed engineering constants (800 W / 11.6 V / 14.6 V); admin dashboard is a non-functional shell (login/logout/exit only)
 - [x] Alert emails via Edge Function + AgentMail (branded template, per-user toggle, offline-safe cache)
 - [x] Notifications screen with filters and pagination
 - [x] Activity logs with pagination (separate list from notifications)
@@ -939,7 +938,7 @@ The final build configuration may change as the project approaches deployment.
 ### In Progress
 
 - [ ] Additional historical energy charts (beyond battery level)
-- [x] Notification safety threshold configuration (high-load, voltage min/max via admin-published `alert_thresholds`)
+- [x] Notification safety threshold configuration (fixed 800 W / 11.6 V / 14.6 V engineering constants; admin has no publishing role)
 - [ ] Forgot password screen (no route yet)
 - [ ] Color-blind / language / vibration persistence (currently session-only)
 - [ ] End-to-end ESP32 → Supabase hardware feed
@@ -980,7 +979,7 @@ The ESP32 hardware feed is being integrated. The application consumes data throu
 
 - Additional analytics charts are future work (battery chart is implemented; `AnalyticsChartCard` is reusable for other metrics)
 - Appliance recommendations are battery-aware only while live monitoring data is present; without it, the app falls back to a wattage threshold
-- Notification safety rules for high load and voltage min/max fire on the admin-published `alert_thresholds` row (cached in the watcher, admin defaults on read failure)
+- Notification safety rules for high load and voltage min/max fire on fixed engineering constants (800 W / 11.6 V / 14.6 V)
 - The forgot password screen has no route or implementation yet
 
 ### Settings Persistence

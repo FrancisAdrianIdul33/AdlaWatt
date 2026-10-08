@@ -15,10 +15,6 @@ import {
   type ResilientSubscription,
 } from "@/services/realtimeResubscribe";
 import { sendAlertEmail } from "@/services/alertEmailService";
-import {
-  getDefaultThresholds,
-  getPublishedThresholds,
-} from "@/admin/services/adminService";
 
 // ============================================================
 // TYPES
@@ -72,188 +68,35 @@ const STALE_MONITORING_INTERVAL_MS =
   10 * 1000;
 
 // ------------------------------------------------------------
-// ADMIN-PUBLISHED SAFE THRESHOLDS (LIVE)
+// FIXED SAFETY THRESHOLDS
 // ------------------------------------------------------------
 //
-// Values come from the alert_thresholds backend store,
-// published by admins through ThresholdEditor and consumed
-// here through an in-memory cache — never one DB read per
-// evaluation. Cache miss or read failure falls back to the
-// admin defaults so a failed fetch can never silently disarm
-// safety (the failure is logged).
+// Frozen engineering values (from the former admin defaults:
+// 11.6 V / 14.6 V window, 800 W high-load trip). The admin
+// dashboard is a non-functional shell — nobody publishes
+// thresholds at runtime — so the rules consume these
+// constants directly. To retune, change the literals below
+// (and the matching tests); the rule functions themselves
+// take injected values and stay unit-testable.
 //
-//   highLoadWatts     → checkHighCurrentLoad
+//   HIGH_LOAD_WATTS     → checkHighCurrentLoad
 //     ("High Current Load", alert)
-//   batteryVoltageMin → checkBatteryVoltageTooLow
+//   BATTERY_VOLTAGE_MIN → checkBatteryVoltageTooLow
 //     ("Battery Voltage Too Low", alert)
-//   batteryVoltageMax → checkBatteryVoltageTooHigh
+//   BATTERY_VOLTAGE_MAX → checkBatteryVoltageTooHigh
 //     ("Battery Voltage Too High", alert)
 //
-// Temperature editor rows have no consumer rules (temp alerts
-// come from ESP32 status transitions) and are intentionally
-// not cached here.
+// Temperature editor rows never had consumer rules (temp
+// alerts come from ESP32 status transitions).
 //
 // See implementation plan/notification_catalog.md.
 // ------------------------------------------------------------
 
-export interface SafetyThresholds {
-  highLoadWatts: number;
-  batteryVoltageMin: number;
-  batteryVoltageMax: number;
-}
+export const HIGH_LOAD_WATTS = 800;
 
-const DEFAULT_SAFETY_THRESHOLDS: SafetyThresholds =
-  (() => {
-    const defaults = getDefaultThresholds();
+export const BATTERY_VOLTAGE_MIN = 11.6;
 
-    return {
-      highLoadWatts:
-        defaults.highLoadWatts,
-      batteryVoltageMin:
-        defaults.batteryVoltageMin,
-      batteryVoltageMax:
-        defaults.batteryVoltageMax,
-    };
-  })();
-
-let thresholdCache:
-  SafetyThresholds | null = null;
-
-let thresholdRefreshTimer:
-  | ReturnType<typeof setInterval>
-  | null = null;
-
-let thresholdsChannel:
-  | ReturnType<typeof supabase.channel>
-  | null = null;
-
-const THRESHOLD_REFRESH_MS =
-  60 * 1000;
-
-// Loads the published row into the cache. Never throws:
-// failure keeps the previous cache (or defaults on first
-// load) and logs, so safety stays armed.
-export const loadThresholdCache =
-  async (): Promise<SafetyThresholds> => {
-    try {
-      const published =
-        await getPublishedThresholds();
-
-      thresholdCache = {
-        highLoadWatts:
-          published.thresholds
-            .highLoadWatts,
-        batteryVoltageMin:
-          published.thresholds
-            .batteryVoltageMin,
-        batteryVoltageMax:
-          published.thresholds
-            .batteryVoltageMax,
-      };
-
-      if (published.stale) {
-        console.warn(
-          "Threshold cache using defaults (store unreachable).",
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "Threshold cache load failed, keeping previous:",
-        error instanceof Error
-          ? error.message
-          : error,
-      );
-
-      if (!thresholdCache) {
-        thresholdCache = {
-          ...DEFAULT_SAFETY_THRESHOLDS,
-        };
-      }
-    }
-
-    return getThresholdCache();
-  };
-
-// Synchronous read for the per-evaluation hot path.
-// Defaults when never loaded — never null, never a read.
-export const getThresholdCache =
-  (): SafetyThresholds => {
-    return (
-      thresholdCache ?? {
-        ...DEFAULT_SAFETY_THRESHOLDS,
-      }
-    );
-  };
-
-// Test seam: replaces the cache wholesale.
-export const setThresholdCacheForTests =
-  (
-    values: SafetyThresholds | null,
-  ): void => {
-    thresholdCache = values
-      ? { ...values }
-      : null;
-  };
-
-const startThresholdRefresh = () => {
-  stopThresholdRefresh();
-
-  // Refresh on publish: admin UPDATEs invalidate immediately
-  // (seconds, not minutes) while connected.
-  try {
-    thresholdsChannel = supabase
-      .channel("thresholds-watcher")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "alert_thresholds",
-        },
-        () => {
-          void loadThresholdCache();
-        },
-      )
-      .subscribe();
-  } catch (error) {
-    console.warn(
-      "Thresholds realtime unavailable, interval-only:",
-      error instanceof Error
-        ? error.message
-        : error,
-    );
-  }
-
-  thresholdRefreshTimer = setInterval(
-    () => {
-      void loadThresholdCache();
-    },
-    THRESHOLD_REFRESH_MS,
-  );
-};
-
-const stopThresholdRefresh =
-  async () => {
-    if (thresholdRefreshTimer) {
-      clearInterval(
-        thresholdRefreshTimer,
-      );
-
-      thresholdRefreshTimer = null;
-    }
-
-    if (thresholdsChannel) {
-      try {
-        await supabase.removeChannel(
-          thresholdsChannel,
-        );
-      } catch {
-        // Teardown best-effort by design.
-      }
-
-      thresholdsChannel = null;
-    }
-  };
+export const BATTERY_VOLTAGE_MAX = 14.6;
 
 
 // ============================================================
@@ -3082,28 +2925,25 @@ const processMonitoringNotifications =
         previous,
       );
 
-      const safetyThresholds =
-        getThresholdCache();
-
       await checkHighCurrentLoad(
         userId,
         current,
         previous,
-        safetyThresholds.highLoadWatts,
+        HIGH_LOAD_WATTS,
       );
 
       await checkBatteryVoltageTooLow(
         userId,
         current,
         previous,
-        safetyThresholds.batteryVoltageMin,
+        BATTERY_VOLTAGE_MIN,
       );
 
       await checkBatteryVoltageTooHigh(
         userId,
         current,
         previous,
-        safetyThresholds.batteryVoltageMax,
+        BATTERY_VOLTAGE_MAX,
       );
 
       await checkInvalidTimeRemaining(
@@ -3443,8 +3283,6 @@ export const unsubscribeFromNotificationMonitoring =
 
     stopStaleMonitoringCheck();
 
-    await stopThresholdRefresh();
-
     resetNotificationState();
   };
 
@@ -3635,8 +3473,6 @@ export const startMonitoringNotificationWatcher =
 
     stopStaleMonitoringCheck();
 
-    await stopThresholdRefresh();
-
     resetNotificationState();
 
     currentUserId =
@@ -3720,19 +3556,6 @@ export const startMonitoringNotificationWatcher =
     startStaleMonitoringCheck(
       user.id,
     );
-
-    // ----------------------------------------------------------
-    // LOAD ADMIN THRESHOLDS (cache + refresh)
-    // ----------------------------------------------------------
-    //
-    // Fail-safe by design: loadThresholdCache never throws and
-    // falls back to admin defaults, so safety rules stay armed
-    // even when the store is unreachable.
-    // ----------------------------------------------------------
-
-    await loadThresholdCache();
-
-    startThresholdRefresh();
 
     // ----------------------------------------------------------
     // SUBSCRIBE TO USER'S MONITORING ROW

@@ -1,27 +1,27 @@
-// Threshold cache + safety-rule unit tests.
+// Threshold safety-rule unit tests.
 //
-// The three admin-published rules (high load, voltage min/max)
-// are exercised with injected values through the real pipeline
-// helpers; Supabase is spied (no network, no DB).
+// The three rules (high load, voltage min/max) consume fixed
+// engineering constants — the admin dashboard is a
+// non-functional shell with no publishing role — while the
+// rule functions take injected values and stay unit-testable.
+// Supabase is spied (no network, no DB).
 //
-// Covers: cache defaults before load, published load, stale
-// failure keeps previous, upward/downward crossing fires once,
-// no repeat without re-crossing, boundary equality.
+// Covers: pinned constant values, upward/downward crossing
+// fires once, no repeat without re-crossing, boundary
+// equality.
 
 import {
+  BATTERY_VOLTAGE_MAX,
+  BATTERY_VOLTAGE_MIN,
   checkBatteryVoltageTooHigh,
   checkBatteryVoltageTooLow,
   checkHighCurrentLoad,
-  getThresholdCache,
-  loadThresholdCache,
-  setThresholdCacheForTests,
+  HIGH_LOAD_WATTS,
   startMonitoringNotificationWatcher,
   stopMonitoringNotificationWatcher,
 } from "@/services/notificationService";
-import type { MonitoringData } from "@/services/monitoringService";
 import * as supabaseLib from "@/lib/supabase";
-import * as adminService from "@/admin/services/adminService";
-import { getDefaultThresholds } from "@/admin/services/adminService";
+import type { MonitoringData } from "@/services/monitoringService";
 
 const USER_ID = "user-1";
 
@@ -150,94 +150,21 @@ afterAll(async () => {
   jest.restoreAllMocks();
 });
 
-describe("threshold cache", () => {
-  test("defaults before any load (fail-safe armed)", () => {
-    setThresholdCacheForTests(null);
-
-    const cache = getThresholdCache();
-    const defaults = getDefaultThresholds();
-
-    expect(cache).toEqual({
-      highLoadWatts: defaults.highLoadWatts,
-      batteryVoltageMin:
-        defaults.batteryVoltageMin,
-      batteryVoltageMax:
-        defaults.batteryVoltageMax,
-    });
-  });
-
-  test("published load updates the cache", async () => {
-    const spy = jest
-      .spyOn(
-        adminService,
-        "getPublishedThresholds",
-      )
-      .mockResolvedValue({
-        thresholds: {
-          ...getDefaultThresholds(),
-          highLoadWatts: 500,
-          batteryVoltageMin: 11.0,
-          batteryVoltageMax: 14.0,
-        },
-        stale: false,
-      });
-
-    try {
-      const cache =
-        await loadThresholdCache();
-
-      expect(cache.highLoadWatts).toBe(
-        500,
-      );
-      expect(cache.batteryVoltageMin).toBe(
-        11.0,
-      );
-      expect(cache.batteryVoltageMax).toBe(
-        14.0,
-      );
-    } finally {
-      spy.mockRestore();
-    }
-  });
-
-  test("stale failure keeps the previous cache", async () => {
-    setThresholdCacheForTests({
-      highLoadWatts: 500,
-      batteryVoltageMin: 11.0,
-      batteryVoltageMax: 14.0,
-    });
-
-    const spy = jest
-      .spyOn(
-        adminService,
-        "getPublishedThresholds",
-      )
-      .mockRejectedValue(
-        new Error("offline"),
-      );
-
-    try {
-      const cache =
-        await loadThresholdCache();
-
-      expect(cache.highLoadWatts).toBe(
-        500,
-      );
-    } finally {
-      spy.mockRestore();
-    }
+describe("fixed safety thresholds", () => {
+  test("constants pin the engineering values", () => {
+    expect(HIGH_LOAD_WATTS).toBe(800);
+    expect(BATTERY_VOLTAGE_MIN).toBe(11.6);
+    expect(BATTERY_VOLTAGE_MAX).toBe(14.6);
   });
 });
 
 describe("safety rules with injected thresholds", () => {
   beforeAll(async () => {
-    // Arms currentUserId + loads the cache through the real
-    // starter; the initial missing-record insert is discarded
-    // (insert already records into `inserts` by default).
+    // Arms currentUserId through the real starter; the
+    // initial missing-record insert is discarded (insert
+    // already records into `inserts` by default).
     await startMonitoringNotificationWatcher();
     inserts.length = 0;
-
-    setThresholdCacheForTests(null);
   });
 
   beforeEach(() => {
@@ -245,11 +172,6 @@ describe("safety rules with injected thresholds", () => {
   });
 
   test("high load crossing fires once with threshold values", async () => {
-    // Unique title per firing path is fixed ("High Current
-    // Load"); cooldown isolation comes from beforeEach +
-    // distinct thresholds per test via fresh module state is
-    // unnecessary — each rule fires at most once here because
-    // the memory cooldown suppresses immediate repeats.
     await checkHighCurrentLoad(
       USER_ID,
       mon({ current_load: 900 }),
