@@ -56,9 +56,12 @@ What you do well already:
 |     |          |                              |            | monitoring-based cards. State this scoping in            |
 |     |          |                              |            | delimitations.                                           |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
-| 6   | P1       | No push notifications        | ⏳ Open    | No `expo-notifications`. Vibration + email only work     |
-|     |          |                              |            | with app open. Add FCM push via Edge Function for        |
-|     |          |                              |            | `alert` types.                                           |
+| 6   | P1       | No push notifications        | ✅ Done    | Android via Expo Push Service: `expo-notifications` +    |
+|     |          |                              |            | `push_tokens` store (user-scoped RLS) + `send-push` Edge |
+|     |          |                              |            | Function at the alert choke point (cooldown-gated); Menu |
+|     |          |                              |            | push toggle default ON; tap deep-links to Notifications; |
+|     |          |                              |            | needs FCM key in EAS credentials + dev-client rebuild +  |
+|     |          |                              |            | physical-device test. iOS/APNs out of scope.             |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 | 7   | P1       | No offline story             | ⏳ Open    | AsyncStorage cache for last `monitoring` row, ESP32      |
 |     |          |                              |            | buffer + retry, `last_seen` staleness (10s too           |
@@ -97,4 +100,4 @@ What you do well already:
 | 15  | P2       | No crash reporting           | ⏳ Open    | No Sentry, no OTA strategy, no staging vs prod split.    |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 
-Revised build order: 10 > 11 > 9 > 8 > 7 > 6 (P2s only if time remains: 12 > 14 > 15 > 13).
+Revised build order: 10 > 11 > 9 > 8 > 7 (P2s only if time remains: 12 > 14 > 15 > 13).

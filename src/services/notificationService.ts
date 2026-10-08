@@ -15,6 +15,7 @@ import {
   type ResilientSubscription,
 } from "@/services/realtimeResubscribe";
 import { sendAlertEmail } from "@/services/alertEmailService";
+import { sendPushNotification } from "@/services/pushService";
 
 // ============================================================
 // TYPES
@@ -534,8 +535,86 @@ const createNotification = async (
   );
 
   maybeSendAlertEmail(userId, rule);
+  maybeSendPush(userId, rule);
 
   return true;
+};
+
+
+// ============================================================
+// PUSH (fire-and-forget, Expo Push via Edge Function)
+// ============================================================
+//
+// Sends alert notifications as device push banners through
+// the deployed send-push function after the in-app row is
+// stored. Same contract as email: alert-only, per-user
+// toggle-gated (default ON), fail-open on lookup errors,
+// cooldown rate-limited by the insert gates above.
+// ============================================================
+
+const maybeSendPush = (
+  userId: string,
+  rule: NotificationRule,
+): void => {
+  if (rule.type !== "alert") {
+    return;
+  }
+
+  void getAuthenticatedUser()
+    .then(async (user) => {
+      if (
+        !user ||
+        user.id !== userId
+      ) {
+        return;
+      }
+
+      try {
+        const { data: prefs } = await supabase
+          .from("users")
+          .select("push_notifications")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (
+          prefs &&
+          (prefs as { push_notifications?: boolean | null })
+            .push_notifications === false
+        ) {
+          console.debug(
+            `[push] skipped for "${rule.title}" (push notifications off).`,
+          );
+
+          return;
+        }
+      } catch {
+        // Fail-open: fall through to send.
+      }
+
+      return sendPushNotification({
+        title: `AdlaWatt Alert: ${rule.title}`,
+        body: rule.description,
+      }).then((result) => {
+        if (result.success) {
+          console.log(
+            `[push] sent for "${rule.title}"`,
+          );
+        } else {
+          console.warn(
+            `Push not sent for "${rule.title}":`,
+            result.error,
+          );
+        }
+      });
+    })
+    .catch((error) => {
+      console.warn(
+        "Push lookup failed:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    });
 };
 
 
@@ -765,6 +844,7 @@ const createNotificationWithCooldown =
     );
 
     maybeSendAlertEmail(userId, rule);
+    maybeSendPush(userId, rule);
 
     return true;
   };

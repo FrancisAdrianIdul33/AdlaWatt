@@ -297,6 +297,9 @@ const en = {
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Allow AdlaWatt to send alerts and notifications through your email.",
+    pushNotifications: "Push Notifications",
+    pushNotificationsHint:
+      "Allow AdlaWatt to send alert banners to this device, even with the app closed.",
     confirmChanges: "Confirm Changes",
     confirmChangesBody:
       "Enter your current password to confirm these account changes.",

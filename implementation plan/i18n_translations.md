@@ -272,6 +272,8 @@ by hand.
 | `menu.vibrationHint` | Vibrate when important alerts are received. | Mag-vibrate kapag may mahalagang alerto. | Mag-vibrate kung adunay importanteng alerto. |  |
 | `menu.emailNotifications` | Email Notifications | Email Notifications | Email Notifications |  |
 | `menu.emailNotificationsHint` | Allow AdlaWatt to send alerts and notifications through your email. | Payagan ang AdlaWatt na magpadala ng mga alerto sa iyong email. | Tugoti ang AdlaWatt nga magpadala ug mga alerto sa imong email. |  |
+| `menu.pushNotifications` | Push Notifications | Push Notifications | Push Notifications |  |
+| `menu.pushNotificationsHint` | Allow AdlaWatt to send alert banners to this device, even with the app closed. | Payagan ang AdlaWatt na magpadala ng mga alerto sa device na ito kahit sarado ang app. | Tugoti ang AdlaWatt nga magpadala ug mga alerto niini nga device bisan sirado ang app. |  |
 | `menu.confirmChanges` | Confirm Changes | Kumpirmahin ang mga Pagbabago | Kumpirmahi ang mga Pagbag-o |  |
 | `menu.confirmChangesBody` | Enter your current password to confirm these account changes. | Ilagay ang iyong current password upang kumpirmahin ang mga pagbabagong ito. | Isulod ang imong current password aron kumpirmahon kini nga mga pagbag-o. |  |
 | `menu.accountUpdated` | Account Updated | Na-update ang Account | Na-update ang Account | alert title |

@@ -54,6 +54,14 @@
           "locationWhenInUsePermission": "Allow app to access your location for weather."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/adlawatt-icon.png",
+          "color": "#00805A",
+          "androidMode": "default"
+        }
+      ],
       "expo-web-browser",
       "expo-localization",
       "expo-sharing",

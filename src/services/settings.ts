@@ -271,3 +271,77 @@ export async function saveCachedEmailNotifications(
     // Intentionally ignored.
   }
 }
+
+// ============================================================
+// PUSH NOTIFICATIONS CACHE (v1)
+//
+// Same contract as the email cache above: server column
+// users.push_notifications (default ON), per-user scoped key
+// plus device-level last-known key, best-effort writes.
+// Used by the Menu toggle paint and the push send gate.
+// ============================================================
+
+const PUSH_NOTIFICATIONS_KEY =
+  "adlawatt.push_notifications.v1";
+
+const scopedPushKey = (userId: string): string =>
+  `${PUSH_NOTIFICATIONS_KEY}:${userId}`;
+
+function parsePushFlag(value: unknown): boolean | null {
+  if (value === "1" || value === true) {
+    return true;
+  }
+
+  if (value === "0" || value === false) {
+    return false;
+  }
+
+  return null;
+}
+
+export async function loadCachedPushNotifications(
+  userId?: string | null,
+): Promise<boolean | null> {
+  try {
+    if (userId) {
+      const scoped = parsePushFlag(
+        await AsyncStorage.getItem(
+          scopedPushKey(userId),
+        ),
+      );
+
+      if (scoped !== null) {
+        return scoped;
+      }
+    }
+
+    return parsePushFlag(
+      await AsyncStorage.getItem(PUSH_NOTIFICATIONS_KEY),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCachedPushNotifications(
+  value: boolean,
+  userId?: string | null,
+): Promise<void> {
+  try {
+    const raw = value ? "1" : "0";
+
+    if (userId) {
+      await AsyncStorage.setItem(
+        scopedPushKey(userId),
+        raw,
+      );
+    }
+
+    await AsyncStorage.setItem(
+      PUSH_NOTIFICATIONS_KEY,
+      raw,
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}

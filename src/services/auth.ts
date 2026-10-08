@@ -521,7 +521,7 @@ export async function getCurrentUserProfile() {
             await supabase
                 .from("users")
                 .select(
-                    "id, username, email, terms_agreed, created_at, email_notifications, role",
+                    "id, username, email, terms_agreed, created_at, email_notifications, push_notifications, role",
                 )
                 .eq("id", user.id)
                 .single();
@@ -550,6 +550,16 @@ export async function getCurrentUserProfile() {
             // legacy rows where the column reads null.
             emailNotifications:
                 profile?.email_notifications ?? true,
+            // Global push preference; default ON for legacy
+            // rows where the column reads null.
+            pushNotifications:
+                (
+                    profile as {
+                        push_notifications?:
+                            | boolean
+                            | null;
+                    } | null
+                )?.push_notifications ?? true,
             // Hidden admin dashboard gating. Unknown/missing
             // values fall back to household (never fail open
             // to admin). Phase 1: self-readable users.role.

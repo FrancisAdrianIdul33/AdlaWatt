@@ -119,6 +119,8 @@ Notifications are stored in the Supabase `notifications` table, include `normal`
 
 Alert-type notifications also send a branded email via `src/services/alertEmailService.ts` → Supabase Edge Function `send-alert-email` (AgentMail proxy, API key server-only). The email is a Gmail-safe 600px table with inline styles, exact AdlaWatt logo (hosted via `EXPO_PUBLIC_AGENTMAIL_LOGO_URL`, cream/white header), and no CTA. Sends are JWT-gated, fire-and-forget, and cooldown-gated. A global per-user “Email notifications” toggle (default ON, `users.email_notifications`) gates email sends on every device — in-app rows are always written regardless. The toggle persists server-side with a per-user `AsyncStorage` cache (`adlawatt.email_notifications.v1(:userId)`) so it survives offline.
 
+Alert-type notifications also fan out as Android push banners via `src/services/pushService.ts` → Edge Function `send-push` (Expo Push Service; no push secrets in code). The device registers its ExpoPushToken on sign-in into the user-scoped `push_tokens` table (upsert per sign-in, deleted on sign-out) after granting notification permission; taps deep-link to the Notifications screen. A global per-user “Push notifications” toggle (default ON, `users.push_notifications` + `adlawatt.push_notifications.v1` cache) gates sends server-side, fail-open on read errors. Requires an FCM key in EAS credentials, a dev-client rebuild, and a physical device (emulators cannot receive pushes); iOS/APNs is out of scope.
+
 ### Activity Logs
 
 The application provides an activity log for viewing recorded system activities and events. Logs are paginated and typed (info, warning, error, critical). The dashboard also provides a preview of recent activity logs with an option to view all recorded activities.
@@ -624,13 +626,14 @@ Static/mock dashboard values have been replaced by live Supabase queries and rea
 
 | Table / Bucket | Purpose |
 |---|---|
-| `users` | User profiles (created by database trigger on sign-up + backfill migration; includes `email_notifications` boolean default true) |
+| `users` | User profiles (created by database trigger on sign-up + backfill migration; includes `email_notifications` and `push_notifications` booleans, both default true) |
 | `monitoring` | Current live sensor readings (single row per user) |
 | `monitoring_history` | Historical monitoring records for analytics (5-min cron snapshots via `record_all_monitoring_snapshots()`) |
 | `appliance_usage_history` | Historical appliance usage for analytics |
 | `appliances` | Slim schema: `app_id, appliance_name, type, catalog_key, wattage_min/max, selection, archive, user_id` (`archive=true` = hidden) |
 | `notifications` | Generated notifications with read state (separate list from activity logs) |
 | `activity_logs` | Recorded system activities via manual `logActivity()` (no triggers/hooks) |
+| `push_tokens` | Per-device Expo push tokens (`user_id, expo_push_token` PK, user-scoped RLS; upsert on sign-in, delete on sign-out) |
 | `components` | IoT/power component list and live status |
 | Storage `email-assets` (public) | Hosted alert-email logo/assets |
 
@@ -922,6 +925,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Notification service (auto-generated alerts, transition-gated rules, cooldowns)
 - [x] Safety threshold rules live on fixed engineering constants (800 W / 11.6 V / 14.6 V); admin dashboard is a non-functional shell (login/logout/exit only)
 - [x] Alert emails via Edge Function + AgentMail (branded template, per-user toggle, offline-safe cache)
+- [x] Android push banners via Edge Function + Expo Push Service (`push_tokens` store, per-user toggle, tap deep-link; needs FCM key + dev-client rebuild + physical device)
 - [x] Notifications screen with filters and pagination
 - [x] Activity logs with pagination (separate list from notifications)
 - [x] Analytics data pipeline (monitoring + appliance history)

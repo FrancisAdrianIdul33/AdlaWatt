@@ -58,9 +58,11 @@ import {
 } from "@/services/typography";
 import {
   loadCachedEmailNotifications,
+  loadCachedPushNotifications,
   loadLanguageSetting,
   loadVibrationSetting,
   saveCachedEmailNotifications,
+  saveCachedPushNotifications,
   saveVibrationSetting,
 } from "@/services/settings";
 import {
@@ -73,6 +75,10 @@ import {
   stopAlertVibration,
   syncAlertVibration,
 } from "@/services/alertVibration";
+import {
+  registerPushToken,
+  unregisterPushToken,
+} from "@/services/pushService";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -227,6 +233,25 @@ export default function SettingsScreen() {
   const [savedEmailNotifications, setSavedEmailNotifications] =
     useState(true);
 
+  // Global per-user push switch (server column,
+  // default ON). Drafted exactly like the email switch:
+  // flips instantly, commits on Save, discards on Cancel.
+  // Turning it ON re-registers this device so alerts can
+  // reach it again without signing out and back in.
+  const [pushNotifications, setPushNotifications] =
+    useState(true);
+
+  const [savedPushNotifications, setSavedPushNotifications] =
+    useState(true);
+
+  const handlePushToggle = (next: boolean) => {
+    setPushNotifications(next);
+
+    if (next) {
+      void registerPushToken();
+    }
+  };
+
   // ============================================
   // PREFERENCE DROPDOWNS
   // ============================================
@@ -289,6 +314,7 @@ export default function SettingsScreen() {
       setFontFamily(savedTypography.fontFamily);
       setThemeDraft(savedTheme);
       setEmailNotifications(savedEmailNotifications);
+      setPushNotifications(savedPushNotifications);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
@@ -297,6 +323,7 @@ export default function SettingsScreen() {
     savedTypography,
     savedTheme,
     savedEmailNotifications,
+    savedPushNotifications,
   ]);
 
   const THEME_OPTIONS: readonly ThemeOption[] = [
@@ -326,6 +353,7 @@ export default function SettingsScreen() {
     setFontFamily(savedTypography.fontFamily);
     setThemeDraft(savedTheme);
     setEmailNotifications(savedEmailNotifications);
+    setPushNotifications(savedPushNotifications);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -371,6 +399,29 @@ export default function SettingsScreen() {
           emailNotifications,
           emailProfile.userId,
         );
+
+        // Push switch: same global per-user column pattern.
+        const { error: pushError } = await supabase
+          .from("users")
+          .update({
+            push_notifications: pushNotifications,
+          })
+          .eq("id", emailProfile.userId);
+
+        if (pushError) {
+          console.error(
+            "Push preference save error:",
+            pushError.message,
+          );
+          setPushNotifications(savedPushNotifications);
+        } else {
+          setSavedPushNotifications(pushNotifications);
+
+          await saveCachedPushNotifications(
+            pushNotifications,
+            emailProfile.userId,
+          );
+        }
       }
 
       // Theme last: the flip re-renders screens, so it
@@ -378,7 +429,7 @@ export default function SettingsScreen() {
       await commitTheme(themeDraft);
 
       logSettings.preferencesSaved(
-        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode, email ${emailNotifications ? "on" : "off"}.`,
+        `Font ${fontSize} ${fontFamily}, ${themeLabel(themeDraft)} mode, email ${emailNotifications ? "on" : "off"}, push ${pushNotifications ? "on" : "off"}.`,
       );
 
       setFontFamilyOpen(false);
@@ -409,6 +460,15 @@ export default function SettingsScreen() {
         setEmailNotifications(cached);
         setSavedEmailNotifications(cached);
       }
+
+      const cachedPush = await loadCachedPushNotifications(
+        user?.id ?? null,
+      );
+
+      if (cachedPush !== null) {
+        setPushNotifications(cachedPush);
+        setSavedPushNotifications(cachedPush);
+      }
     };
 
     hydrateEmailSwitch();
@@ -436,13 +496,23 @@ export default function SettingsScreen() {
       const loadedEmailNotifications =
         result.emailNotifications ?? true;
 
+      const loadedPushNotifications =
+        result.pushNotifications ?? true;
+
       setUsername(loadedUsername);
       setEmail(loadedEmail);
       setEmailNotifications(loadedEmailNotifications);
       setSavedEmailNotifications(loadedEmailNotifications);
+      setPushNotifications(loadedPushNotifications);
+      setSavedPushNotifications(loadedPushNotifications);
 
       await saveCachedEmailNotifications(
         loadedEmailNotifications,
+        result.userId,
+      );
+
+      await saveCachedPushNotifications(
+        loadedPushNotifications,
         result.userId,
       );
 
@@ -807,6 +877,10 @@ export default function SettingsScreen() {
       // Logged before sign-out: after sign-out there is no
       // session left to satisfy RLS on insert.
       logAuth.loggedOut();
+
+      // Push token removed while still authed: the delete
+      // needs the session for RLS, so it runs before signOut.
+      await unregisterPushToken();
 
       try {
         await supabase.auth.signOut();
@@ -1619,6 +1693,35 @@ export default function SettingsScreen() {
                 {renderToggle(
                   emailNotifications,
                   setEmailNotifications,
+                )}
+              </View>
+
+              <View style={styles.preferenceRow}>
+                <View
+                  style={styles.preferenceText}
+                >
+                  <AppText
+                    variant="body"
+                    style={
+                      styles.preferenceTitle
+                    }
+                  >
+                    {tMenu("menu.pushNotifications")}
+                  </AppText>
+
+                  <AppText
+                    variant="caption"
+                    style={
+                      styles.preferenceDescription
+                    }
+                  >
+                    {tMenu("menu.pushNotificationsHint")}
+                  </AppText>
+                </View>
+
+                {renderToggle(
+                  pushNotifications,
+                  handlePushToggle,
                 )}
               </View>
           </View>
