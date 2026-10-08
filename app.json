@@ -7,6 +7,12 @@
     "icon": "./assets/images/adlawatt-icon.png",
     "scheme": "adlawatt",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ba375929-16f4-4a21-b339-8b43e93ecfd2"
+    },
     "ios": {
       "icon": "./assets/images/adlawatt-icon.png",
       "bundleIdentifier": "com.teamadlawatt.adlawatt",
