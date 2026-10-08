@@ -327,25 +327,21 @@ export default function NavBar({
         </View>
 
         {/* ====================================================
-            SIGNED-IN USERNAME (center, truncated)
+            RIGHT CLUSTER (username › profile › bell)
             ==================================================== */}
 
-        {username ? (
-          <View
-            style={navBarStyles.usernameSlot}
-            accessibilityLabel={t("shared.signedInAs", {
-              username,
-            })}
-          >
+        <View
+          style={
+            navBarStyles.actions
+          }
+        >
+          {username ? (
             <View
-              style={navBarStyles.identityRow}
+              style={navBarStyles.identityGroup}
+              accessibilityLabel={t("shared.signedInAs", {
+                username,
+              })}
             >
-              <UserAvatar
-                username={username}
-                photoUrl={photoUrl}
-                size={30}
-              />
-
               <AppText
                 variant="body"
                 style={navBarStyles.usernameText}
@@ -354,19 +350,15 @@ export default function NavBar({
               >
                 {username}
               </AppText>
+
+              <UserAvatar
+                username={username}
+                photoUrl={photoUrl}
+                size={30}
+              />
             </View>
-          </View>
-        ) : null}
+          ) : null}
 
-        {/* ====================================================
-            RIGHT-SIDE ACTIONS
-            ==================================================== */}
-
-        <View
-          style={
-            navBarStyles.actions
-          }
-        >
           {/* ==================================================
               NOTIFICATION
               ================================================== */}
@@ -453,31 +445,26 @@ const getNavBarStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-
-  // Center slot between the status capsule and the bell.
-  // space-between keeps both ends pinned, so this appearing
-  // late never moves them; the name itself truncates.
-  usernameSlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
+    flexShrink: 1,
     minWidth: 0,
   },
 
-  identityRow: {
+  // Identity cluster pinned right with the bell: username,
+  // then avatar, then bell. The name truncates at maxWidth
+  // instead of squeezing its neighbors.
+  identityGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    maxWidth: "100%",
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   usernameText: {
     color: colors.bar.text,
     fontSize: 14,
     fontWeight: "600",
-    textAlign: "center",
+    maxWidth: 140,
     flexShrink: 1,
   },
 
