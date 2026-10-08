@@ -63,28 +63,9 @@ export interface MonitoringHistoryRow {
   energy_output_wh: number | null;
 }
 
-export interface ApplianceUsageHistoryRow {
-  usage_id: number;
-  user_id: string;
-  app_id: number | null;
-  appliance_name: string | null;
-  recorded_at: string;
-  status: string | null;
-  wattage: number | null;
-  duration_seconds: number | null;
-  energy_wh: number | null;
-}
-
 export interface ChartPoint {
   value: number;
   label?: string;
-}
-
-export interface ApplianceChartItem {
-  name: string;
-  value: number;
-  durationSeconds: number;
-  energyWh: number;
 }
 
 export interface AnalyticsRange {
@@ -153,10 +134,6 @@ export interface ReportSummary {
 
   latestDeviceStatus: string;
   latestTimeRemaining: string;
-
-  totalApplianceUsageRecords: number;
-  totalApplianceEnergyWh: number;
-  totalApplianceDurationSeconds: number;
 }
 
 export interface ReportMonitoringRow {
@@ -182,28 +159,15 @@ export interface ReportMonitoringRow {
   energyOutputWh: string;
 }
 
-export interface ReportApplianceRow {
-  recordedAt: string;
-  appliance: string;
-  status: string;
-  wattage: string;
-  duration: string;
-  energyWh: string;
-}
-
 export interface AnalyticsReportData {
   frequency: ReportFrequency;
   range: AnalyticsRange;
 
   monitoringHistory: MonitoringHistoryRow[];
-  applianceUsageHistory: ApplianceUsageHistoryRow[];
 
   monitoringRows: ReportMonitoringRow[];
-  applianceRows: ReportApplianceRow[];
 
   summary: ReportSummary;
-
-  topAppliances: ApplianceChartItem[];
 
   reportTitle: string;
   reportSubtitle: string;
@@ -718,53 +682,6 @@ export function createCsv(
   return lines.join("\n");
 }
 
-export function createApplianceCsv(
-  rows: ApplianceUsageHistoryRow[],
-): string {
-  const headers = [
-    "Recorded At",
-    "Appliance",
-    "Status",
-    "Wattage (W)",
-    "Duration (seconds)",
-    "Energy (Wh)",
-    "App ID",
-  ];
-
-  const lines = [
-    headers
-      .map(escapeCsvValue)
-      .join(","),
-  ];
-
-  rows.forEach(
-    (row) => {
-      lines.push(
-        [
-          row.recorded_at,
-          row.appliance_name ??
-            "Unknown appliance",
-          row.status ?? "",
-          toNumber(
-            row.wattage,
-          ),
-          toNumber(
-            row.duration_seconds,
-          ),
-          toNumber(
-            row.energy_wh,
-          ),
-          row.app_id ?? "",
-        ]
-          .map(escapeCsvValue)
-          .join(","),
-      );
-    },
-  );
-
-  return lines.join("\n");
-}
-
 /* ============================================================
    REPORT ROW FORMATTING
    ============================================================ */
@@ -928,59 +845,6 @@ export function formatMonitoringReportRows(
   );
 }
 
-export function formatApplianceReportRows(
-  rows: ApplianceUsageHistoryRow[],
-): ReportApplianceRow[] {
-  return rows.map(
-    (row) => ({
-      recordedAt:
-        formatReportDateTime(
-          new Date(
-            row.recorded_at,
-          ),
-        ),
-
-      appliance:
-        row.appliance_name?.trim() ||
-        "Unknown appliance",
-
-      status:
-        row.status ??
-        "Unknown",
-
-      wattage:
-        formatNumber(
-          Math.max(
-            0,
-            toNumber(
-              row.wattage,
-            ),
-          ),
-        ),
-
-      duration:
-        formatDuration(
-          Math.max(
-            0,
-            toNumber(
-              row.duration_seconds,
-            ),
-          ),
-        ),
-
-      energyWh:
-        formatNumber(
-          Math.max(
-            0,
-            toNumber(
-              row.energy_wh,
-            ),
-          ),
-        ),
-    }),
-  );
-}
-
 /* ============================================================
    REPORT SUMMARY
    ============================================================ */
@@ -1017,7 +881,6 @@ function getLatestMonitoringRow(
 
 export function createReportSummary(
   monitoringHistory: MonitoringHistoryRow[],
-  applianceUsageHistory: ApplianceUsageHistoryRow[],
 ): ReportSummary {
   const batteryLevels =
     monitoringHistory.map(
@@ -1090,32 +953,6 @@ export function createReportSummary(
           0,
           toNumber(
             row.energy_output_wh,
-          ),
-        ),
-      0,
-    );
-
-  const totalApplianceEnergyWh =
-    applianceUsageHistory.reduce(
-      (sum, row) =>
-        sum +
-        Math.max(
-          0,
-          toNumber(
-            row.energy_wh,
-          ),
-        ),
-      0,
-    );
-
-  const totalApplianceDurationSeconds =
-    applianceUsageHistory.reduce(
-      (sum, row) =>
-        sum +
-        Math.max(
-          0,
-          toNumber(
-            row.duration_seconds,
           ),
         ),
       0,
@@ -1293,13 +1130,6 @@ export function createReportSummary(
     latestTimeRemaining:
       latest?.time_remaining ??
       "No data",
-
-    totalApplianceUsageRecords:
-      applianceUsageHistory.length,
-
-    totalApplianceEnergyWh,
-
-    totalApplianceDurationSeconds,
   };
 }
 
@@ -1309,7 +1139,6 @@ export function createReportSummary(
 
 export function prepareReportData(
   monitoringHistory: MonitoringHistoryRow[],
-  applianceUsageHistory: ApplianceUsageHistoryRow[],
   reportFrequency: ReportFrequency,
   range: AnalyticsRange,
 ): AnalyticsReportData {
@@ -1318,20 +1147,9 @@ export function prepareReportData(
       monitoringHistory,
     );
 
-  const applianceRows =
-    formatApplianceReportRows(
-      applianceUsageHistory,
-    );
-
   const summary =
     createReportSummary(
       monitoringHistory,
-      applianceUsageHistory,
-    );
-
-  const topAppliances =
-    getApplianceChartData(
-      applianceUsageHistory,
     );
 
   return {
@@ -1342,15 +1160,9 @@ export function prepareReportData(
 
     monitoringHistory,
 
-    applianceUsageHistory,
-
     monitoringRows,
 
-    applianceRows,
-
     summary,
-
-    topAppliances,
 
     reportTitle:
       "AdlaWatt Analytics Report",
@@ -1370,23 +1182,16 @@ export function prepareReportData(
 
 export function createAnalyticsReportContent(
   monitoringHistory: MonitoringHistoryRow[],
-  applianceUsageHistory: ApplianceUsageHistoryRow[],
   reportFrequency: ReportFrequency,
   range: AnalyticsRange,
 ): {
   monitoringCsv: string;
-  applianceCsv: string;
   reportHeader: string;
   reportContent: string;
 } {
   const monitoringCsv =
     createCsv(
       monitoringHistory,
-    );
-
-  const applianceCsv =
-    createApplianceCsv(
-      applianceUsageHistory,
     );
 
   const reportHeader =
@@ -1407,14 +1212,10 @@ export function createAnalyticsReportContent(
       reportHeader,
       "MONITORING HISTORY",
       monitoringCsv,
-      "",
-      "APPLIANCE USAGE HISTORY",
-      applianceCsv,
     ].join("\n");
 
   return {
     monitoringCsv,
-    applianceCsv,
     reportHeader,
     reportContent,
   };
@@ -1511,7 +1312,6 @@ export async function loadAnalyticsData(
   range: AnalyticsRange,
 ): Promise<{
   monitoringHistory: MonitoringHistoryRow[];
-  applianceUsageHistory: ApplianceUsageHistoryRow[];
 }> {
   try {
     const user = await getAuthenticatedUserSafe();
@@ -1519,7 +1319,6 @@ export async function loadAnalyticsData(
     if (!user) {
       return {
         monitoringHistory: [],
-        applianceUsageHistory: [],
       };
     }
 
@@ -1619,92 +1418,10 @@ export async function loadAnalyticsData(
       }
     }
 
-    const applianceRows: unknown[] = [];
-
-    for (
-      let pageStart = 0;
-      ;
-      pageStart += ANALYTICS_PAGE_SIZE
-    ) {
-      const {
-        data:
-          appliancePage,
-        error:
-          applianceError,
-      } =
-        await supabase
-          .from(
-            "appliance_usage_history",
-          )
-          .select(
-            [
-              "usage_id",
-              "user_id",
-              "app_id",
-              "appliance_name",
-              "recorded_at",
-              "status",
-              "wattage",
-              "duration_seconds",
-              "energy_wh",
-            ].join(","),
-          )
-          .eq(
-            "user_id",
-            user.id,
-          )
-          .gte(
-            "recorded_at",
-            range.start.toISOString(),
-          )
-          .lte(
-            "recorded_at",
-            getInclusiveRangeEnd(
-              range,
-            ).toISOString(),
-          )
-          .order(
-            "recorded_at",
-            {
-              ascending: true,
-            },
-          )
-          .range(
-            pageStart,
-            pageStart + ANALYTICS_PAGE_SIZE - 1,
-          );
-
-      if (
-        applianceError
-      ) {
-        console.error(
-          "Analytics appliance history error:",
-          applianceError.message,
-        );
-
-        break;
-      }
-
-      applianceRows.push(
-        ...(appliancePage ?? []),
-      );
-
-      if (
-        !appliancePage ||
-        appliancePage.length < ANALYTICS_PAGE_SIZE
-      ) {
-        break;
-      }
-    }
-
     return {
       monitoringHistory:
         (monitoringRows ??
           []) as unknown as MonitoringHistoryRow[],
-
-      applianceUsageHistory:
-        (applianceRows ??
-          []) as unknown as ApplianceUsageHistoryRow[],
     };
   } catch (error) {
     console.error(
@@ -1714,7 +1431,6 @@ export async function loadAnalyticsData(
 
     return {
       monitoringHistory: [],
-      applianceUsageHistory: [],
     };
   }
 
@@ -2792,155 +2508,6 @@ export function getPowerByHourData(
   }));
 }
 
-export interface ApplianceShareSlice {
-  name: string;
-  energyWh: number;
-  durationSeconds: number;
-}
-
-/*
- * Appliance energy share: top 5 appliances by energy plus an
- * "Other" aggregate of the rest, from getApplianceChartData.
- * Range-total (grouping would scatter sparse usage events
- * meaninglessly), so cards 3-4 share one memo with no toggle.
- * Empty until the app records appliance usage — callers render
- * an honest empty state, never placeholder data.
- */
-export function getApplianceEnergyShare(
-  applianceUsageHistory: ApplianceUsageHistoryRow[],
-): ApplianceShareSlice[] {
-  const ranked = getApplianceChartData(applianceUsageHistory);
-
-  if (ranked.length <= 5) {
-    return ranked.map((item) => ({
-      name: item.name,
-      energyWh: item.energyWh,
-      durationSeconds: item.durationSeconds,
-    }));
-  }
-
-  const top = ranked.slice(0, 5).map((item) => ({
-    name: item.name,
-    energyWh: item.energyWh,
-    durationSeconds: item.durationSeconds,
-  }));
-
-  const rest = ranked.slice(5);
-  let otherEnergy = 0;
-  let otherDuration = 0;
-
-  rest.forEach((item) => {
-    otherEnergy += item.energyWh;
-    otherDuration += item.durationSeconds;
-  });
-
-  top.push({
-    name: "Other",
-    energyWh: otherEnergy,
-    durationSeconds: otherDuration,
-  });
-
-  return top;
-}
-
-/* ============================================================
-   APPLIANCE HISTORY PROCESSING
-   ============================================================ */
-
-export function getApplianceChartData(
-  applianceUsageHistory: ApplianceUsageHistoryRow[],
-): ApplianceChartItem[] {
-  const grouped =
-    new Map<
-      string,
-      {
-        durationSeconds: number;
-        energyWh: number;
-        wattages: number[];
-      }
-    >();
-
-  applianceUsageHistory.forEach(
-    (row) => {
-      const name =
-        row.appliance_name?.trim() ||
-        "Unknown appliance";
-
-      const current =
-        grouped.get(name) ??
-        {
-          durationSeconds: 0,
-          energyWh: 0,
-          wattages: [],
-        };
-
-      current.durationSeconds +=
-        Math.max(
-          0,
-          toNumber(
-            row.duration_seconds,
-          ),
-        );
-
-      current.energyWh +=
-        Math.max(
-          0,
-          toNumber(
-            row.energy_wh,
-          ),
-        );
-
-      if (
-        row.wattage !==
-          null &&
-        row.wattage !==
-          undefined
-      ) {
-        current.wattages.push(
-          Math.max(
-            0,
-            toNumber(
-              row.wattage,
-            ),
-          ),
-        );
-      }
-
-      grouped.set(
-        name,
-        current,
-      );
-    },
-  );
-
-  return Array.from(
-    grouped.entries(),
-  )
-    .map(
-      ([
-        name,
-        values,
-      ]) => ({
-        name,
-
-        value:
-          values.energyWh,
-
-        durationSeconds:
-          values.durationSeconds,
-
-        energyWh:
-          values.energyWh,
-      }),
-    )
-    .sort(
-      (a, b) =>
-        b.energyWh -
-        a.energyWh,
-    )
-    .slice(0, 8);
-}
-
 /* ============================================================
    ANALYTICS RANGE PROCESSING
    ============================================================ */
@@ -3165,28 +2732,6 @@ export function generateAdlaWattCsv(
           .totalEnergyOutputWh,
       ),
     ],
-
-    [
-      "Appliance Usage Records",
-      reportData.summary
-        .totalApplianceUsageRecords,
-    ],
-
-    [
-      "Total Appliance Energy (Wh)",
-      formatNumber(
-        reportData.summary
-          .totalApplianceEnergyWh,
-      ),
-    ],
-
-    [
-      "Total Appliance Duration",
-      formatDuration(
-        reportData.summary
-          .totalApplianceDurationSeconds,
-      ),
-    ],
   ];
 
   const monitoringHeaders = [
@@ -3219,46 +2764,6 @@ export function generateAdlaWattCsv(
         row.solarVoltage,
         row.solarCurrent,
         row.totalEnergy,
-      ],
-    );
-
-  const applianceHeaders = [
-    "Recorded At",
-    "Appliance",
-    "Status",
-    "Wattage (W)",
-    "Duration",
-    "Energy (Wh)",
-  ];
-
-  const applianceCsvRows =
-    reportData.applianceRows.map(
-      (row) => [
-        row.recordedAt,
-        row.appliance,
-        row.status,
-        row.wattage,
-        row.duration,
-        row.energyWh,
-      ],
-    );
-
-  const topApplianceHeaders = [
-    "Appliance",
-    "Total Energy (Wh)",
-    "Total Duration",
-  ];
-
-  const topApplianceRows =
-    reportData.topAppliances.map(
-      (item) => [
-        item.name,
-        formatNumber(
-          item.energyWh,
-        ),
-        formatDuration(
-          item.durationSeconds,
-        ),
       ],
     );
 
@@ -3303,18 +2808,6 @@ export function generateAdlaWattCsv(
     ],
     monitoringHeaders,
     ...monitoringCsvRows,
-    [],
-    [
-      "APPLIANCE USAGE HISTORY",
-    ],
-    applianceHeaders,
-    ...applianceCsvRows,
-    [],
-    [
-      "APPLIANCE ENERGY SUMMARY",
-    ],
-    topApplianceHeaders,
-    ...topApplianceRows,
   );
 
   return sections
@@ -5140,236 +4633,6 @@ export async function generateAdlaWattPdf(
     10;
 
   /* ----------------------------------------------------------
-     APPLIANCE ENERGY SUMMARY
-     ---------------------------------------------------------- */
-
-  if (
-    currentY >
-    pageHeight - 75
-  ) {
-    doc.addPage();
-
-    paintPdfPageBase(
-      doc,
-      pageWidth,
-      pageHeight,
-    );
-
-    currentY =
-      20;
-  }
-
-  currentY =
-    addPdfSectionTitle(
-      doc,
-      "APPLIANCE ENERGY SUMMARY",
-      currentY,
-    );
-
-  if (
-    reportData.topAppliances
-      .length >
-    0
-  ) {
-    const applianceSummaryStartPage =
-      doc.getCurrentPageInfo().pageNumber;
-
-    autoTable(
-      doc,
-      {
-        startY:
-          currentY,
-
-        tableWidth:
-          contentWidth,
-
-        margin: {
-          left:
-            horizontalMargin,
-
-          right:
-            horizontalMargin,
-        },
-
-        head: [
-          [
-            "Appliance",
-            "Energy (Wh)",
-            "Duration",
-          ],
-        ],
-
-        body:
-          reportData.topAppliances.map(
-            (item) => [
-              item.name,
-
-              formatNumber(
-                item.energyWh,
-              ),
-
-              formatDuration(
-                item.durationSeconds,
-              ),
-            ],
-          ),
-
-        theme:
-          "plain",
-
-        styles: {
-          font:
-            "helvetica",
-
-          fontSize:
-            8,
-
-          cellPadding:
-            3,
-
-          textColor: [
-            31,
-            41,
-            55,
-          ],
-
-          fillColor: [
-            248,
-            245,
-            234,
-          ],
-        },
-
-        headStyles: {
-          fillColor: [
-            0,
-            168,
-            107,
-          ],
-
-          textColor: [
-            255,
-            255,
-            255,
-          ],
-
-          fontStyle:
-            "bold",
-        },
-
-        bodyStyles: {
-          fillColor: [
-            255,
-            255,
-            255,
-          ],
-        },
-
-        alternateRowStyles: {
-          fillColor: [
-            248,
-            245,
-            234,
-          ],
-        },
-
-        willDrawPage:
-          (
-            hookData,
-          ) => {
-            paintPdfContinuationPage(
-              doc,
-              hookData.pageNumber,
-              applianceSummaryStartPage,
-              pageWidth,
-              pageHeight,
-            );
-          },
-
-        columnStyles: {
-          0: {
-            cellWidth:
-              contentWidth *
-              0.50,
-          },
-
-          1: {
-            cellWidth:
-              contentWidth *
-              0.25,
-          },
-
-          2: {
-            cellWidth:
-              contentWidth *
-              0.25,
-          },
-        },
-      },
-    );
-
-    currentY =
-      (
-        doc as unknown as {
-          lastAutoTable?: {
-            finalY?: number;
-          };
-        }
-      ).lastAutoTable
-        ?.finalY ??
-      currentY + 30;
-  } else {
-    doc.setFillColor(
-      255,
-      253,
-      230,
-    );
-
-    doc.setDrawColor(
-      242,
-      222,
-      150,
-    );
-
-    doc.roundedRect(
-      horizontalMargin,
-      currentY,
-      contentWidth,
-      15,
-      3,
-      3,
-      "FD",
-    );
-
-    doc.setFont(
-      "helvetica",
-      "normal",
-    );
-
-    doc.setFontSize(
-      8,
-    );
-
-    doc.setTextColor(
-      PDF_MUTED[0],
-      PDF_MUTED[1],
-      PDF_MUTED[2],
-    );
-
-    doc.text(
-      "No appliance usage data available for this report period.",
-      horizontalMargin + 6,
-      currentY + 9,
-    );
-
-    currentY +=
-      15;
-  }
-
-  currentY +=
-    10;
-
-  /* ----------------------------------------------------------
      MONITORING HISTORY
      ---------------------------------------------------------- */
 
@@ -5722,221 +4985,6 @@ export async function generateAdlaWattPdf(
   }
 
   /* ----------------------------------------------------------
-     APPLIANCE USAGE HISTORY
-     ---------------------------------------------------------- */
-
-  if (
-    reportData.applianceRows
-      .length >
-    0
-  ) {
-    doc.addPage();
-
-    paintPdfPageBase(
-      doc,
-      pageWidth,
-      pageHeight,
-    );
-
-    currentY =
-      20;
-
-    currentY =
-      addPdfSectionTitle(
-        doc,
-        "APPLIANCE USAGE HISTORY",
-        currentY,
-      );
-
-    const applianceUsageStartPage =
-      doc.getCurrentPageInfo().pageNumber;
-
-    autoTable(
-      doc,
-      {
-        startY:
-          currentY,
-
-        tableWidth:
-          contentWidth,
-
-        margin: {
-          left:
-            horizontalMargin,
-
-          right:
-            horizontalMargin,
-
-          bottom:
-            20,
-        },
-
-        head: [
-          [
-            "Recorded At",
-            "Appliance",
-            "Status",
-            "Wattage W",
-            "Duration",
-            "Energy Wh",
-          ],
-        ],
-
-        body:
-          reportData.applianceRows.map(
-            (row) => [
-              row.recordedAt,
-              row.appliance,
-              row.status,
-              row.wattage,
-              row.duration,
-              row.energyWh,
-            ],
-          ),
-
-        theme:
-          "plain",
-
-        styles: {
-          font:
-            "helvetica",
-
-          fontSize:
-            7,
-
-          cellPadding:
-            2.5,
-
-          overflow:
-            "linebreak",
-
-          textColor: [
-            31,
-            41,
-            55,
-          ],
-
-          fillColor: [
-            248,
-            245,
-            234,
-          ],
-        },
-
-        headStyles: {
-          fillColor: [
-            0,
-            168,
-            107,
-          ],
-
-          textColor: [
-            255,
-            255,
-            255,
-          ],
-
-          fontStyle:
-            "bold",
-        },
-
-        bodyStyles: {
-          fillColor: [
-            255,
-            255,
-            255,
-          ],
-        },
-
-        alternateRowStyles: {
-          fillColor: [
-            248,
-            245,
-            234,
-          ],
-        },
-
-        willDrawPage:
-          (
-            hookData,
-          ) => {
-            paintPdfContinuationPage(
-              doc,
-              hookData.pageNumber,
-              applianceUsageStartPage,
-              pageWidth,
-              pageHeight,
-            );
-          },
-
-        columnStyles: {
-          0: {
-            cellWidth:
-              contentWidth *
-              0.20,
-          },
-
-          1: {
-            cellWidth:
-              contentWidth *
-              0.25,
-          },
-
-          2: {
-            cellWidth:
-              contentWidth *
-              0.15,
-          },
-
-          3: {
-            cellWidth:
-              contentWidth *
-              0.13,
-          },
-
-          4: {
-            cellWidth:
-              contentWidth *
-              0.135,
-          },
-
-          5: {
-            cellWidth:
-              contentWidth *
-              0.135,
-          },
-        },
-
-        didParseCell:
-          (
-            hookData,
-          ) => {
-            /*
-             * Status column keeps its semantic status color.
-             */
-            if (
-              hookData.section ===
-                "body" &&
-              hookData.column.index ===
-                2
-            ) {
-              const status =
-                String(
-                  hookData.cell.raw ??
-                    "",
-                );
-
-              hookData.cell.styles.textColor =
-                getPdfStatusColor(
-                  status,
-                );
-            }
-          },
-      },
-    );
-  }
-
-  /* ----------------------------------------------------------
      FOOTER
      ---------------------------------------------------------- */
 
@@ -6171,7 +5219,6 @@ export async function buildAnalyticsReport(
 ): Promise<AnalyticsReportData> {
   const {
     monitoringHistory,
-    applianceUsageHistory,
   } =
     await loadAnalyticsData(
       range,
@@ -6179,7 +5226,6 @@ export async function buildAnalyticsReport(
 
   return prepareReportData(
     monitoringHistory,
-    applianceUsageHistory,
     reportFrequency,
     range,
   );

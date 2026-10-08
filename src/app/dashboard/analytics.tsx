@@ -23,8 +23,6 @@ import UptimeChart from "@/components/charts/UptimeChart";
 import OnlineOfflineChart from "@/components/charts/OnlineOfflineChart";
 import AvgPeakLoadChart from "@/components/charts/AvgPeakLoadChart";
 import PowerByHourChart from "@/components/charts/PowerByHourChart";
-import ApplianceEnergyChart from "@/components/charts/ApplianceEnergyChart";
-import ApplianceRuntimeChart from "@/components/charts/ApplianceRuntimeChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -36,7 +34,6 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   AnalyticsRange,
-  ApplianceUsageHistoryRow,
   ChartFrequency,
   MonitoringHistoryRow,
   REPORT_FREQUENCIES,
@@ -52,7 +49,6 @@ import {
   getBatteryTemperatureData,
   getBestSunDaysData,
   getDefaultRange,
-  getApplianceEnergyShare,
   getEnergyInputChartData,
   getEnergyOutputChartData,
   getInteriorTemperatureData,
@@ -107,11 +103,6 @@ export default function AnalyticsScreen() {
     monitoringHistory,
     setMonitoringHistory,
   ] = useState<MonitoringHistoryRow[]>([]);
-
-  const [
-    applianceUsageHistory,
-    setApplianceUsageHistory,
-  ] = useState<ApplianceUsageHistoryRow[]>([]);
 
   const [
     reportFrequency,
@@ -525,32 +516,18 @@ export default function AnalyticsScreen() {
     [monitoringHistory],
   );
 
-  // Appliance cards share one range-total grouping (usage rows
-  // are sparse; bucketing them would scatter single events).
-  // No frequency toggle on either card.
-  const applianceShare = useMemo(
-    () => getApplianceEnergyShare(applianceUsageHistory),
-    [applianceUsageHistory],
-  );
-
   const loadAnalytics =
     useCallback(
       async () => {
         const {
           monitoringHistory:
           monitoringRows,
-          applianceUsageHistory:
-          applianceRows,
         } = await loadAnalyticsData(
           range,
         );
 
         setMonitoringHistory(
           monitoringRows,
-        );
-
-        setApplianceUsageHistory(
-          applianceRows,
         );
       },
       [range],
@@ -573,8 +550,6 @@ export default function AnalyticsScreen() {
       ) => {
         if (
           monitoringHistory.length ===
-          0 &&
-          applianceUsageHistory.length ===
           0
         ) {
           Alert.alert(
@@ -596,7 +571,6 @@ export default function AnalyticsScreen() {
             const reportData =
               prepareReportData(
                 monitoringHistory,
-                applianceUsageHistory,
                 reportFrequency,
                 range,
               );
@@ -663,7 +637,6 @@ export default function AnalyticsScreen() {
         } =
           createAnalyticsReportContent(
             monitoringHistory,
-            applianceUsageHistory,
             reportFrequency,
             range,
           );
@@ -689,7 +662,6 @@ export default function AnalyticsScreen() {
             "PDF export preparation",
             "",
             `Monitoring records: ${monitoringHistory.length}`,
-            `Appliance usage records: ${applianceUsageHistory.length}`,
             "",
             "This report contains the selected historical analytics data.",
           ].join("\n"),
@@ -700,7 +672,6 @@ export default function AnalyticsScreen() {
       },
       [
         monitoringHistory,
-        applianceUsageHistory,
         reportFrequency,
         range,
       ],
@@ -1094,26 +1065,6 @@ export default function AnalyticsScreen() {
         >
           <PowerByHourChart
             points={powerByHourPoints}
-          />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Energy by Appliance"
-          subtitle="What uses the most power."
-          icon="bulb-outline"
-        >
-          <ApplianceEnergyChart
-            slices={applianceShare}
-          />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Appliance Run Time"
-          subtitle="What runs the longest."
-          icon="bulb-outline"
-        >
-          <ApplianceRuntimeChart
-            slices={applianceShare}
           />
         </AnalyticsChartCard>
 
