@@ -225,4 +225,8 @@ export const CATALOG_IMAGES: Record<string, number> = {
   // Porch batch
   "catalog:porch:bulb": require("@/assets/images/appliances/porch-lantern.png"),
   "catalog:porch:cctv": require("@/assets/images/appliances/cctv-camera.png"),
+  // Bathroom batch
+  "catalog:bath:washing-machine": require("@/assets/images/appliances/washing-machine.png"),
+  "catalog:bath:clipper": require("@/assets/images/appliances/hair-clipper.png"),
+  "catalog:bath:exhaust-fan": require("@/assets/images/appliances/exhaust-fan.png"),
 };
