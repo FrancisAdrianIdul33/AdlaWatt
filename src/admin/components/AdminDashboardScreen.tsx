@@ -39,8 +39,8 @@ import { logActivity } from "@/services/activityLogService";
 // NavBar (whose a11y strings translate). Purpose-driven tabs:
 // each tab answers one question (health now / what limits /
 // who did what). Fleet aggregates load async with loading +
-// stale states so the UI never looks broken; thresholds stay
-// staged-mock.
+// stale states so the UI never looks broken; thresholds
+// publish to the alert_thresholds backend store on Save.
 // ============================================================
 
 export default function AdminDashboardScreen() {

@@ -2,9 +2,9 @@
 // ADMIN CONSTANTS (UI-first)
 //
 // Admin-only goal/elements live here so household constants
-// stay untouched. Threshold defaults mirror the dormant
-// SAFE_* = null values in notificationService (UI edits stay
-// local until a backend store lands in Phase 2).
+// stay untouched. Threshold defaults seed the alert_thresholds
+// backend store and back every read fallback (service cache,
+// editor stale banner) — see 20261011000000_alert_thresholds.sql.
 // ============================================================
 
 export type AdminTab =

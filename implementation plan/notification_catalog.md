@@ -66,7 +66,7 @@ Alert: Battery Normal-Use Cutoff Reached (≤ 20%), Battery Critically Low (< 20
 | Battery Voltage Reading Zero | `alert` | Voltage reads 0 (sensor lost) |
 | Battery Charging Not Detected | `alert` | Level < 100%, not Charging, solar present |
 | Invalid Time Remaining | `alert` | Malformed `time_remaining` |
-| Battery Voltage Too Low / Too High | `alert` | **Disabled** (`SAFE_*` thresholds are `null`) |
+| Battery Voltage Too Low / Too High | `alert` | Downward/upward crossing of the admin-published `battery_voltage_min/max` (`alert_thresholds` singleton; cached, defaults on miss) |
 
 ## Solar Rules
 
@@ -108,7 +108,7 @@ Alert: Battery Normal-Use Cutoff Reached (≤ 20%), Battery Critically Low (< 20
 |---|---|---|---|
 | Current Load Detected / No Current Load | `normal` | 0 ↔ >0 crossings | Exists (generic, not per-component) |
 | Load Activity Detected | `normal` | 50 W upward milestones, follows down on decrease | Exists (generic) |
-| High Current Load | `alert` | Above safe threshold | **Disabled** (threshold `null`) |
+| High Current Load | `alert` | Upward crossing of the admin-published `high_load_watts` (`alert_thresholds` singleton; cached, defaults on miss) | Implemented (`checkHighCurrentLoad`) |
 | Component Went Inactive (per component) | `alert` | `components.status` Active → Inactive, via the service's `components` watcher | Implemented (`checkComponentStatusTransition`) |
 | Critical Component Inactive | `alert` + `critical` mirror | Relay / INA228 / Voltage Sensor inactive | Implemented — severity by component role |
 | Component Back Online | `normal` + `info` mirror | `components.status` Inactive → Active | Implemented |
@@ -165,7 +165,7 @@ Shared rules:
 - Do not put live values in `title`; it breaks cooldown keys and fragments history.
 - Do not mark routine transitions (`Charging`, `Level Updated`, milestones) with `logAs`; the activity table gets signal, not telemetry.
 - Do not evaluate rules on raw snapshots; always compare current vs previous or the rule refires every poll.
-- Do not leave `SAFE_*` thresholds `null` silently; disabled rules (`High Current Load`, voltage bounds) must be enabled with real values or deleted.
+- Threshold values live in the `alert_thresholds` backend store (admin-published, cached in the watcher with admin-default fallback) — never hardcoded per-user, never silently `null`.
 - Do not duplicate the Safe/Returned-to-Safe pair on one transition (fixed in `checkDepthOfDischarge` — only the transition-accurate "Returned to Safe" fires, since `dod_status` is binary).
 - Do not add forecast rules that poll the weather API on the monitoring cadence; poll forecasts on their own slow schedule.
 

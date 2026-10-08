@@ -17,9 +17,12 @@ import {
 //   (offline, not yet pushed, RLS) callers fall back to the
 //   mocks below with stale=true so the UI shows a "stale data"
 //   banner instead of a blank page.
-// - Threshold Save stays staged-mock (no backend table yet);
-//   ranges are validated server-side by
-//   validate_admin_thresholds() for future use.
+// - Thresholds publish to the alert_thresholds backend
+//   store (getPublishedThresholds / publishThresholds below);
+//   temperature rows are stored but staged-only (no consumer
+//   rules yet). Ranges are validated server-side by
+//   validate_admin_thresholds() so the store cannot be
+//   bypassed from the client.
 // ============================================================
 
 export interface AdminFleetHealth {
@@ -190,6 +193,193 @@ export function getMockAuditLogs(): ActivityLogItem[] {
 
 export function getDefaultThresholds(): AdminThresholds {
   return { ...DEFAULT_ADMIN_THRESHOLDS };
+}
+
+/* ============================================================
+   PUBLISHED THRESHOLDS (backend store)
+   Single global row in public.alert_thresholds (see
+   20261011000000_alert_thresholds.sql): admins publish, every
+   household watcher reads through its own cache.
+   ============================================================ */
+
+export interface PublishedThresholds {
+  thresholds: AdminThresholds;
+  /** True when the read failed and defaults are shown. */
+  stale: boolean;
+}
+
+interface ThresholdRow {
+  battery_voltage_min?: unknown;
+  battery_voltage_max?: unknown;
+  high_load_watts?: unknown;
+  battery_temp_high?: unknown;
+  solar_temp_high?: unknown;
+  interior_temp_high?: unknown;
+}
+
+const toFiniteNumber = (
+  value: unknown,
+  fallback: number,
+): number => {
+  // Nullish and empty cells fall back per-field: coercing
+  // null to 0 would arm a 0W high-load trip (every load
+  // alerts) or a 0V window, so absence must mean default.
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return fallback;
+  }
+
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : fallback;
+};
+
+const rowToThresholds = (
+  row: ThresholdRow,
+): AdminThresholds => {
+  const defaults = getDefaultThresholds();
+
+  return {
+    batteryVoltageMin: toFiniteNumber(
+      row.battery_voltage_min,
+      defaults.batteryVoltageMin,
+    ),
+    batteryVoltageMax: toFiniteNumber(
+      row.battery_voltage_max,
+      defaults.batteryVoltageMax,
+    ),
+    highLoadWatts: toFiniteNumber(
+      row.high_load_watts,
+      defaults.highLoadWatts,
+    ),
+    batteryTempHigh: toFiniteNumber(
+      row.battery_temp_high,
+      defaults.batteryTempHigh,
+    ),
+    solarTempHigh: toFiniteNumber(
+      row.solar_temp_high,
+      defaults.solarTempHigh,
+    ),
+    interiorTempHigh: toFiniteNumber(
+      row.interior_temp_high,
+      defaults.interiorTempHigh,
+    ),
+  };
+};
+
+/** Client-side mirror of validate_admin_thresholds() ranges
+ *  (editor steppers already clamp to these; the DB CHECK is
+ *  the real gate and rejects bypasses server-side). */
+export function isValidThresholds(
+  values: AdminThresholds,
+): boolean {
+  return (
+    values.batteryVoltageMin >= 10 &&
+    values.batteryVoltageMin <= 13 &&
+    values.batteryVoltageMax >= 13 &&
+    values.batteryVoltageMax <= 15 &&
+    values.batteryVoltageMax >
+      values.batteryVoltageMin &&
+    values.highLoadWatts >= 100 &&
+    values.highLoadWatts <= 1000 &&
+    values.batteryTempHigh >= 30 &&
+    values.batteryTempHigh <= 60 &&
+    values.solarTempHigh >= 40 &&
+    values.solarTempHigh <= 80 &&
+    values.interiorTempHigh >= 30 &&
+    values.interiorTempHigh <= 70
+  );
+}
+
+export async function getPublishedThresholds(): Promise<PublishedThresholds> {
+  try {
+    const { data, error } = await supabase
+      .from("alert_thresholds")
+      .select(
+        [
+          "battery_voltage_min",
+          "battery_voltage_max",
+          "high_load_watts",
+          "battery_temp_high",
+          "solar_temp_high",
+          "interior_temp_high",
+        ].join(","),
+      )
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data) {
+      throw new Error(
+        "No published thresholds row.",
+      );
+    }
+
+    return {
+      thresholds: rowToThresholds(
+        data as ThresholdRow,
+      ),
+      stale: false,
+    };
+  } catch (thrown) {
+    console.warn(
+      "Published thresholds read failed, showing defaults:",
+      thrown instanceof Error
+        ? thrown.message
+        : thrown,
+    );
+
+    return {
+      thresholds: getDefaultThresholds(),
+      stale: true,
+    };
+  }
+}
+
+export async function publishThresholds(
+  values: AdminThresholds,
+): Promise<void> {
+  if (!isValidThresholds(values)) {
+    throw new Error(
+      "Thresholds are outside the allowed ranges.",
+    );
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("alert_thresholds")
+    .update({
+      battery_voltage_min:
+        values.batteryVoltageMin,
+      battery_voltage_max:
+        values.batteryVoltageMax,
+      high_load_watts: values.highLoadWatts,
+      battery_temp_high:
+        values.batteryTempHigh,
+      solar_temp_high: values.solarTempHigh,
+      interior_temp_high:
+        values.interiorTempHigh,
+      updated_at: new Date().toISOString(),
+      updated_by:
+        userData.user?.id ?? null,
+    })
+    .eq("id", 1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export function paginateAudit(

@@ -107,10 +107,10 @@ A 5-day solar outlook (`src/services/forecast.ts`) groups OpenWeatherMap `/forec
 
 The application generates and displays system notifications in real time via transition-gated `check*()` rules in `src/services/notificationService.ts`:
 
-- Battery alerts (charging, discharging, low level, fully charged, runtime, voltage — voltage rules inactive until production thresholds are set: `SAFE_BATTERY_VOLTAGE_MIN/MAX = null`)
+- Battery alerts (charging, discharging, low level, fully charged, runtime, voltage — voltage rules fire on the admin-published `battery_voltage_min/max` from the `alert_thresholds` store)
 - Temperature alerts (battery, solar panel, and interior — Nominal to Critical)
 - Solar alerts (input detected, increased, unavailable, low input during charging)
-- Load alerts (current load detected, no load, consumption increased — high-load rule inactive until `SAFE_CURRENT_LOAD_THRESHOLD` is configured)
+- Load alerts (current load detected, no load, consumption increased, high load above the admin-published `high_load_watts`)
 - Depth of discharge alerts (safe, unsafe, returned to safe)
 - Device status alerts (online, offline, status changed)
 - Data health alerts (stale monitoring, missing records, invalid time remaining)
@@ -632,6 +632,7 @@ Static/mock dashboard values have been replaced by live Supabase queries and rea
 | `notifications` | Generated notifications with read state (separate list from activity logs) |
 | `activity_logs` | Recorded system activities via manual `logActivity()` (no triggers/hooks) |
 | `components` | IoT/power component list and live status |
+| `alert_thresholds` | Admin-published safety thresholds (singleton row: voltage min/max, high-load watts, temp highs; admin-write, authenticated-read, `validate_admin_thresholds()` CHECK) |
 | Storage `email-assets` (public) | Hosted alert-email logo/assets |
 
 ### Real-Time Features
@@ -676,7 +677,6 @@ AGENTMAIL_SENDER_INBOX=<sender inbox, optional>
 The following remain pending:
 
 - **Additional analytics charts** — battery chart is implemented; other historical energy metrics are future work
-- **Notification safety thresholds** — high-load and voltage min/max rules early-return (`null`) until production thresholds are configured
 - **Forgot password** — no route or screen exists yet
 
 ---
@@ -921,6 +921,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Battery-aware appliance recommendation engine (ZENOVA 720 Wh / 144 Wh reserve)
 - [x] Component monitoring with real-time status (INA228, DS18B20, DHT22, SPI TFT)
 - [x] Notification service (auto-generated alerts, transition-gated rules, cooldowns)
+- [x] Admin-published safety thresholds (`alert_thresholds` singleton + cached watcher rules + ThresholdEditor publish flow)
 - [x] Alert emails via Edge Function + AgentMail (branded template, per-user toggle, offline-safe cache)
 - [x] Notifications screen with filters and pagination
 - [x] Activity logs with pagination (separate list from notifications)
@@ -938,7 +939,7 @@ The final build configuration may change as the project approaches deployment.
 ### In Progress
 
 - [ ] Additional historical energy charts (beyond battery level)
-- [ ] Notification safety threshold configuration (high-load, voltage min/max)
+- [x] Notification safety threshold configuration (high-load, voltage min/max via admin-published `alert_thresholds`)
 - [ ] Forgot password screen (no route yet)
 - [ ] Color-blind / language / vibration persistence (currently session-only)
 - [ ] End-to-end ESP32 → Supabase hardware feed
@@ -979,7 +980,7 @@ The ESP32 hardware feed is being integrated. The application consumes data throu
 
 - Additional analytics charts are future work (battery chart is implemented; `AnalyticsChartCard` is reusable for other metrics)
 - Appliance recommendations are battery-aware only while live monitoring data is present; without it, the app falls back to a wattage threshold
-- Notification safety rules for high load and voltage min/max early-return until production thresholds are configured
+- Notification safety rules for high load and voltage min/max fire on the admin-published `alert_thresholds` row (cached in the watcher, admin defaults on read failure)
 - The forgot password screen has no route or implementation yet
 
 ### Settings Persistence
@@ -1087,7 +1088,6 @@ Future development may include:
 - Additional historical energy charts on top of the battery chart
 - Detailed runtime / load-stack recommendation views on top of the recommendation engine
 - End-to-end ESP32 → Supabase integration and real-time sensor data
-- Notification safety threshold configuration (high-load, voltage min/max)
 - Forgot password and password reset flow
 - Color-blind / language / vibration persistence
 - Offline data handling

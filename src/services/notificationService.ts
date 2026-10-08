@@ -15,6 +15,10 @@ import {
   type ResilientSubscription,
 } from "@/services/realtimeResubscribe";
 import { sendAlertEmail } from "@/services/alertEmailService";
+import {
+  getDefaultThresholds,
+  getPublishedThresholds,
+} from "@/admin/services/adminService";
 
 // ============================================================
 // TYPES
@@ -68,31 +72,188 @@ const STALE_MONITORING_INTERVAL_MS =
   10 * 1000;
 
 // ------------------------------------------------------------
-// OPTIONAL SAFE THRESHOLDS (DISABLED — all null)
+// ADMIN-PUBLISHED SAFE THRESHOLDS (LIVE)
 // ------------------------------------------------------------
 //
-// Set a real value to enable its rule; null keeps the rule
-// dormant (each check early-returns). The monitoring table
-// does NOT define these thresholds.
+// Values come from the alert_thresholds backend store,
+// published by admins through ThresholdEditor and consumed
+// here through an in-memory cache — never one DB read per
+// evaluation. Cache miss or read failure falls back to the
+// admin defaults so a failed fetch can never silently disarm
+// safety (the failure is logged).
 //
-//   SAFE_CURRENT_LOAD_THRESHOLD → checkHighCurrentLoad
-//     ("High Current Load", alert, logs critical)
-//   SAFE_BATTERY_VOLTAGE_MIN → checkBatteryVoltageTooLow
-//     ("Battery Voltage Too Low", alert, logs critical)
-//   SAFE_BATTERY_VOLTAGE_MAX → checkBatteryVoltageTooHigh
-//     ("Battery Voltage Too High", alert, logs critical)
+//   highLoadWatts     → checkHighCurrentLoad
+//     ("High Current Load", alert)
+//   batteryVoltageMin → checkBatteryVoltageTooLow
+//     ("Battery Voltage Too Low", alert)
+//   batteryVoltageMax → checkBatteryVoltageTooHigh
+//     ("Battery Voltage Too High", alert)
+//
+// Temperature editor rows have no consumer rules (temp alerts
+// come from ESP32 status transitions) and are intentionally
+// not cached here.
 //
 // See implementation plan/notification_catalog.md.
 // ------------------------------------------------------------
 
-const SAFE_CURRENT_LOAD_THRESHOLD:
-  number | null = null;
+export interface SafetyThresholds {
+  highLoadWatts: number;
+  batteryVoltageMin: number;
+  batteryVoltageMax: number;
+}
 
-const SAFE_BATTERY_VOLTAGE_MIN:
-  number | null = null;
+const DEFAULT_SAFETY_THRESHOLDS: SafetyThresholds =
+  (() => {
+    const defaults = getDefaultThresholds();
 
-const SAFE_BATTERY_VOLTAGE_MAX:
-  number | null = null;
+    return {
+      highLoadWatts:
+        defaults.highLoadWatts,
+      batteryVoltageMin:
+        defaults.batteryVoltageMin,
+      batteryVoltageMax:
+        defaults.batteryVoltageMax,
+    };
+  })();
+
+let thresholdCache:
+  SafetyThresholds | null = null;
+
+let thresholdRefreshTimer:
+  | ReturnType<typeof setInterval>
+  | null = null;
+
+let thresholdsChannel:
+  | ReturnType<typeof supabase.channel>
+  | null = null;
+
+const THRESHOLD_REFRESH_MS =
+  60 * 1000;
+
+// Loads the published row into the cache. Never throws:
+// failure keeps the previous cache (or defaults on first
+// load) and logs, so safety stays armed.
+export const loadThresholdCache =
+  async (): Promise<SafetyThresholds> => {
+    try {
+      const published =
+        await getPublishedThresholds();
+
+      thresholdCache = {
+        highLoadWatts:
+          published.thresholds
+            .highLoadWatts,
+        batteryVoltageMin:
+          published.thresholds
+            .batteryVoltageMin,
+        batteryVoltageMax:
+          published.thresholds
+            .batteryVoltageMax,
+      };
+
+      if (published.stale) {
+        console.warn(
+          "Threshold cache using defaults (store unreachable).",
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "Threshold cache load failed, keeping previous:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+
+      if (!thresholdCache) {
+        thresholdCache = {
+          ...DEFAULT_SAFETY_THRESHOLDS,
+        };
+      }
+    }
+
+    return getThresholdCache();
+  };
+
+// Synchronous read for the per-evaluation hot path.
+// Defaults when never loaded — never null, never a read.
+export const getThresholdCache =
+  (): SafetyThresholds => {
+    return (
+      thresholdCache ?? {
+        ...DEFAULT_SAFETY_THRESHOLDS,
+      }
+    );
+  };
+
+// Test seam: replaces the cache wholesale.
+export const setThresholdCacheForTests =
+  (
+    values: SafetyThresholds | null,
+  ): void => {
+    thresholdCache = values
+      ? { ...values }
+      : null;
+  };
+
+const startThresholdRefresh = () => {
+  stopThresholdRefresh();
+
+  // Refresh on publish: admin UPDATEs invalidate immediately
+  // (seconds, not minutes) while connected.
+  try {
+    thresholdsChannel = supabase
+      .channel("thresholds-watcher")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "alert_thresholds",
+        },
+        () => {
+          void loadThresholdCache();
+        },
+      )
+      .subscribe();
+  } catch (error) {
+    console.warn(
+      "Thresholds realtime unavailable, interval-only:",
+      error instanceof Error
+        ? error.message
+        : error,
+    );
+  }
+
+  thresholdRefreshTimer = setInterval(
+    () => {
+      void loadThresholdCache();
+    },
+    THRESHOLD_REFRESH_MS,
+  );
+};
+
+const stopThresholdRefresh =
+  async () => {
+    if (thresholdRefreshTimer) {
+      clearInterval(
+        thresholdRefreshTimer,
+      );
+
+      thresholdRefreshTimer = null;
+    }
+
+    if (thresholdsChannel) {
+      try {
+        await supabase.removeChannel(
+          thresholdsChannel,
+        );
+      } catch {
+        // Teardown best-effort by design.
+      }
+
+      thresholdsChannel = null;
+    }
+  };
 
 
 // ============================================================
@@ -318,6 +479,39 @@ const getCurrentMonitoringNotificationData =
 
 
 // ============================================================
+// COOLDOWN MATH (pure, exported for unit tests)
+// ============================================================
+//
+// True when a previous firing at lastMs still suppresses a new
+// one at nowMs. Undefined lastMs (never fired) never suppresses.
+//
+// Both create paths below delegate their in-memory and DB
+// last-created checks to this helper so the rule is defined
+// once and tested directly.
+// ============================================================
+
+export const isWithinCooldown = (
+  lastMs: number | undefined,
+  nowMs: number,
+  windowMs: number,
+): boolean => {
+  if (lastMs === undefined) {
+    return false;
+  }
+
+  if (
+    !Number.isFinite(lastMs) ||
+    !Number.isFinite(nowMs) ||
+    !Number.isFinite(windowMs) ||
+    windowMs <= 0
+  ) {
+    return false;
+  }
+
+  return nowMs - lastMs < windowMs;
+};
+
+// ============================================================
 // CREATE NOTIFICATION
 // ============================================================
 //
@@ -359,11 +553,11 @@ const createNotification = async (
     );
 
   if (
-    previousNotificationTime !==
-      undefined &&
-    now -
-      previousNotificationTime <
-        NOTIFICATION_COOLDOWN_MS
+    isWithinCooldown(
+      previousNotificationTime,
+      now,
+      NOTIFICATION_COOLDOWN_MS,
+    )
   ) {
     return false;
   }
@@ -432,10 +626,13 @@ const createNotification = async (
       ).getTime();
 
     if (
-      !Number.isNaN(lastCreatedAt) &&
-      now -
-        lastCreatedAt <
-          NOTIFICATION_COOLDOWN_MS
+      isWithinCooldown(
+        Number.isNaN(lastCreatedAt)
+          ? undefined
+          : lastCreatedAt,
+        now,
+        NOTIFICATION_COOLDOWN_MS,
+      )
     ) {
 
       notificationCooldowns.set(
@@ -621,11 +818,11 @@ const createNotificationWithCooldown =
       );
 
     if (
-      previousNotificationTime !==
-        undefined &&
-      now -
-        previousNotificationTime <
-          cooldownMs
+      isWithinCooldown(
+        previousNotificationTime,
+        now,
+        cooldownMs,
+      )
     ) {
       return false;
     }
@@ -676,10 +873,13 @@ const createNotificationWithCooldown =
         ).getTime();
 
       if (
-        !Number.isNaN(lastCreatedAt) &&
-        now -
-          lastCreatedAt <
-            cooldownMs
+        isWithinCooldown(
+          Number.isNaN(lastCreatedAt)
+            ? undefined
+            : lastCreatedAt,
+          now,
+          cooldownMs,
+        )
       ) {
 
         notificationCooldowns.set(
@@ -2453,31 +2653,25 @@ const checkLowSolarInputDuringCharging =
 // HIGH CURRENT LOAD
 // ------------------------------------------------------------
 //
-// Disabled until the actual safe current-load threshold
-// has been configured.
+// Transition-gated: fires on the upward crossing of the
+// admin-published safe load threshold.
 // ------------------------------------------------------------
 
-const checkHighCurrentLoad =
+export const checkHighCurrentLoad =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    thresholdWatts: number,
   ) => {
 
     if (
-      SAFE_CURRENT_LOAD_THRESHOLD ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.current_load >
-        SAFE_CURRENT_LOAD_THRESHOLD &&
+        thresholdWatts &&
       (
         previous === null ||
         previous.current_load <=
-          SAFE_CURRENT_LOAD_THRESHOLD
+          thresholdWatts
       )
     ) {
 
@@ -2487,7 +2681,7 @@ const checkHighCurrentLoad =
           title:
             "High Current Load",
           description:
-            "The current_load value is above your configured safe load threshold.",
+            `Load at ${current.current_load}W exceeds the ${thresholdWatts}W safe limit.`,
           type: "alert",
         },
       );
@@ -2499,30 +2693,25 @@ const checkHighCurrentLoad =
 // BATTERY VOLTAGE TOO LOW
 // ------------------------------------------------------------
 //
-// Disabled until SAFE_BATTERY_VOLTAGE_MIN is configured.
+// Transition-gated: fires on the downward crossing of the
+// admin-published minimum battery voltage.
 // ------------------------------------------------------------
 
-const checkBatteryVoltageTooLow =
+export const checkBatteryVoltageTooLow =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    minVoltage: number,
   ) => {
 
     if (
-      SAFE_BATTERY_VOLTAGE_MIN ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.voltage <
-        SAFE_BATTERY_VOLTAGE_MIN &&
+        minVoltage &&
       (
         previous === null ||
         previous.voltage >=
-          SAFE_BATTERY_VOLTAGE_MIN
+          minVoltage
       )
     ) {
 
@@ -2532,7 +2721,7 @@ const checkBatteryVoltageTooLow =
           title:
             "Battery Voltage Too Low",
           description:
-            "The voltage value is below your configured safe battery-voltage threshold.",
+            `Voltage at ${current.voltage}V is below the ${minVoltage}V safe minimum.`,
           type: "alert",
         },
       );
@@ -2544,30 +2733,25 @@ const checkBatteryVoltageTooLow =
 // BATTERY VOLTAGE TOO HIGH
 // ------------------------------------------------------------
 //
-// Disabled until SAFE_BATTERY_VOLTAGE_MAX is configured.
+// Transition-gated: fires on the upward crossing of the
+// admin-published maximum battery voltage.
 // ------------------------------------------------------------
 
-const checkBatteryVoltageTooHigh =
+export const checkBatteryVoltageTooHigh =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    maxVoltage: number,
   ) => {
 
     if (
-      SAFE_BATTERY_VOLTAGE_MAX ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.voltage >
-        SAFE_BATTERY_VOLTAGE_MAX &&
+        maxVoltage &&
       (
         previous === null ||
         previous.voltage <=
-          SAFE_BATTERY_VOLTAGE_MAX
+          maxVoltage
       )
     ) {
 
@@ -2577,7 +2761,7 @@ const checkBatteryVoltageTooHigh =
           title:
             "Battery Voltage Too High",
           description:
-            "The voltage value is above your configured safe battery-voltage threshold.",
+            `Voltage at ${current.voltage}V is above the ${maxVoltage}V safe maximum.`,
           type: "alert",
         },
       );
@@ -2898,22 +3082,28 @@ const processMonitoringNotifications =
         previous,
       );
 
+      const safetyThresholds =
+        getThresholdCache();
+
       await checkHighCurrentLoad(
         userId,
         current,
         previous,
+        safetyThresholds.highLoadWatts,
       );
 
       await checkBatteryVoltageTooLow(
         userId,
         current,
         previous,
+        safetyThresholds.batteryVoltageMin,
       );
 
       await checkBatteryVoltageTooHigh(
         userId,
         current,
         previous,
+        safetyThresholds.batteryVoltageMax,
       );
 
       await checkInvalidTimeRemaining(
@@ -3253,6 +3443,8 @@ export const unsubscribeFromNotificationMonitoring =
 
     stopStaleMonitoringCheck();
 
+    await stopThresholdRefresh();
+
     resetNotificationState();
   };
 
@@ -3443,6 +3635,8 @@ export const startMonitoringNotificationWatcher =
 
     stopStaleMonitoringCheck();
 
+    await stopThresholdRefresh();
+
     resetNotificationState();
 
     currentUserId =
@@ -3526,6 +3720,19 @@ export const startMonitoringNotificationWatcher =
     startStaleMonitoringCheck(
       user.id,
     );
+
+    // ----------------------------------------------------------
+    // LOAD ADMIN THRESHOLDS (cache + refresh)
+    // ----------------------------------------------------------
+    //
+    // Fail-safe by design: loadThresholdCache never throws and
+    // falls back to admin defaults, so safety rules stay armed
+    // even when the store is unreachable.
+    // ----------------------------------------------------------
+
+    await loadThresholdCache();
+
+    startThresholdRefresh();
 
     // ----------------------------------------------------------
     // SUBSCRIBE TO USER'S MONITORING ROW

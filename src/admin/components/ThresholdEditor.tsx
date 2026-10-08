@@ -1,5 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Pressable,
   StyleSheet,
@@ -16,6 +20,8 @@ import { Radius, Spacing } from "@/constants/theme";
 import type { AdminThresholds } from "@/admin/constants";
 import {
   getDefaultThresholds,
+  getPublishedThresholds,
+  publishThresholds,
 } from "@/admin/services/adminService";
 import { logActivity } from "@/services/activityLogService";
 
@@ -23,11 +29,25 @@ import { logActivity } from "@/services/activityLogService";
 // THRESHOLD EDITOR (admin-only elements)
 //
 // Staged Save/Cancel draft flow mirrors Menu preferences:
-// edits stay local until Save. No backend write yet — Save
-// stages locally with a v1 version stamp (change-management
-// honesty). Ranges mirror validate_admin_thresholds() so a
-// future store cannot be bypassed from the client.
+// edits stay local until Save. Save publishes to the
+// alert_thresholds backend store (fleet-wide on success),
+// validated by validate_admin_thresholds() server-side.
+//
+// Temperature rows (battery/solar/interior) are stored but
+// have no consumer rules yet — temp alerts come from ESP32
+// status transitions. Those rows stay visibly staged-only.
 // ============================================================
+
+// Temperature rows have no live consumer rules (temp alerts
+// come from ESP32 status transitions), so they stay visibly
+// staged-only while voltage/load publish fleet-wide.
+const STAGED_ONLY_KEYS: ReadonlySet<
+  keyof AdminThresholds
+> = new Set([
+  "batteryTempHigh",
+  "solarTempHigh",
+  "interiorTempHigh",
+]);
 
 interface Row {
   key: keyof AdminThresholds;
@@ -62,6 +82,45 @@ export default function ThresholdEditor() {
     getDefaultThresholds(),
   );
   const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [stale, setStale] = useState(false);
+
+  // Load the published row on mount; failures fall back to
+  // defaults with a stale banner (same convention as fleet
+  // health) instead of a blank editor.
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const published =
+          await getPublishedThresholds();
+
+        if (cancelled) {
+          return;
+        }
+
+        setSaved(published.thresholds);
+        setDraft(published.thresholds);
+        setStale(published.stale);
+
+        if (published.stale) {
+          setNotice(
+            "Could not reach the threshold store — showing defaults.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isDirty = JSON.stringify(saved) !== JSON.stringify(draft);
 
@@ -77,15 +136,20 @@ export default function ThresholdEditor() {
   return (
     <AnalyticsChartCard
       title="Alert thresholds"
-      subtitle="Staged drafts · v1 staged locally, not published"
+      subtitle={
+        stale
+          ? "Defaults shown — store unreachable"
+          : "Published fleet-wide on Save"
+      }
       icon="options-outline"
     >
       <AppText
         variant="caption"
         style={styles.versionStamp}
       >
-        Change-managed draft v1 — Save stages locally, publish
-        lands with a future backend store.
+        {loading
+          ? "Loading published thresholds…"
+          : "Voltage and load publish to all devices on Save. Temperature rows are stored but staged-only (no live rule consumes them yet)."}
       </AppText>
 
       <View style={styles.list}>
@@ -107,6 +171,11 @@ export default function ThresholdEditor() {
               >
                 Allowed {row.min}–{row.max}
                 {row.unit}
+                {STAGED_ONLY_KEYS.has(
+                  row.key,
+                )
+                  ? " · staged only"
+                  : ""}
               </AppText>
             </View>
 
@@ -160,12 +229,13 @@ export default function ThresholdEditor() {
               type: "info",
             });
           }}
-          disabled={!isDirty}
+          disabled={!isDirty || publishing}
           accessibilityRole="button"
           accessibilityLabel="Discard threshold drafts"
           style={({ pressed }) => [
             styles.secondaryButton,
-            !isDirty && styles.disabled,
+            (!isDirty || publishing) &&
+              styles.disabled,
             pressed && isDirty && styles.pressed,
           ]}
         >
@@ -176,28 +246,51 @@ export default function ThresholdEditor() {
 
         <Pressable
           onPress={() => {
-            setSaved(draft);
-            setNotice(
-              "Thresholds staged locally (v1 draft, not published).",
-            );
-            // Accountability: record the stage, fire-and-forget.
-            logActivity({
-              title: "Threshold draft saved",
-              description: `High-load cap staged at ${draft.highLoadWatts}W (v1 draft, not published).`,
-              type: "info",
-            });
+            // Accountability: record the publish, fire-and-forget.
+            void (async () => {
+              setPublishing(true);
+
+              try {
+                await publishThresholds(
+                  draft,
+                );
+
+                setSaved(draft);
+                setStale(false);
+                setNotice(
+                  "Thresholds published fleet-wide.",
+                );
+
+                logActivity({
+                  title: "Thresholds published",
+                  description: `High-load cap published at ${draft.highLoadWatts}W; voltage window ${draft.batteryVoltageMin}–${draft.batteryVoltageMax}V.`,
+                  type: "info",
+                });
+              } catch (error) {
+                setNotice(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to publish thresholds. Draft kept.",
+                );
+              } finally {
+                setPublishing(false);
+              }
+            })();
           }}
-          disabled={!isDirty}
+          disabled={!isDirty || publishing || loading}
           accessibilityRole="button"
-          accessibilityLabel="Save threshold drafts"
+          accessibilityLabel="Publish threshold drafts"
           style={({ pressed }) => [
             styles.primaryButton,
-            !isDirty && styles.disabled,
+            (!isDirty || publishing || loading) &&
+              styles.disabled,
             pressed && isDirty && styles.pressed,
           ]}
         >
           <AppText variant="button" style={styles.primaryText}>
-            Save
+            {publishing
+              ? "Publishing…"
+              : "Save"}
           </AppText>
         </Pressable>
       </View>
