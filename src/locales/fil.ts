@@ -314,6 +314,9 @@ const fil = {
     currentFont: "Kasalukuyan: {{font}}",
     vibration: "Vibration",
     vibrationHint: "Mag-vibrate kapag may mahalagang alerto.",
+    reminders: "Reminders",
+    remindersHint:
+      "Araw-araw na evening review at low-sun advisories bilang phone banners. Gumagana offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Payagan ang AdlaWatt na magpadala ng mga alerto sa iyong email.",

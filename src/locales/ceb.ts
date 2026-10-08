@@ -314,6 +314,9 @@ const ceb = {
     currentFont: "Karon: {{font}}",
     vibration: "Vibration",
     vibrationHint: "Mag-vibrate kung adunay importanteng alerto.",
+    reminders: "Reminders",
+    remindersHint:
+      "Adlaw-adlaw nga evening review ug low-sun advisories isip phone banners. Moandar offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Tugoti ang AdlaWatt nga magpadala ug mga alerto sa imong email.",

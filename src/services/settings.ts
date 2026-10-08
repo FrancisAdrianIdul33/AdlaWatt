@@ -271,3 +271,54 @@ export async function saveCachedEmailNotifications(
     // Intentionally ignored.
   }
 }
+
+// ============================================================
+// LOCAL REMINDERS SWITCH (v1)
+//
+// Device-local preference backing the Menu "Reminders" row
+// (daily evening review + low-sun advisories, default ON).
+// Same best-effort contract as vibration: the UI holds the
+// value, the store must never break the toggle. Unlike the
+// email switch this is device-level, not per-user —
+// scheduled notifications live on the OS, not the account.
+// ============================================================
+
+const REMINDERS_KEY =
+  "adlawatt.reminders.v1";
+
+export async function loadRemindersSetting(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      REMINDERS_KEY,
+    );
+
+    if (raw === null || raw === undefined) {
+      return true;
+    }
+
+    if (raw === "1" || raw === "true") {
+      return true;
+    }
+
+    if (raw === "0" || raw === "false") {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export async function saveRemindersSetting(
+  value: boolean,
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      REMINDERS_KEY,
+      value ? "1" : "0",
+    );
+  } catch {
+    // Intentionally ignored.
+  }
+}

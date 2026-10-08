@@ -657,7 +657,12 @@ export default function UserManualScreen() {
               Preferences, default ON)
               emails alert-type events
               only — in-app rows are always
-              kept. Vibration (default ON)
+              kept. Reminders (default ON)
+              are on-device banners — a
+              daily evening review and a
+              low-sun morning advisory —
+              that work fully offline.
+              Vibration (default ON)
               buzzes gently while unread
               alerts exist.
             </ManualCallout>

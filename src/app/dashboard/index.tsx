@@ -49,6 +49,7 @@ import {
   useMonitoring,
 } from "@/services/monitoringService";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { maybeScheduleLowSunAdvisory } from "@/services/reminderService";
 import { useTranslation } from "react-i18next";
 
 // ============================================================
@@ -240,6 +241,13 @@ export default function DashboardScreen() {
         hasLoadedForecast.current = true;
 
         setForecast(result);
+
+        // Low-sun advisory: self-gated on the reminders
+        // switch inside the service (OFF cancels instead).
+        // Fire-and-forget so forecast rendering never waits.
+        void maybeScheduleLowSunAdvisory(
+          result,
+        ).catch(() => {});
 
         setForecastError("");
       } catch (error) {

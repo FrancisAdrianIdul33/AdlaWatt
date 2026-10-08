@@ -294,6 +294,9 @@ const en = {
     vibration: "Vibration",
     vibrationHint:
       "Vibrate when important alerts are received.",
+    reminders: "Reminders",
+    remindersHint:
+      "Daily evening review and low-sun advisories as phone banners. Works offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Allow AdlaWatt to send alerts and notifications through your email.",

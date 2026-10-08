@@ -59,8 +59,10 @@ import {
 import {
   loadCachedEmailNotifications,
   loadLanguageSetting,
+  loadRemindersSetting,
   loadVibrationSetting,
   saveCachedEmailNotifications,
+  saveRemindersSetting,
   saveVibrationSetting,
 } from "@/services/settings";
 import {
@@ -73,6 +75,10 @@ import {
   stopAlertVibration,
   syncAlertVibration,
 } from "@/services/alertVibration";
+import {
+  cancelAllReminders,
+  ensureEveningReminder,
+} from "@/services/reminderService";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -215,6 +221,37 @@ export default function SettingsScreen() {
       void syncAlertVibration();
     } else {
       stopAlertVibration();
+    }
+  };
+
+  // Device-local reminders switch (default ON, immediate
+  // like vibration — not part of the Save/Cancel draft).
+  // ON re-ensures tonight's schedule; OFF cancels everything.
+  const [reminders, setReminders] =
+    useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    loadRemindersSetting().then((loaded) => {
+      if (active) {
+        setReminders(loaded);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleRemindersToggle = (next: boolean) => {
+    setReminders(next);
+    void saveRemindersSetting(next);
+
+    if (next) {
+      void ensureEveningReminder();
+    } else {
+      void cancelAllReminders();
     }
   };
 
@@ -807,6 +844,10 @@ export default function SettingsScreen() {
       // Logged before sign-out: after sign-out there is no
       // session left to satisfy RLS on insert.
       logAuth.loggedOut();
+
+      // Scheduled reminders belong to the signed-in phone:
+      // cancel so a signed-out device stays silent.
+      await cancelAllReminders();
 
       try {
         await supabase.auth.signOut();
@@ -1590,6 +1631,35 @@ export default function SettingsScreen() {
                 {renderToggle(
                   vibration,
                   handleVibrationToggle,
+                )}
+              </View>
+
+              <View style={styles.preferenceRow}>
+                <View
+                  style={styles.preferenceText}
+                >
+                  <AppText
+                    variant="body"
+                    style={
+                      styles.preferenceTitle
+                    }
+                  >
+                    {tMenu("menu.reminders")}
+                  </AppText>
+
+                  <AppText
+                    variant="caption"
+                    style={
+                      styles.preferenceDescription
+                    }
+                  >
+                    {tMenu("menu.remindersHint")}
+                  </AppText>
+                </View>
+
+                {renderToggle(
+                  reminders,
+                  handleRemindersToggle,
                 )}
               </View>
 
