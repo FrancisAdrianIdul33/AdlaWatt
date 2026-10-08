@@ -5,7 +5,7 @@ An IoT-based transportable off-grid solar energy harvesting system with a mobile
 AdlaWatt is designed to provide households with an alternative backup power source by harvesting solar energy, storing it in a battery, and supplying electricity through a built-in AC outlet. The mobile application allows users to monitor battery status, solar energy, power consumption, temperature, system status, energy history, and appliance recommendations.
 
 > **Project Status:** In Development
-> The mobile application is integrated with Supabase — authentication, database, Edge Functions, and real-time streaming — for live monitoring, notifications (in-app + email + Android push), activity logs, appliances, and analytics report export. Implemented: 17 analytics charts across Battery/Solar/Energy/Health/Usage (`AnalyticsChartCard` + `charts/` via `react-native-gifted-charts`) with CSV/PDF export (real files on native via expo-print, jsPDF binary on web), 5-day solar forecast, branded alert emails via AgentMail, slim appliance catalog (`GIVEN_CATALOG` + `appliancesService`), in-app User Manual (15 EN sections), fixed safety thresholds (800 W / 11.6 V / 14.6 V), and persisted theme/typography/language/preference stores. Still in progress: end-to-end ESP32 hardware feed, offline hardening beyond the last-reading cache, and push on-device verification.
+> The mobile application is integrated with Supabase — authentication, database, Edge Functions, and real-time streaming — for live monitoring, notifications (in-app + email), activity logs, appliances, and analytics report export. Implemented: 17 analytics charts across Battery/Solar/Energy/Health/Usage (`AnalyticsChartCard` + `charts/` via `react-native-gifted-charts`) with CSV/PDF export (real files on native via expo-print, jsPDF binary on web), 5-day solar forecast, branded alert emails via AgentMail, slim appliance catalog (`GIVEN_CATALOG` + `appliancesService`), in-app User Manual (15 EN sections), fixed safety thresholds (800 W / 11.6 V / 14.6 V), and persisted theme/typography/language/preference stores. Still in progress: end-to-end ESP32 hardware feed, offline hardening beyond the last-reading cache, and push on-device verification.
 
 ---
 
@@ -119,8 +119,6 @@ Notifications are stored in the Supabase `notifications` table, include `normal`
 
 Alert-type notifications also send a branded email via `src/services/alertEmailService.ts` → Supabase Edge Function `send-alert-email` (AgentMail proxy, API key server-only). The email is a Gmail-safe 600px table with inline styles, exact AdlaWatt logo (hosted via `EXPO_PUBLIC_AGENTMAIL_LOGO_URL`, cream/white header), and no CTA. Sends are JWT-gated, fire-and-forget, and cooldown-gated. A global per-user “Email notifications” toggle (default ON, `users.email_notifications`) gates email sends on every device — in-app rows are always written regardless. The toggle persists server-side with a per-user `AsyncStorage` cache (`adlawatt.email_notifications.v1(:userId)`) so it survives offline.
 
-Alert-type notifications also fan out as Android push banners via `src/services/pushService.ts` → Edge Function `send-push` (Expo Push Service; no push secrets in code). The device registers its ExpoPushToken on sign-in into the user-scoped `push_tokens` table (upsert per sign-in, deleted on sign-out) after granting notification permission; taps deep-link to the Notifications screen. A global per-user “Push notifications” toggle (default ON, `users.push_notifications` + `adlawatt.push_notifications.v1` cache) gates sends server-side, fail-open on read errors. Requires an FCM key in EAS credentials, a dev-client rebuild, and a physical device (emulators cannot receive pushes); iOS/APNs is out of scope.
-
 ### Activity Logs
 
 The application provides an activity log for viewing recorded system activities and events. Logs are paginated and typed (info, warning, error, critical). The dashboard also provides a preview of recent activity logs with an option to view all recorded activities.
@@ -154,10 +152,10 @@ The Menu screen (`SettingsScreen`, staged Save/Cancel draft flow) provides accou
 
 - Edit username and email
 - Change password (with current-password verification)
-- Dark mode toggle (system / light / dark, instant apply), color-blind mode, font size (Small / Medium / Big, 0.875 / 1 / 1.15 scale), font family (Inter / Roboto / Times New Roman / Monospace / System Default via `expo-font` + `useAppFonts`), language (English / Filipino / Cebuano), vibration, global per-user email-notification preference, and push-notification preference (Android)
+- Dark mode toggle (system / light / dark, instant apply), color-blind mode, font size (Small / Medium / Big, 0.875 / 1 / 1.15 scale), font family (Inter / Roboto / Times New Roman / Monospace / System Default via `expo-font` + `useAppFonts`), language (English / Filipino / Cebuano), vibration, and global per-user email-notification preference
 - Logout with confirmation
 
-> Persistence: theme (`adlawatt.theme.v2`, with v1 migration), typography (`adlawatt.typography.v1`), language (`adlawatt.language.v1`), vibration (`adlawatt.vibration.v1`), email-notifications (server `users.email_notifications` + per-user `AsyncStorage` cache), and push-notifications (server `users.push_notifications` + cache) survive app restarts and offline. Color-blind mode is session-only by design. `fontWeight` was removed — old saves carrying it are ignored without migration. A single shared `SettingsProvider` + `ThemeProvider` in `app/dashboard/_layout.tsx` propagates typography/theme to all dashboard screens (auth screens intentionally render light).
+> Persistence: theme (`adlawatt.theme.v2`, with v1 migration), typography (`adlawatt.typography.v1`), language (`adlawatt.language.v1`), vibration (`adlawatt.vibration.v1`), email-notifications (server `users.email_notifications` + per-user `AsyncStorage` cache) survive app restarts and offline. Color-blind mode is session-only by design. `fontWeight` was removed — old saves carrying it are ignored without migration. A single shared `SettingsProvider` + `ThemeProvider` in `app/dashboard/_layout.tsx` propagates typography/theme to all dashboard screens (auth screens intentionally render light).
 
 ### About Us
 
@@ -171,7 +169,7 @@ The application uses Supabase authentication with:
 - Login by username or email (60s resend throttle, mapped error messages)
 - Auth callback (`/auth/callback`, `adlawatt://auth/callback` for PKCE on native, `/auth/callback` on web)
 - Persistent login sessions (`AuthContext` single source via `getSession` + `onAuthStateChange`; AsyncStorage on native, localStorage on web)
-- User profile loading and account updates (username, email, password; `email_notifications` and `push_notifications` default ON)
+- User profile loading and account updates (username, email, password; `email_notifications` defaults ON)
 - Email change handling with confirmation
 - Logout functionality (silences expected Realtime `CLOSED`, guards logout writes; `shutdownNotificationService` on sign-out/user change)
 
@@ -269,7 +267,7 @@ The User Manual screen (`src/app/dashboard/user-manual.tsx`, `Routes.USER_MANUAL
 | `expo-glass-effect` | Glass-style surfaces |
 | `expo-image` | Optimized image rendering |
 | `@expo/vector-icons` / Ionicons | Application icons |
-| `@react-native-async-storage/async-storage` | Session, theme, typography, language, vibration, email/push-preference, and last-reading persistence |
+| `@react-native-async-storage/async-storage` | Session, theme, typography, language, vibration, email-preference, and last-reading persistence |
 | `expo-location` | Location access for weather/forecast |
 | `expo-font` + `@expo-google-fonts/inter|roboto` | Bundled Inter/Roboto (Light/Regular/Bold) for typography preferences |
 | `expo-device` | Device info |
@@ -282,9 +280,7 @@ The User Manual screen (`src/app/dashboard/user-manual.tsx`, `Routes.USER_MANUAL
 | Supabase | Cloud database (PostgreSQL), authentication, Edge Functions, and real-time streaming |
 | Supabase Realtime | `postgres_changes` live updates for monitoring, notification, and components |
 | Supabase Edge Function `send-alert-email` | Server-side AgentMail proxy (key never ships in app bundle, JWT-gated) |
-| Supabase Edge Function `send-push` | Server-side Expo Push fan-out (no push secrets; JWT-gated, per-user tokens) |
 | `@react-native-community/netinfo` | Phone-side connectivity for the dashboard offline banner |
-| `expo-notifications` | Android push registration, alert channel, tap deep-linking |
 | Supabase Storage (`email-assets` public bucket) | Hosted alert-email logo/assets |
 | OpenWeatherMap API | Live weather + 5-day forecast data |
 | REST/HTTP | Communication between the IoT system and cloud services |
@@ -418,7 +414,7 @@ Voltage Sensor ───────┤
     (Realtime)   (login/logout)  (monitoring)
 ```
 
-Sensor information is collected by the ESP32, transmitted to Supabase over HTTP, and streamed to the mobile application through Supabase Realtime channels filtered by the authenticated user. Alert-type notifications fan out through the `send-alert-email` Edge Function (AgentMail, gated by the per-user email preference) and the `send-push` Edge Function (Expo Push Service, gated by the per-user push preference).
+Sensor information is collected by the ESP32, transmitted to Supabase over HTTP, and streamed to the mobile application through Supabase Realtime channels filtered by the authenticated user. Alert-type notifications fan out through the `send-alert-email` Edge Function (AgentMail, gated by the per-user email preference).
 
 ---
 
@@ -599,8 +595,8 @@ The Activity Logs screen:
 The Menu screen (`SettingsScreen`) provides:
 
 - Account management (username, email, password change)
-- Preferences staged as drafts (Save commits, Cancel discards): theme (system/light/dark), font size/family, color-blind mode, language, vibration, email and push notifications
-- Persisted: theme, typography, language, vibration, email/push-notifications. Session-only: color-blind mode.
+- Preferences staged as drafts (Save commits, Cancel discards): theme (system/light/dark), font size/family, color-blind mode, language, vibration, email notifications
+- Persisted: theme, typography, language, vibration, email-notifications. Session-only: color-blind mode.
 - Logout with confirmation
 
 ### About Us
@@ -629,14 +625,13 @@ Static/mock dashboard values have been replaced by live Supabase queries and rea
 
 | Table / Bucket | Purpose |
 |---|---|
-| `users` | User profiles (created by database trigger on sign-up + backfill migration; includes `email_notifications` and `push_notifications` booleans, both default true) |
+| `users` | User profiles (created by database trigger on sign-up + backfill migration; includes `email_notifications` boolean default true) |
 | `monitoring` | Current live sensor readings (single row per user) |
 | `monitoring_history` | Historical monitoring records for analytics (5-min cron snapshots via `record_all_monitoring_snapshots()`) |
 | `appliance_usage_history` | Historical appliance usage for analytics |
 | `appliances` | Slim schema: `app_id, appliance_name, type, catalog_key, wattage_min/max, selection, archive, user_id` (`archive=true` = hidden) |
 | `notifications` | Generated notifications with read state (separate list from activity logs) |
 | `activity_logs` | Recorded system activities via manual `logActivity()` (no triggers/hooks) |
-| `push_tokens` | Per-device Expo push tokens (`user_id, expo_push_token` PK, user-scoped RLS; upsert on sign-in, delete on sign-out) |
 | `components` | IoT/power component list and live status |
 | Storage `email-assets` (public) | Hosted alert-email logo/assets |
 
@@ -702,7 +697,6 @@ Physical Sensors (ESP32)
         ├──────────────► Admin Shell (login-gated, logout/exit)
         │
         ├── Alert Email (AgentMail via Edge Function)
-        ├── Push Banners (Expo Push via Edge Function)
         │
        ▼ (Realtime postgres_changes)
 AdlaWatt Mobile App
@@ -928,7 +922,6 @@ The final build configuration may change as the project approaches deployment.
 - [x] Notification service (auto-generated alerts, transition-gated rules, cooldowns)
 - [x] Safety threshold rules live on fixed engineering constants (800 W / 11.6 V / 14.6 V); admin dashboard is a non-functional shell (login/logout/exit only)
 - [x] Alert emails via Edge Function + AgentMail (branded template, per-user toggle, offline-safe cache)
-- [x] Android push banners via Edge Function + Expo Push Service (`push_tokens` store, per-user toggle, tap deep-link; needs FCM key + dev-client rebuild + physical device)
 - [x] Notifications screen with filters and pagination
 - [x] Activity logs with pagination (separate list from notifications)
 - [x] Analytics data pipeline (monitoring history)
@@ -937,7 +930,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Light/dark/glass color tokens and theme hooks
 - [x] Full dark-mode adoption across dashboard screens and shared components (auth screens intentionally remain light)
 - [x] Typography preferences (Inter/Roboto via `expo-font`, Small/Medium/Big) with persistence
-- [x] Theme persistence (`system/light/dark` v2) + email/push-preference persistence
+- [x] Theme persistence (`system/light/dark` v2) + email-preference persistence
 - [x] Realtime/web hardening (stable topics, leak guard, staggered startup, silenced CLOSED)
 - [x] EAS build configuration (development, preview, production)
 - [x] ESLint flat config (eslint-config-expo)
@@ -990,7 +983,7 @@ The ESP32 hardware feed is being integrated. The application consumes data throu
 
 ### Settings Persistence
 
-Theme, typography (font size/family), language, vibration, and the global email/push-notification toggles persist across restarts (AsyncStorage + Supabase). Color-blind mode is session-only by design.
+Theme, typography (font size/family), language, vibration, and the global email-notification toggle persist across restarts (AsyncStorage + Supabase). Color-blind mode is session-only by design.
 
 ### Dark Mode Coverage
 
@@ -1096,7 +1089,6 @@ Future development may include:
 - ESP32 offline buffer firmware (handoff spec exists; app side done)
 - Color-blind persistence
 - Offline hardening beyond the last-reading cache
-- Push on-device verification + stale-token pruning
 - Remote monitoring
 - Improved authentication flows
 - Optimized appliance power consumption calculations

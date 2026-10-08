@@ -11,7 +11,6 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useHouseholdGuard } from "@/hooks/useHouseholdGuard";
 import { useAlertVibration } from "@/hooks/useAlertVibration";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   initializeNotificationService,
   shutdownNotificationService,
@@ -40,10 +39,6 @@ function ThemedDashboard() {
   // Persistent alert buzz while unread alerts exist.
   // Mounted once for the whole signed-in dashboard.
   useAlertVibration();
-
-  // Push token registration + tap deep-linking.
-  // Mounted once for the whole signed-in dashboard.
-  usePushNotifications();
 
   // Auth guard: unauthenticated deep-links land here
   // without passing through splash.

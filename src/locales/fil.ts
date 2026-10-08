@@ -317,9 +317,6 @@ const fil = {
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Payagan ang AdlaWatt na magpadala ng mga alerto sa iyong email.",
-    pushNotifications: "Push Notifications",
-    pushNotificationsHint:
-      "Payagan ang AdlaWatt na magpadala ng mga alerto sa device na ito kahit sarado ang app.",
     confirmChanges: "Kumpirmahin ang mga Pagbabago",
     confirmChangesBody:
       "Ilagay ang iyong current password upang kumpirmahin ang mga pagbabagong ito.",

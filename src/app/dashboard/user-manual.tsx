@@ -657,14 +657,9 @@ export default function UserManualScreen() {
               Preferences, default ON)
               emails alert-type events
               only — in-app rows are always
-              kept. Push Notifications
-              (default ON) banner the same
-              alerts on this Android
-              device, even with the app
-              closed — tap a banner to open
-              this screen. Vibration
-              (default ON) buzzes gently
-              while unread alerts exist.
+              kept. Vibration (default ON)
+              buzzes gently while unread
+              alerts exist.
             </ManualCallout>
 
             <Para>

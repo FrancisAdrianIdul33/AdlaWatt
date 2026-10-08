@@ -317,9 +317,6 @@ const ceb = {
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Tugoti ang AdlaWatt nga magpadala ug mga alerto sa imong email.",
-    pushNotifications: "Push Notifications",
-    pushNotificationsHint:
-      "Tugoti ang AdlaWatt nga magpadala ug mga alerto niini nga device bisan sirado ang app.",
     confirmChanges: "Kumpirmahi ang mga Pagbag-o",
     confirmChangesBody:
       "Isulod ang imong current password aron kumpirmahon kini nga mga pagbag-o.",

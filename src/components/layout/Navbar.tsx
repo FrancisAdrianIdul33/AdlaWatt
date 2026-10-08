@@ -32,7 +32,9 @@ import {
 } from "@/services/realtimeResubscribe";
 
 import AppText from "@/components/ui/AppText";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useTranslation } from "react-i18next";
+import { resolveAvatarPhotoUrl } from "@/services/avatar";
 
 import type { DeviceStatus } from "@/services/monitoringService";
 
@@ -72,6 +74,12 @@ export default function NavBar({
     authUser?.email?.split("@")[0] || null;
 
   const username = profileUsername || fallbackName;
+
+  // Google photo URL from session metadata (email accounts
+  // carry none) — resolved synchronously beside the name so
+  // the avatar never blinks independently of it. Null feeds
+  // the initial-letter fallback inside UserAvatar.
+  const photoUrl = resolveAvatarPhotoUrl(authUser);
 
   // ==========================================================
   // CHECK FOR UNREAD NOTIFICATIONS
@@ -329,14 +337,24 @@ export default function NavBar({
               username,
             })}
           >
-            <AppText
-              variant="body"
-              style={navBarStyles.usernameText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
+            <View
+              style={navBarStyles.identityRow}
             >
-              {username}
-            </AppText>
+              <UserAvatar
+                username={username}
+                photoUrl={photoUrl}
+                size={30}
+              />
+
+              <AppText
+                variant="body"
+                style={navBarStyles.usernameText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {username}
+              </AppText>
+            </View>
           </View>
         ) : null}
 
@@ -448,11 +466,19 @@ const getNavBarStyles = (colors: AppColors) =>
     minWidth: 0,
   },
 
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: "100%",
+  },
+
   usernameText: {
     color: colors.bar.text,
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+    flexShrink: 1,
   },
 
   iconButton: {

@@ -1,4 +1,4 @@
-As a developer looking at `AdlaWatt-`, here's the updated take: 8 of the original 15 items are now resolved (commits below) — all P0 defense-blockers plus push, offline, and docs sync are closed. Remaining: analytics perf, history bloat, one profile-polish TODO, and P2 scope.
+As a developer looking at `AdlaWatt-`, here's the updated take: 7 of the original 15 items are now resolved (commits below) — all P0 defense-blockers closed. Push was built then dropped by decision (AgentMail suffices), so it returns to ⏳ as documented scope, not missing function. Remaining: analytics perf, history bloat, one profile-polish TODO, and P2 scope.
 
 > **Status as of docs-sync pass.** ✅ = done (commit ref), ⏳ = pending. Line refs re-verified this pass.
 
@@ -56,12 +56,12 @@ What you do well already:
 |     |          |                              |            | monitoring-based cards. State this scoping in            |
 |     |          |                              |            | delimitations.                                           |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
-| 6   | P1       | No push notifications        | ✅ Done    | Android via Expo Push Service: `expo-notifications` +    |
-|     |          |                              |            | `push_tokens` store (user-scoped RLS) + `send-push` Edge |
-|     |          |                              |            | Function at the alert choke point (cooldown-gated); Menu |
-|     |          |                              |            | push toggle default ON; tap deep-links to Notifications; |
-|     |          |                              |            | needs FCM key in EAS credentials + dev-client rebuild +  |
-|     |          |                              |            | physical-device test. iOS/APNs out of scope.             |
+| 6   | P1       | No push notifications        | ⏳ Open    | Dropped by decision: AgentMail email already delivers    |
+|     |          |                              |            | every alert accurately (9+ days live), so push was cut  |
+|     |          |                              |            | as unnecessary scope. Code fully removed; pasted         |
+|     |          |                              |            | `push_notifications` column + `push_tokens` table and   |
+|     |          |                              |            | deployed `send-push` left inert in place. Revisit        |
+|     |          |                              |            | post-defense if instant delivery is required.            |
 +-----+----------+------------------------------+------------+----------------------------------------------------------+
 | 7   | P1       | No offline story             | ✅ Done    | App side: last-reading AsyncStorage cache painted stale  |
 |     |          |                              |            | on cold open, NetInfo offline banner + last-updated on   |

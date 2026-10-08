@@ -235,10 +235,9 @@ Open the **bell icon** or Notifications screen to see what the hardware did:
 - **Normal** (gray/info) — routine events: charging started, fully charged, solar input changed, device came online.
 - **Alert** (demands attention) — low battery (20% or below), unsafe depth of discharge, critical temperatures, stale or missing data, unsafe load while battery is low.
 
-### Email, vibration, and push alerts
+### Email and vibration alerts
 
 - **Email notifications** (Menu → Preferences, default **ON**) send alert-type events to your account email with AdlaWatt branding. Turning it off stops emails only — in-app notifications are always kept.
-- **Push notifications** (Menu → Preferences, default **ON**) send alert-type events as banner alerts to this Android device, even with the app closed. Tapping a banner opens the Notifications screen. Needs notification permission (asked once at sign-in) and a physical device.
 - **Vibration** (Menu → Preferences, default **ON**) buzzes in a gentle pattern while unread alerts exist, and stops when you read them, when nothing is unread, or when you sign out.
 
 ### Managing the list
