@@ -819,9 +819,11 @@ export default function SettingsScreen() {
     <Switch
       value={value}
       onValueChange={onValueChange}
-      pointerEvents={
-        decorative ? "none" : "auto"
-      }
+      style={{
+        pointerEvents: decorative
+          ? "none"
+          : "auto",
+      }}
       trackColor={{
         false: colors.border,
         true: colors.primary,

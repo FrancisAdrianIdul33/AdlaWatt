@@ -276,8 +276,10 @@ export default function OnlineOfflineChart({
           isAnimated
           centerLabelComponent={() => (
             <View
-              style={styles.centerLabel}
-              pointerEvents="none"
+              style={[
+                styles.centerLabel,
+                { pointerEvents: "none" },
+              ]}
             >
               {selectedVisible ? (
                 <AppText
