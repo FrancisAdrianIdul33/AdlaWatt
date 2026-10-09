@@ -402,6 +402,8 @@ const ceb = {
       sectionEnergy: "Enerhiya",
       sectionHealth: "Panglawas",
       sectionUsage: "Paggamit",
+      generateReport: "Generate Report",
+      goToGenerateReport: "Adto sa Generate Report",
     },
     logs: {
       title: "Activity Logs",

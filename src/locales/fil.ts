@@ -402,6 +402,8 @@ const fil = {
       sectionEnergy: "Enerhiya",
       sectionHealth: "Kalusugan",
       sectionUsage: "Paggamit",
+      generateReport: "Generate Report",
+      goToGenerateReport: "Pumunta sa Generate Report",
     },
     logs: {
       title: "Activity Logs",

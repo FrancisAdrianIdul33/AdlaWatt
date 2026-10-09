@@ -385,6 +385,8 @@ const en = {
       sectionEnergy: "Energy",
       sectionHealth: "Health",
       sectionUsage: "Usage",
+      generateReport: "Generate Report",
+      goToGenerateReport: "Go to Generate Report",
     },
     logs: {
       title: "Activity Logs",
