@@ -30,7 +30,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control } from "@/constants/sizing";
+import { Control, useScreenPadding } from "@/constants/sizing";
 import { Routes } from "@/constants/routes";
 
 import {
@@ -176,6 +176,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     const current = menuI18n.language;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local code with i18n language
     setLanguageCode(
       current === "fil" || current === "ceb"
         ? current
@@ -303,6 +304,8 @@ export default function SettingsScreen() {
   } = useTypography();
 
   const colors = useAppColors();
+  // Responsive gutter: 16/20/24 by phone width (UI-STANDARDS.md).
+  const screenPadding = useScreenPadding();
   // Pushes renames into the AuthContext session cache so
   // the Navbar username updates without any navigation.
   const { refreshProfile } = useAuth();
@@ -322,6 +325,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     if (preferencesExpanded) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate drafts when section opens
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
       setThemeDraft(savedTheme);
@@ -954,7 +958,10 @@ export default function SettingsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: screenPadding },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Settings Header */}

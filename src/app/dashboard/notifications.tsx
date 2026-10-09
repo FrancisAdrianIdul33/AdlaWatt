@@ -42,7 +42,7 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
-import { OptionRow } from "@/constants/sizing";
+import { OptionRow, useScreenPadding } from "@/constants/sizing";
 
 import { getAuthenticatedUserSafe, supabase } from "@/lib/supabase";
 import { stopAlertVibration } from "@/services/alertVibration";
@@ -71,6 +71,9 @@ const PAGE_TURN_SCROLL_MS = 1500;
 export default function NotificationsScreen() {
   const { t, i18n } = useTranslation();
   const colors = useAppColors();
+
+  // Responsive gutter: 16/20/24 by phone width (UI-STANDARDS.md).
+  const screenPadding = useScreenPadding();
 
   // Locale-aware date/time formatting (format only per policy).
   const localeTag =
@@ -576,7 +579,10 @@ export default function NotificationsScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: screenPadding },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
           scrollYRef.current =

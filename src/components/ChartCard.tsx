@@ -2942,10 +2942,14 @@ const getStyles = (colors: AppColors) =>
     flex: 1,
     width: "100%",
     flexDirection: "row",
+    // Wrap on narrow phones (<360): gauge stacks above metrics
+    // instead of squeezing the fixed 150 ring (UI-STANDARDS.md).
+    flexWrap: "wrap",
     alignItems: "stretch",
     paddingHorizontal: 10,
     paddingVertical: 10,
     columnGap: 12,
+    rowGap: 12,
   },
 
   // ==========================================================
@@ -2953,7 +2957,10 @@ const getStyles = (colors: AppColors) =>
   // ==========================================================
 
   batteryGaugeColumn: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 160,
+    minWidth: 150,
     alignItems: "center",
     justifyContent: "flex-start",
     paddingHorizontal: 6,
@@ -3075,7 +3082,10 @@ const getStyles = (colors: AppColors) =>
   // ==========================================================
 
   batteryMetricGrid: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 160,
+    minWidth: 150,
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "stretch",

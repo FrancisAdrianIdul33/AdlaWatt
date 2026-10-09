@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
 
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "center",
   },
 
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
 
   centerCaption: {
-    fontSize: 11,
+    fontSize: 12,
   },
 
   emptyNote: {

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/DropdownModal";
 import { useAppColors, type AppColors } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control } from "@/constants/sizing";
+import { Control, useScreenPadding } from "@/constants/sizing";
 import { useTranslation } from "react-i18next";
 import {
   AnalyticsRange,
@@ -102,6 +102,9 @@ const QUICK_NAV_SCROLL_INSET = 12;
 export default function AnalyticsScreen() {
   const { t } = useTranslation();
   const colors = useAppColors();
+
+  // Responsive gutter: 16/20/24 by phone width (UI-STANDARDS.md).
+  const screenPadding = useScreenPadding();
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -874,9 +877,10 @@ export default function AnalyticsScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={
-          styles.content
-        }
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: screenPadding },
+        ]}
         showsVerticalScrollIndicator={
           false
         }

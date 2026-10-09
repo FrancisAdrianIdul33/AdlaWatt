@@ -29,7 +29,7 @@ import {
   type AppColors,
 } from "@/hooks/useAppColors";
 import { Radius } from "@/constants/theme";
-import { Control } from "@/constants/sizing";
+import { Control, useScreenPadding } from "@/constants/sizing";
 
 import weatherJson from "@/data/weather.json";
 
@@ -76,6 +76,9 @@ const QUICK_NAV_SCROLL_INSET = 12;
 export default function DashboardScreen() {
   const { t } = useTranslation();
   const colors = useAppColors();
+
+  // Responsive gutter: 16/20/24 by phone width (UI-STANDARDS.md).
+  const screenPadding = useScreenPadding();
 
   const styles = useMemo(
     () => getStyles(colors),
@@ -410,9 +413,10 @@ export default function DashboardScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={
-          styles.scrollContent
-        }
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: screenPadding },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
           scrollYRef.current =
