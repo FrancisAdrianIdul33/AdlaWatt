@@ -1,5 +1,5 @@
 import { Slot } from "expo-router";
-import { LogBox } from "react-native";
+import { LogBox, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/context/AuthContext";
@@ -7,6 +7,14 @@ import { AuthProvider } from "@/context/AuthContext";
 // Side effect: boots i18next (default English paints
 // instantly; the saved language applies when loaded).
 import "@/services/i18n";
+
+// Canonical web-only CSS entry (Expo-accepted location).
+// Guarded so native OTA bundles skip CSS at runtime; Metro + tsc
+// resolve types via src/types/css.d.ts, Jest via styleMock.
+if (Platform.OS === "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require("@/global.css");
+}
 
 // Benign web-only responder noise ("Cannot record touch end
 // without a touch start", empty Touch Bank) fires without user
