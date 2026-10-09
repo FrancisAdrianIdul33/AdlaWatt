@@ -70,10 +70,6 @@ import {
   type BatteryActivitySlice,
   type UnsafeBarPoint,
 } from "@/services/analyticsService";
-import {
-  printAndSharePdf,
-  saveAndShareCsv,
-} from "@/services/reportPrint";
 import React, {
   useCallback,
   useEffect,
@@ -730,6 +726,10 @@ export default function AnalyticsScreen() {
            Real files: PDF via expo-print HTML, CSV via the
            shared CSV generator written to the cache directory.
            Both are handed to the system share sheet.
+           Native modules are lazy-bound here (dynamic import)
+           so tab mount never evaluates expo-print/sharing/
+           file-system on release — web shims survive the
+           static import but Fabric can throw at load.
            ====================================================== */
 
         setIsExporting(true);
@@ -741,6 +741,14 @@ export default function AnalyticsScreen() {
               reportFrequency,
               range,
             );
+
+          // Lazy-bound: only evaluated on actual export press.
+          const {
+            printAndSharePdf,
+            saveAndShareCsv,
+          } = await import(
+            "@/services/reportPrint"
+          );
 
           if (
             reportType === "CSV"
@@ -1210,7 +1218,11 @@ export default function AnalyticsScreen() {
             ANALYTICS PANEL
             Report export + date-range controls.
         ====================================================== */}
-        <View ref={reportRef} style={styles.section}>
+        <View
+          ref={reportRef}
+          collapsable={false}
+          style={styles.section}
+        >
           <AnalyticsCards
             reportFrequency={reportFrequency}
             setReportModalVisible={

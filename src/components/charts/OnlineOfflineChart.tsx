@@ -271,7 +271,12 @@ export default function OnlineOfflineChart({
           showText={false}
           focusOnPress={!isEmpty}
           sectionAutoFocus={!isEmpty}
-          focusedPieIndex={focusedIndex ?? -1}
+          // Native-only guard: undefined (no selection) instead
+          // of -1 — out-of-bounds focus index throws on Fabric
+          // release while web ignores it.
+          focusedPieIndex={
+            focusedIndex ?? undefined
+          }
           extraRadius={FOCUS_EXPAND_RADIUS}
           isAnimated
           centerLabelComponent={() => (
