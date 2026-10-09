@@ -118,7 +118,12 @@ export default function AnalyticsScreen() {
 
   const scrollYRef = useRef(0);
 
-  const scrollOffset = useRef(new Animated.Value(0)).current;
+  // Stable Animated driver for the 1.5s scroll transition.
+  // useState initializer (not useRef().current) per
+  // react-hooks/refs: ref values must not be read on render.
+  const [scrollOffset] = useState(
+    () => new Animated.Value(0),
+  );
 
   const [
     monitoringHistory,
@@ -559,7 +564,10 @@ export default function AnalyticsScreen() {
       [range],
     );
 
+  // Mount + range-change fetch: setState lands in the async
+  // loadAnalytics continuation, not synchronously in the body.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- range-driven history fetch is the effect's purpose
     loadAnalytics();
   }, [loadAnalytics]);
 

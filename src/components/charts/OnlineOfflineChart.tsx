@@ -170,6 +170,7 @@ export default function OnlineOfflineChart({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset transient selection when data changes
     setSelectedKey(null);
     setFocusedIndex(null);
     clearResetTimer();

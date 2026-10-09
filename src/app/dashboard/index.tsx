@@ -97,8 +97,12 @@ export default function DashboardScreen() {
   const scrollYRef =
     useRef(0);
 
-  const scrollOffset =
-    useRef(new Animated.Value(0)).current;
+  // Stable Animated driver for the 1.5s scroll transition.
+  // useState initializer (not useRef().current) per
+  // react-hooks/refs: ref values must not be read on render.
+  const [scrollOffset] = useState(
+    () => new Animated.Value(0),
+  );
 
   // ==========================================================
   // ADLAWATT MONITORING
@@ -283,7 +287,9 @@ export default function DashboardScreen() {
   useEffect(() => {
     screenMounted.current = true;
 
-    // Initial fetch.
+    // Initial fetch: setState lands in the async
+    // loadWeather/loadForecast continuations.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount + interval weather fetch is the effect's purpose
     loadWeather();
 
     loadForecast();
