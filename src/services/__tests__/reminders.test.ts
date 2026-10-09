@@ -88,6 +88,12 @@ const forecastWith = (
 
 beforeEach(async () => {
   jest.clearAllMocks();
+  // Honor the real Promise<void> contract so source never
+  // receives undefined from this mock (regression guard for
+  // the `.catch`-on-undefined TypeError).
+  mocked.cancelScheduledNotificationAsync.mockResolvedValue(
+    undefined as never,
+  );
   await saveRemindersSetting(true);
 });
 

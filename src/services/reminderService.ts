@@ -238,17 +238,25 @@ export const maybeScheduleLowSunAdvisory =
       if (
         !(await loadRemindersSetting())
       ) {
-        await Notifications.cancelScheduledNotificationAsync(
-          LOW_SUN_REMINDER_ID,
-        ).catch(() => {});
+        try {
+          await Notifications.cancelScheduledNotificationAsync(
+            LOW_SUN_REMINDER_ID,
+          );
+        } catch {
+          // Best-effort by design.
+        }
 
         return false;
       }
 
       if (!isLowSunStretch(result)) {
-        await Notifications.cancelScheduledNotificationAsync(
-          LOW_SUN_REMINDER_ID,
-        ).catch(() => {});
+        try {
+          await Notifications.cancelScheduledNotificationAsync(
+            LOW_SUN_REMINDER_ID,
+          );
+        } catch {
+          // Best-effort by design.
+        }
 
         return false;
       }
