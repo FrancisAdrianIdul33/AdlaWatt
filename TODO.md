@@ -18,20 +18,24 @@
   - Empty active segment auto-corrects on add/archive/delete/battery verdict shifts
   - Empty appliance list keeps all three segments on Advisable
   - Example: If there are no advisable devices, display the default toggle for Not Advisable Devices
-- [ ] Navbar Upper: Display username
+- [x] Navbar Upper: Display username — **Resolved**
+  - Username slot in `Navbar.tsx` with profile-username + auth-fallback so it never renders empty
 - [x] Appliances: Add image upload inside the Custom Appliance box with a media picker modal — **Resolved**
   - Public `appliance-images` bucket (per-user write scope) + `appliances.image_url` column
   - Library-only `MediaPickerModal` on the system `DropdownModal` shell (square crop, 5MB validation, permission-denied copy)
   - Photo preview in Add/Edit custom form (adlawatt icon stays the default for every custom); upload on save, orphan cleanup on replace/remove/delete
   - Box 3-dot camera button wired to the same picker; photos thread to modal list, dashboard list, and recommendation card
-- [ ] Analytics: Add more graphs and charts
-  - Note: Critical
+- [ ] Analytics: Battery band upgrade (avg + min/max lines + unsafe red dots)
+  - Note: Critical — 17 charts already wired; this is the remaining gap per `analytics_charts.md`
 - [x] Preferences: Add phone vibration for alert notifications — **Resolved**
   - Safe buzz-pause rhythm (400ms buzz / 2s rest; iOS re-buzz interval) that cannot escalate or overheat the motor
   - Buzz starts on unread alerts (mount check + realtime inserts) and stops only on mark-as-read, zero unread, toggle OFF, or sign-out
   - Menu Vibration row now persisted (default ON) instead of dead local state
-- [ ] Preferences: Add multi-language display
-- [ ] User Manual: Add manual contents inside its screen
+- [x] Preferences: Add multi-language display — **Resolved**
+  - EN/FIL/CEB locales with picker + persistence (`adlawatt.language.v1`); spot-verified zero hardcoded display strings across all 7 dashboard screens
+- [x] User Manual: Add manual contents inside its screen — **Resolved (EN content)**
+  - 15 sections in `user-manual.tsx` with section cards, quick-jump chips, callouts, AppLogo, Figure 1–8 slots
+  - Remaining: screenshot capture, Filipino/Cebuano translation pass
 
 ## Second Page
 

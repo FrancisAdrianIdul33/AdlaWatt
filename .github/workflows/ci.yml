@@ -1,0 +1,38 @@
+# AdlaWatt CI: typecheck + lint + unit tests.
+#
+# Runs on every push and pull request against the repo's
+# pinned toolchain (Node 20, npm ci). Coverage is
+# collect-only (see jest.config.js) — informational until
+# the suite stabilizes.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npx jest --ci

@@ -262,12 +262,12 @@ const ceb = {
     },
     title: "Menu",
     subtitle: "Tan-awa ug dumalaha ang imong AdlaWatt application.",
-    accountProfile: "Account Profile",
-    preferences: "Preferences",
-    userManual: "User Manual",
-    components: "Components",
-    activityLogs: "Activity Logs",
-    aboutUs: "About Us",
+    accountProfile: "Profile sa Account",
+    preferences: "Mga Kagustuhan",
+    userManual: "Manwal sa Gumagamit",
+    components: "Mga Komponente",
+    activityLogs: "Mga Tala sa Aktibidad",
+    aboutUs: "Mahitungod Kanamo",
     openAccountProfile: "Ablihi ang Account Profile",
     openPreferences: "Ablihi ang Preferences",
     openUserManual: "Ablihi ang User Manual",
@@ -314,6 +314,9 @@ const ceb = {
     currentFont: "Karon: {{font}}",
     vibration: "Vibration",
     vibrationHint: "Mag-vibrate kung adunay importanteng alerto.",
+    reminders: "Reminders",
+    remindersHint:
+      "Adlaw-adlaw nga evening review ug low-sun advisories isip phone banners. Moandar offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Tugoti ang AdlaWatt nga magpadala ug mga alerto sa imong email.",
@@ -353,6 +356,10 @@ const ceb = {
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
       goToApplianceRecommendation: "Adto sa Appliance Recommendation",
+      offlineBanner:
+        "Wala kay koneksyon — katapusang readings ang gipakita.",
+      lastUpdated:
+        "Katapusang na-update {{time}}.",
       forecastFailed: "Dili ma-load ang forecast.",
     },
     about: {
@@ -377,6 +384,24 @@ const ceb = {
     manual: {
       title: "User Manual",
       subtitle: "Mga giya sa pagpadagan sa imong AdlaWatt system.",
+    },
+    appliances: {
+      title: "Mga Appliance",
+      subtitle: "Dumalaha ug i-monitor ang gisuportahang mga appliance.",
+    },
+    components: {
+      title: "Mga Komponente",
+      subtitle: "I-monitor ang mga component sa AdlaWatt system.",
+    },
+    analytics: {
+      title: "Analytics ug Trends",
+      subtitle:
+        "Susiha ang performance sa system, paggamit sa enerhiya, temperatura, ug datos sa appliance sa paglabay sa panahon.",
+      sectionBattery: "Baterya",
+      sectionSolar: "Solar",
+      sectionEnergy: "Enerhiya",
+      sectionHealth: "Panglawas",
+      sectionUsage: "Paggamit",
     },
     logs: {
       title: "Activity Logs",

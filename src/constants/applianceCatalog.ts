@@ -194,7 +194,7 @@ export function resolveRow(
 }
 
 // ============================================================
-// BUNDLED CATALOG PHOTOS (Living Area batch)
+// BUNDLED CATALOG PHOTOS (all areas)
 // ============================================================
 //
 // Keys match GIVEN_CATALOG keys; require() paths must be
@@ -222,4 +222,20 @@ export const CATALOG_IMAGES: Record<string, number> = {
   "catalog:work:usb-fan": require("@/assets/images/appliances/mini-fan.png"),
   "catalog:work:desk-lamp": require("@/assets/images/appliances/desk-lamp.png"),
   "catalog:work:printer": require("@/assets/images/appliances/printer.png"),
+  // Porch batch
+  "catalog:porch:bulb": require("@/assets/images/appliances/porch-lantern.png"),
+  "catalog:porch:cctv": require("@/assets/images/appliances/cctv-camera.png"),
+  // Bathroom batch
+  "catalog:bath:washing-machine": require("@/assets/images/appliances/washing-machine.png"),
+  "catalog:bath:clipper": require("@/assets/images/appliances/hair-clipper.png"),
+  "catalog:bath:exhaust-fan": require("@/assets/images/appliances/exhaust-fan.png"),
+  "catalog:bath:bulb": require("@/assets/images/appliances/bathroom-bulb.png"),
+  // Kitchen batch
+  "catalog:kitchen:refrigerator": require("@/assets/images/appliances/refrigerator.png"),
+  "catalog:kitchen:rice-cooker": require("@/assets/images/appliances/rice-cooker.png"),
+  "catalog:kitchen:dispenser": require("@/assets/images/appliances/water-dispenser.png"),
+  "catalog:kitchen:blender": require("@/assets/images/appliances/blender.png"),
+  "catalog:kitchen:multi-cooker": require("@/assets/images/appliances/multi-cooker.png"),
+  "catalog:kitchen:exhaust-fan": require("@/assets/images/appliances/kitchen-exhaust-fan.png"),
+  "catalog:kitchen:bulb": require("@/assets/images/appliances/kitchen-bulb.png"),
 };

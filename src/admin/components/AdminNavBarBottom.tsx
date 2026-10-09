@@ -21,8 +21,8 @@ import {
 // ADMIN NAV BAR BOTTOM
 //
 // Same shell + tokens as household NavBarBottom (accent line,
-// bar background, 24px+ targets) but admin tabs only:
-// Overview / Thresholds / Audit. Controlled by the admin
+// bar background, 24px+ targets) but admin tabs only —
+// currently Menu alone (starting UI). Controlled by the admin
 // screen so UI-first needs no extra routes. Strictly no
 // cross-role switch: role guards own all routing.
 // ============================================================

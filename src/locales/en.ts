@@ -294,6 +294,9 @@ const en = {
     vibration: "Vibration",
     vibrationHint:
       "Vibrate when important alerts are received.",
+    reminders: "Reminders",
+    remindersHint:
+      "Daily evening review and low-sun advisories as phone banners. Works offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Allow AdlaWatt to send alerts and notifications through your email.",
@@ -334,6 +337,10 @@ const en = {
       subtitle: "Monitor your AdlaWatt system in real time.",
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
+      offlineBanner:
+        "You're offline — showing last readings.",
+      lastUpdated:
+        "Last updated {{time}}.",
       goToApplianceRecommendation:
         "Go to Appliance Recommendation",
       forecastFailed: "Could not load the forecast.",
@@ -360,6 +367,24 @@ const en = {
     manual: {
       title: "User Manual",
       subtitle: "Guides for operating your AdlaWatt system.",
+    },
+    appliances: {
+      title: "Appliances",
+      subtitle: "Manage and monitor supported appliances.",
+    },
+    components: {
+      title: "Components",
+      subtitle: "Monitor AdlaWatt system components.",
+    },
+    analytics: {
+      title: "Analytics & Trends",
+      subtitle:
+        "Analyze system performance, energy usage, temperature, and appliance data over time.",
+      sectionBattery: "Battery",
+      sectionSolar: "Solar",
+      sectionEnergy: "Energy",
+      sectionHealth: "Health",
+      sectionUsage: "Usage",
     },
     logs: {
       title: "Activity Logs",

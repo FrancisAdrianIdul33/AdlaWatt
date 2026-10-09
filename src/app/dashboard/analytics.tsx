@@ -23,8 +23,6 @@ import UptimeChart from "@/components/charts/UptimeChart";
 import OnlineOfflineChart from "@/components/charts/OnlineOfflineChart";
 import AvgPeakLoadChart from "@/components/charts/AvgPeakLoadChart";
 import PowerByHourChart from "@/components/charts/PowerByHourChart";
-import ApplianceEnergyChart from "@/components/charts/ApplianceEnergyChart";
-import ApplianceRuntimeChart from "@/components/charts/ApplianceRuntimeChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -33,15 +31,14 @@ import {
   useAppColors,
   type AppColors,
 } from "@/hooks/useAppColors";
+import { useTranslation } from "react-i18next";
 import {
   AnalyticsRange,
-  ApplianceUsageHistoryRow,
   ChartFrequency,
   MonitoringHistoryRow,
   REPORT_FREQUENCIES,
   ReportFrequency,
   ReportType,
-  createAnalyticsReportContent,
   downloadCsvOnWeb,
   downloadPdfOnWeb,
   generateAdlaWattCsv,
@@ -51,7 +48,6 @@ import {
   getBatteryTemperatureData,
   getBestSunDaysData,
   getDefaultRange,
-  getApplianceEnergyShare,
   getEnergyInputChartData,
   getEnergyOutputChartData,
   getInteriorTemperatureData,
@@ -74,6 +70,10 @@ import {
   type BatteryActivitySlice,
   type UnsafeBarPoint,
 } from "@/services/analyticsService";
+import {
+  printAndSharePdf,
+  saveAndShareCsv,
+} from "@/services/reportPrint";
 import React, {
   useCallback,
   useEffect,
@@ -84,7 +84,6 @@ import {
   Alert,
   Platform,
   ScrollView,
-  Share,
   StyleSheet,
   View,
 } from "react-native";
@@ -94,6 +93,7 @@ import {
    ============================================================ */
 
 export default function AnalyticsScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -107,9 +107,9 @@ export default function AnalyticsScreen() {
   ] = useState<MonitoringHistoryRow[]>([]);
 
   const [
-    applianceUsageHistory,
-    setApplianceUsageHistory,
-  ] = useState<ApplianceUsageHistoryRow[]>([]);
+    isExporting,
+    setIsExporting,
+  ] = useState(false);
 
   const [
     reportFrequency,
@@ -523,32 +523,18 @@ export default function AnalyticsScreen() {
     [monitoringHistory],
   );
 
-  // Appliance cards share one range-total grouping (usage rows
-  // are sparse; bucketing them would scatter single events).
-  // No frequency toggle on either card.
-  const applianceShare = useMemo(
-    () => getApplianceEnergyShare(applianceUsageHistory),
-    [applianceUsageHistory],
-  );
-
   const loadAnalytics =
     useCallback(
       async () => {
         const {
           monitoringHistory:
           monitoringRows,
-          applianceUsageHistory:
-          applianceRows,
         } = await loadAnalyticsData(
           range,
         );
 
         setMonitoringHistory(
           monitoringRows,
-        );
-
-        setApplianceUsageHistory(
-          applianceRows,
         );
       },
       [range],
@@ -569,10 +555,12 @@ export default function AnalyticsScreen() {
       async (
         reportType: ReportType,
       ) => {
+        if (isExporting) {
+          return;
+        }
+
         if (
           monitoringHistory.length ===
-          0 &&
-          applianceUsageHistory.length ===
           0
         ) {
           Alert.alert(
@@ -584,7 +572,7 @@ export default function AnalyticsScreen() {
         }
 
         /* ======================================================
-           WEB EXPORT
+           WEB EXPORT (jsPDF template)
            ====================================================== */
 
         if (
@@ -594,7 +582,6 @@ export default function AnalyticsScreen() {
             const reportData =
               prepareReportData(
                 monitoringHistory,
-                applianceUsageHistory,
                 reportFrequency,
                 range,
               );
@@ -653,52 +640,51 @@ export default function AnalyticsScreen() {
 
         /* ======================================================
            NATIVE ANDROID / IOS EXPORT
+           Real files: PDF via expo-print HTML, CSV via the
+           shared CSV generator written to the cache directory.
+           Both are handed to the system share sheet.
            ====================================================== */
 
-        const {
-          reportHeader,
-          reportContent,
-        } =
-          createAnalyticsReportContent(
-            monitoringHistory,
-            applianceUsageHistory,
-            reportFrequency,
-            range,
+        setIsExporting(true);
+
+        try {
+          const reportData =
+            prepareReportData(
+              monitoringHistory,
+              reportFrequency,
+              range,
+            );
+
+          if (
+            reportType === "CSV"
+          ) {
+            await saveAndShareCsv(
+              reportData,
+            );
+
+            return;
+          }
+
+          await printAndSharePdf(
+            reportData,
+          );
+        } catch (error) {
+          console.error(
+            "Native report export error:",
+            error,
           );
 
-        if (
-          reportType === "CSV"
-        ) {
-          await Share.share({
-            message:
-              reportContent,
-
-            title:
-              "AdlaWatt Analytics CSV Report",
-          });
-
-          return;
+          Alert.alert(
+            "Export Error",
+            "The report could not be generated.",
+          );
+        } finally {
+          setIsExporting(false);
         }
-
-        await Share.share({
-          message: [
-            reportHeader,
-            "",
-            "PDF export preparation",
-            "",
-            `Monitoring records: ${monitoringHistory.length}`,
-            `Appliance usage records: ${applianceUsageHistory.length}`,
-            "",
-            "This report contains the selected historical analytics data.",
-          ].join("\n"),
-
-          title:
-            "AdlaWatt Analytics Report",
-        });
       },
       [
+        isExporting,
         monitoringHistory,
-        applianceUsageHistory,
         reportFrequency,
         range,
       ],
@@ -807,7 +793,7 @@ export default function AnalyticsScreen() {
               styles.headerTitle
             }
           >
-            Analytics & Trends
+            {t("dashboard.analytics.title")}
           </AppText>
 
           <AppText
@@ -816,9 +802,7 @@ export default function AnalyticsScreen() {
               styles.headerSubtitle
             }
           >
-            Analyze system performance,
-            energy usage, temperature,
-            and appliance data over time.
+            {t("dashboard.analytics.subtitle")}
           </AppText>
         </View>
 
@@ -829,7 +813,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Battery
+          {t("dashboard.analytics.sectionBattery")}
         </AppText>
 
         <AnalyticsChartCard
@@ -877,7 +861,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Solar
+          {t("dashboard.analytics.sectionSolar")}
         </AppText>
 
         <AnalyticsChartCard
@@ -939,7 +923,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Energy
+          {t("dashboard.analytics.sectionEnergy")}
         </AppText>
 
         <AnalyticsChartCard
@@ -1006,7 +990,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Health
+          {t("dashboard.analytics.sectionHealth")}
         </AppText>
 
         <AnalyticsChartCard
@@ -1070,7 +1054,7 @@ export default function AnalyticsScreen() {
           variant="heading"
           style={styles.sectionTitle}
         >
-          Usage
+          {t("dashboard.analytics.sectionUsage")}
         </AppText>
 
         <AnalyticsChartCard
@@ -1097,26 +1081,6 @@ export default function AnalyticsScreen() {
           />
         </AnalyticsChartCard>
 
-        <AnalyticsChartCard
-          title="Energy by Appliance"
-          subtitle="What uses the most power."
-          icon="bulb-outline"
-        >
-          <ApplianceEnergyChart
-            slices={applianceShare}
-          />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Appliance Run Time"
-          subtitle="What runs the longest."
-          icon="bulb-outline"
-        >
-          <ApplianceRuntimeChart
-            slices={applianceShare}
-          />
-        </AnalyticsChartCard>
-
         {/* ======================================================
             ANALYTICS PANEL
             Report export + date-range controls.
@@ -1137,6 +1101,9 @@ export default function AnalyticsScreen() {
           }
           generateReport={
             generateReport
+          }
+          exporting={
+            isExporting
           }
         />
 

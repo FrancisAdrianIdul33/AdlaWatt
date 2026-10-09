@@ -32,7 +32,9 @@ import {
 } from "@/services/realtimeResubscribe";
 
 import AppText from "@/components/ui/AppText";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useTranslation } from "react-i18next";
+import { resolveAvatarPhotoUrl } from "@/services/avatar";
 
 import type { DeviceStatus } from "@/services/monitoringService";
 
@@ -72,6 +74,12 @@ export default function NavBar({
     authUser?.email?.split("@")[0] || null;
 
   const username = profileUsername || fallbackName;
+
+  // Google photo URL from session metadata (email accounts
+  // carry none) — resolved synchronously beside the name so
+  // the avatar never blinks independently of it. Null feeds
+  // the initial-letter fallback inside UserAvatar.
+  const photoUrl = resolveAvatarPhotoUrl(authUser);
 
   // ==========================================================
   // CHECK FOR UNREAD NOTIFICATIONS
@@ -319,29 +327,7 @@ export default function NavBar({
         </View>
 
         {/* ====================================================
-            SIGNED-IN USERNAME (center, truncated)
-            ==================================================== */}
-
-        {username ? (
-          <View
-            style={navBarStyles.usernameSlot}
-            accessibilityLabel={t("shared.signedInAs", {
-              username,
-            })}
-          >
-            <AppText
-              variant="body"
-              style={navBarStyles.usernameText}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {username}
-            </AppText>
-          </View>
-        ) : null}
-
-        {/* ====================================================
-            RIGHT-SIDE ACTIONS
+            RIGHT CLUSTER (username › profile › bell)
             ==================================================== */}
 
         <View
@@ -349,6 +335,30 @@ export default function NavBar({
             navBarStyles.actions
           }
         >
+          {username ? (
+            <View
+              style={navBarStyles.identityGroup}
+              accessibilityLabel={t("shared.signedInAs", {
+                username,
+              })}
+            >
+              <AppText
+                variant="body"
+                style={navBarStyles.usernameText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {username}
+              </AppText>
+
+              <UserAvatar
+                username={username}
+                photoUrl={photoUrl}
+                size={30}
+              />
+            </View>
+          ) : null}
+
           {/* ==================================================
               NOTIFICATION
               ================================================== */}
@@ -435,16 +445,18 @@ const getNavBarStyles = (colors: AppColors) =>
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
   },
 
-  // Center slot between the status capsule and the bell.
-  // space-between keeps both ends pinned, so this appearing
-  // late never moves them; the name itself truncates.
-  usernameSlot: {
-    flex: 1,
+  // Identity cluster pinned right with the bell: username,
+  // then avatar, then bell. The name truncates at maxWidth
+  // instead of squeezing its neighbors.
+  identityGroup: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
+    gap: 6,
+    flexShrink: 1,
     minWidth: 0,
   },
 
@@ -452,7 +464,8 @@ const getNavBarStyles = (colors: AppColors) =>
     color: colors.bar.text,
     fontSize: 14,
     fontWeight: "600",
-    textAlign: "center",
+    maxWidth: 140,
+    flexShrink: 1,
   },
 
   iconButton: {

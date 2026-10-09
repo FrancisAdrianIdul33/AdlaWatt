@@ -262,12 +262,12 @@ const fil = {
     },
     title: "Menu",
     subtitle: "I-browse at pamahalaan ang iyong AdlaWatt application.",
-    accountProfile: "Account Profile",
-    preferences: "Preferences",
-    userManual: "User Manual",
-    components: "Components",
-    activityLogs: "Activity Logs",
-    aboutUs: "About Us",
+    accountProfile: "Profile ng Account",
+    preferences: "Mga Kagustuhan",
+    userManual: "Manwal ng Gumagamit",
+    components: "Mga Komponente",
+    activityLogs: "Mga Tala ng Aktibidad",
+    aboutUs: "Tungkol sa Amin",
     openAccountProfile: "Buksan ang Account Profile",
     openPreferences: "Buksan ang Preferences",
     openUserManual: "Buksan ang User Manual",
@@ -314,6 +314,9 @@ const fil = {
     currentFont: "Kasalukuyan: {{font}}",
     vibration: "Vibration",
     vibrationHint: "Mag-vibrate kapag may mahalagang alerto.",
+    reminders: "Reminders",
+    remindersHint:
+      "Araw-araw na evening review at low-sun advisories bilang phone banners. Gumagana offline.",
     emailNotifications: "Email Notifications",
     emailNotificationsHint:
       "Payagan ang AdlaWatt na magpadala ng mga alerto sa iyong email.",
@@ -353,6 +356,10 @@ const fil = {
       applianceRecommendation: "Appliance Recommendation",
       realtimeMonitoring: "Real-Time Monitoring",
       goToApplianceRecommendation: "Pumunta sa Appliance Recommendation",
+      offlineBanner:
+        "Wala kang koneksyon — huling readings ang ipinapakita.",
+      lastUpdated:
+        "Huling na-update {{time}}.",
       forecastFailed: "Hindi ma-load ang forecast.",
     },
     about: {
@@ -377,6 +384,24 @@ const fil = {
     manual: {
       title: "User Manual",
       subtitle: "Mga gabay sa pagpapatakbo ng iyong AdlaWatt system.",
+    },
+    appliances: {
+      title: "Mga Appliance",
+      subtitle: "Pamahalaan at i-monitor ang mga sinusuportahang appliance.",
+    },
+    components: {
+      title: "Mga Komponente",
+      subtitle: "I-monitor ang mga component ng AdlaWatt system.",
+    },
+    analytics: {
+      title: "Analytics at Trends",
+      subtitle:
+        "Suriin ang performance ng system, paggamit ng enerhiya, temperatura, at datos ng appliance sa paglipas ng panahon.",
+      sectionBattery: "Baterya",
+      sectionSolar: "Solar",
+      sectionEnergy: "Enerhiya",
+      sectionHealth: "Kalusugan",
+      sectionUsage: "Paggamit",
     },
     logs: {
       title: "Activity Logs",

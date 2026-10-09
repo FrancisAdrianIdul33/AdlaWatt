@@ -48,6 +48,8 @@ import {
 import {
   useMonitoring,
 } from "@/services/monitoringService";
+import { useConnectivity } from "@/hooks/useConnectivity";
+import { maybeScheduleLowSunAdvisory } from "@/services/reminderService";
 import { useTranslation } from "react-i18next";
 
 // ============================================================
@@ -110,7 +112,25 @@ export default function DashboardScreen() {
   const {
     monitoring,
     loading,
+    stale,
+    cachedAt,
   } = useMonitoring();
+
+  // Phone-side connectivity (distinct from device status):
+  // offline shows the cached readings plus a banner instead
+  // of nulls. Banner renders only on explicit false — never
+  // on first paint while NetInfo still resolves.
+  const { connected } = useConnectivity();
+
+  const showOfflineBanner =
+    connected === false;
+
+  const lastUpdatedLabel =
+    cachedAt !== null
+      ? new Date(
+          cachedAt,
+        ).toLocaleTimeString()
+      : null;
 
   // ==========================================================
   // WEATHER STATE
@@ -221,6 +241,13 @@ export default function DashboardScreen() {
         hasLoadedForecast.current = true;
 
         setForecast(result);
+
+        // Low-sun advisory: self-gated on the reminders
+        // switch inside the service (OFF cancels instead).
+        // Fire-and-forget so forecast rendering never waits.
+        void maybeScheduleLowSunAdvisory(
+          result,
+        ).catch(() => {});
 
         setForecastError("");
       } catch (error) {
@@ -448,6 +475,49 @@ export default function DashboardScreen() {
         </View>
 
         {/* ==================================================
+            OFFLINE BANNER (phone offline, cached readings)
+            ================================================== */}
+
+        {showOfflineBanner ? (
+          <View
+            style={styles.offlineBanner}
+            accessibilityRole="text"
+            accessibilityLabel={t(
+              "dashboard.home.offlineBanner",
+            )}
+          >
+            <Ionicons
+              name="cloud-offline-outline"
+              size={20}
+              color={colors.severity.elevated.text}
+            />
+
+            <View style={styles.offlineTextWrap}>
+              <AppText
+                variant="body"
+                style={styles.offlineTitle}
+              >
+                {t(
+                  "dashboard.home.offlineBanner",
+                )}
+              </AppText>
+
+              {stale && lastUpdatedLabel ? (
+                <AppText
+                  variant="caption"
+                  style={styles.offlineSubtitle}
+                >
+                  {t(
+                    "dashboard.home.lastUpdated",
+                    { time: lastUpdatedLabel },
+                  )}
+                </AppText>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {/* ==================================================
             REAL-TIME MONITORING
             ================================================== */}
 
@@ -659,6 +729,39 @@ const getStyles = (colors: AppColors) =>
     color:
       colors.textSecondary,
     marginTop: 6,
+  },
+
+  offlineBanner: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor:
+      colors.severity.elevated.bg,
+    borderWidth: 2,
+    borderColor:
+      colors.severity.elevated.border,
+    borderRadius:
+      dashboardDimensions.cardRadius,
+    padding: 12,
+    marginBottom: 18,
+  },
+
+  offlineTextWrap: {
+    flex: 1,
+  },
+
+  offlineTitle: {
+    color:
+      colors.severity.elevated.text,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  offlineSubtitle: {
+    color:
+      colors.severity.elevated.text,
+    marginTop: 2,
   },
 
   quickNavRow: {

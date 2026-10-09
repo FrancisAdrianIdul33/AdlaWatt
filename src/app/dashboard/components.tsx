@@ -22,6 +22,7 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
+import { useTranslation } from "react-i18next";
 
 import {
   useAppColors,
@@ -109,6 +110,7 @@ type DeviceStatus =
 // ============================================
 
 export default function ComponentsScreen() {
+  const { t } = useTranslation();
   const colors = useAppColors();
 
   const styles = useMemo(
@@ -434,14 +436,14 @@ export default function ComponentsScreen() {
             variant="heading"
             style={styles.title}
           >
-            Components
+            {t("dashboard.components.title")}
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
-            Monitor AdlaWatt system components.
+            {t("dashboard.components.subtitle")}
           </AppText>
         </View>
 

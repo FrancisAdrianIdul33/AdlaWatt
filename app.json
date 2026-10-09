@@ -1,12 +1,18 @@
 {
   "expo": {
     "name": "AdlaWatt",
-    "slug": "adlawatt",
+    "slug": "ADLAWATT-",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adlawatt-icon.png",
     "scheme": "adlawatt",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ba375929-16f4-4a21-b339-8b43e93ecfd2"
+    },
     "ios": {
       "icon": "./assets/images/adlawatt-icon.png",
       "bundleIdentifier": "com.teamadlawatt.adlawatt",
@@ -41,11 +47,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F0EAD6",
-          "android": {
-            "image": "./assets/images/adlawatt-logo.png",
-            "imageWidth": 76
-          }
+          "backgroundColor": "#F0EAD6"
         }
       ],
       [
@@ -55,7 +57,9 @@
         }
       ],
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      "expo-sharing",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

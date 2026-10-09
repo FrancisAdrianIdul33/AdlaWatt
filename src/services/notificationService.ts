@@ -64,35 +64,46 @@ const SOLAR_INPUT_MILESTONE_WATTS =
 const CURRENT_LOAD_MILESTONE_WATTS =
   50;
 
+// Freshness tripwire for last_seen: the ESP32 posts every
+// few seconds and phone-side WiFi jitter rarely exceeds half
+// a minute, so 60s absorbs jitter without crying wolf while
+// still catching genuinely silent units within the minute.
+// (Server-side, the heartbeat cron owns the Online/Offline
+// device_status flip on its own cadence — this gate only
+// drives the client "Monitoring Data Stale" alert.)
 const STALE_MONITORING_INTERVAL_MS =
-  10 * 1000;
+  60 * 1000;
 
 // ------------------------------------------------------------
-// OPTIONAL SAFE THRESHOLDS (DISABLED — all null)
+// FIXED SAFETY THRESHOLDS
 // ------------------------------------------------------------
 //
-// Set a real value to enable its rule; null keeps the rule
-// dormant (each check early-returns). The monitoring table
-// does NOT define these thresholds.
+// Frozen engineering values (from the former admin defaults:
+// 11.6 V / 14.6 V window, 800 W high-load trip). The admin
+// dashboard is a non-functional shell — nobody publishes
+// thresholds at runtime — so the rules consume these
+// constants directly. To retune, change the literals below
+// (and the matching tests); the rule functions themselves
+// take injected values and stay unit-testable.
 //
-//   SAFE_CURRENT_LOAD_THRESHOLD → checkHighCurrentLoad
-//     ("High Current Load", alert, logs critical)
-//   SAFE_BATTERY_VOLTAGE_MIN → checkBatteryVoltageTooLow
-//     ("Battery Voltage Too Low", alert, logs critical)
-//   SAFE_BATTERY_VOLTAGE_MAX → checkBatteryVoltageTooHigh
-//     ("Battery Voltage Too High", alert, logs critical)
+//   HIGH_LOAD_WATTS     → checkHighCurrentLoad
+//     ("High Current Load", alert)
+//   BATTERY_VOLTAGE_MIN → checkBatteryVoltageTooLow
+//     ("Battery Voltage Too Low", alert)
+//   BATTERY_VOLTAGE_MAX → checkBatteryVoltageTooHigh
+//     ("Battery Voltage Too High", alert)
+//
+// Temperature editor rows never had consumer rules (temp
+// alerts come from ESP32 status transitions).
 //
 // See implementation plan/notification_catalog.md.
 // ------------------------------------------------------------
 
-const SAFE_CURRENT_LOAD_THRESHOLD:
-  number | null = null;
+export const HIGH_LOAD_WATTS = 800;
 
-const SAFE_BATTERY_VOLTAGE_MIN:
-  number | null = null;
+export const BATTERY_VOLTAGE_MIN = 11.6;
 
-const SAFE_BATTERY_VOLTAGE_MAX:
-  number | null = null;
+export const BATTERY_VOLTAGE_MAX = 14.6;
 
 
 // ============================================================
@@ -318,6 +329,39 @@ const getCurrentMonitoringNotificationData =
 
 
 // ============================================================
+// COOLDOWN MATH (pure, exported for unit tests)
+// ============================================================
+//
+// True when a previous firing at lastMs still suppresses a new
+// one at nowMs. Undefined lastMs (never fired) never suppresses.
+//
+// Both create paths below delegate their in-memory and DB
+// last-created checks to this helper so the rule is defined
+// once and tested directly.
+// ============================================================
+
+export const isWithinCooldown = (
+  lastMs: number | undefined,
+  nowMs: number,
+  windowMs: number,
+): boolean => {
+  if (lastMs === undefined) {
+    return false;
+  }
+
+  if (
+    !Number.isFinite(lastMs) ||
+    !Number.isFinite(nowMs) ||
+    !Number.isFinite(windowMs) ||
+    windowMs <= 0
+  ) {
+    return false;
+  }
+
+  return nowMs - lastMs < windowMs;
+};
+
+// ============================================================
 // CREATE NOTIFICATION
 // ============================================================
 //
@@ -359,11 +403,11 @@ const createNotification = async (
     );
 
   if (
-    previousNotificationTime !==
-      undefined &&
-    now -
-      previousNotificationTime <
-        NOTIFICATION_COOLDOWN_MS
+    isWithinCooldown(
+      previousNotificationTime,
+      now,
+      NOTIFICATION_COOLDOWN_MS,
+    )
   ) {
     return false;
   }
@@ -432,10 +476,13 @@ const createNotification = async (
       ).getTime();
 
     if (
-      !Number.isNaN(lastCreatedAt) &&
-      now -
-        lastCreatedAt <
-          NOTIFICATION_COOLDOWN_MS
+      isWithinCooldown(
+        Number.isNaN(lastCreatedAt)
+          ? undefined
+          : lastCreatedAt,
+        now,
+        NOTIFICATION_COOLDOWN_MS,
+      )
     ) {
 
       notificationCooldowns.set(
@@ -492,7 +539,6 @@ const createNotification = async (
   console.log(
     `Notification created: ${rule.title}`,
   );
-
   maybeSendAlertEmail(userId, rule);
 
   return true;
@@ -621,11 +667,11 @@ const createNotificationWithCooldown =
       );
 
     if (
-      previousNotificationTime !==
-        undefined &&
-      now -
-        previousNotificationTime <
-          cooldownMs
+      isWithinCooldown(
+        previousNotificationTime,
+        now,
+        cooldownMs,
+      )
     ) {
       return false;
     }
@@ -676,10 +722,13 @@ const createNotificationWithCooldown =
         ).getTime();
 
       if (
-        !Number.isNaN(lastCreatedAt) &&
-        now -
-          lastCreatedAt <
-            cooldownMs
+        isWithinCooldown(
+          Number.isNaN(lastCreatedAt)
+            ? undefined
+            : lastCreatedAt,
+          now,
+          cooldownMs,
+        )
       ) {
 
         notificationCooldowns.set(
@@ -2453,31 +2502,25 @@ const checkLowSolarInputDuringCharging =
 // HIGH CURRENT LOAD
 // ------------------------------------------------------------
 //
-// Disabled until the actual safe current-load threshold
-// has been configured.
+// Transition-gated: fires on the upward crossing of the
+// admin-published safe load threshold.
 // ------------------------------------------------------------
 
-const checkHighCurrentLoad =
+export const checkHighCurrentLoad =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    thresholdWatts: number,
   ) => {
 
     if (
-      SAFE_CURRENT_LOAD_THRESHOLD ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.current_load >
-        SAFE_CURRENT_LOAD_THRESHOLD &&
+        thresholdWatts &&
       (
         previous === null ||
         previous.current_load <=
-          SAFE_CURRENT_LOAD_THRESHOLD
+          thresholdWatts
       )
     ) {
 
@@ -2487,7 +2530,7 @@ const checkHighCurrentLoad =
           title:
             "High Current Load",
           description:
-            "The current_load value is above your configured safe load threshold.",
+            `Load at ${current.current_load}W exceeds the ${thresholdWatts}W safe limit.`,
           type: "alert",
         },
       );
@@ -2499,30 +2542,25 @@ const checkHighCurrentLoad =
 // BATTERY VOLTAGE TOO LOW
 // ------------------------------------------------------------
 //
-// Disabled until SAFE_BATTERY_VOLTAGE_MIN is configured.
+// Transition-gated: fires on the downward crossing of the
+// admin-published minimum battery voltage.
 // ------------------------------------------------------------
 
-const checkBatteryVoltageTooLow =
+export const checkBatteryVoltageTooLow =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    minVoltage: number,
   ) => {
 
     if (
-      SAFE_BATTERY_VOLTAGE_MIN ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.voltage <
-        SAFE_BATTERY_VOLTAGE_MIN &&
+        minVoltage &&
       (
         previous === null ||
         previous.voltage >=
-          SAFE_BATTERY_VOLTAGE_MIN
+          minVoltage
       )
     ) {
 
@@ -2532,7 +2570,7 @@ const checkBatteryVoltageTooLow =
           title:
             "Battery Voltage Too Low",
           description:
-            "The voltage value is below your configured safe battery-voltage threshold.",
+            `Voltage at ${current.voltage}V is below the ${minVoltage}V safe minimum.`,
           type: "alert",
         },
       );
@@ -2544,30 +2582,25 @@ const checkBatteryVoltageTooLow =
 // BATTERY VOLTAGE TOO HIGH
 // ------------------------------------------------------------
 //
-// Disabled until SAFE_BATTERY_VOLTAGE_MAX is configured.
+// Transition-gated: fires on the upward crossing of the
+// admin-published maximum battery voltage.
 // ------------------------------------------------------------
 
-const checkBatteryVoltageTooHigh =
+export const checkBatteryVoltageTooHigh =
   async (
     userId: string,
     current: MonitoringData,
     previous: MonitoringData | null,
+    maxVoltage: number,
   ) => {
 
     if (
-      SAFE_BATTERY_VOLTAGE_MAX ===
-        null
-    ) {
-      return;
-    }
-
-    if (
       current.voltage >
-        SAFE_BATTERY_VOLTAGE_MAX &&
+        maxVoltage &&
       (
         previous === null ||
         previous.voltage <=
-          SAFE_BATTERY_VOLTAGE_MAX
+          maxVoltage
       )
     ) {
 
@@ -2577,7 +2610,7 @@ const checkBatteryVoltageTooHigh =
           title:
             "Battery Voltage Too High",
           description:
-            "The voltage value is above your configured safe battery-voltage threshold.",
+            `Voltage at ${current.voltage}V is above the ${maxVoltage}V safe maximum.`,
           type: "alert",
         },
       );
@@ -2902,18 +2935,21 @@ const processMonitoringNotifications =
         userId,
         current,
         previous,
+        HIGH_LOAD_WATTS,
       );
 
       await checkBatteryVoltageTooLow(
         userId,
         current,
         previous,
+        BATTERY_VOLTAGE_MIN,
       );
 
       await checkBatteryVoltageTooHigh(
         userId,
         current,
         previous,
+        BATTERY_VOLTAGE_MAX,
       );
 
       await checkInvalidTimeRemaining(

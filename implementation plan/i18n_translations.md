@@ -218,12 +218,12 @@ by hand.
 |---|---|---|---|---|
 | `menu.title` | Menu | Menu | Menu |  |
 | `menu.subtitle` | Browse and manage your AdlaWatt application. | I-browse at pamahalaan ang iyong AdlaWatt application. | Tan-awa ug dumalaha ang imong AdlaWatt application. |  |
-| `menu.accountProfile` | Account Profile | Account Profile | Account Profile |  |
-| `menu.preferences` | Preferences | Preferences | Preferences |  |
-| `menu.userManual` | User Manual | User Manual | User Manual |  |
-| `menu.components` | Components | Components | Components |  |
-| `menu.activityLogs` | Activity Logs | Activity Logs | Activity Logs |  |
-| `menu.aboutUs` | About Us | About Us | About Us |  |
+| `menu.accountProfile` | Account Profile | Profile ng Account | Profile sa Account |  |
+| `menu.preferences` | Preferences | Mga Kagustuhan | Mga Kagustuhan |  |
+| `menu.userManual` | User Manual | Manwal ng Gumagamit | Manwal sa Gumagamit |  |
+| `menu.components` | Components | Mga Komponente | Mga Komponente |  |
+| `menu.activityLogs` | Activity Logs | Mga Tala ng Aktibidad | Mga Tala sa Aktibidad |  |
+| `menu.aboutUs` | About Us | Tungkol sa Amin | Mahitungod Kanamo |  |
 | `menu.openAccountProfile` | Open Account Profile | Buksan ang Account Profile | Ablihi ang Account Profile | a11y |
 | `menu.openPreferences` | Open Preferences | Buksan ang Preferences | Ablihi ang Preferences | a11y |
 | `menu.openUserManual` | Open User Manual | Buksan ang User Manual | Ablihi ang User Manual | a11y |
@@ -306,6 +306,8 @@ by hand.
 | `dashboard.home.realtimeMonitoring` | Real-Time Monitoring | Real-Time Monitoring | Real-Time Monitoring |  |
 | `dashboard.home.goToApplianceRecommendation` | Go to Appliance Recommendation | Pumunta sa Appliance Recommendation | Adto sa Appliance Recommendation | a11y |
 | `dashboard.home.forecastFailed` | Could not load the forecast. | Hindi ma-load ang forecast. | Dili ma-load ang forecast. | error fallback |
+| `dashboard.home.offlineBanner` | You're offline — showing last readings. | Wala kang koneksyon — huling readings ang ipinapakita. | Wala kay koneksyon — katapusang readings ang gipakita. | offline banner |
+| `dashboard.home.lastUpdated` | Last updated {{time}}. | Huling na-update {{time}}. | Katapusang na-update {{time}}. | offline banner |
 
 ## Shared (13 keys, Phase 1–2)
 
@@ -461,6 +463,22 @@ Codes stay backend-bound; labels map for display. Dates localize in format only 
 | `shared.emptyDescription` | No activities match the selected filters. | Walang aktibidad na tumutugma sa mga filter. | Walay aktibidad nga motugma sa mga filter. | default prop |
 | `shared.errorTitle` | Couldn't load data | Hindi ma-load ang data | Dili ma-load ang data |  |
 | `shared.retry` | Try Again | Subukang Muli | Sulayi Pag-usab |  |
+
+## Dashboard — Appliances / Components / Analytics headers
+
+| Key | English | Filipino | Cebuano | Notes |
+|---|---|---|---|---|
+| `dashboard.appliances.title` | Appliances | Mga Appliance | Mga Appliance |  |
+| `dashboard.appliances.subtitle` | Manage and monitor supported appliances. | Pamahalaan at i-monitor ang mga sinusuportahang appliance. | Dumalaha ug i-monitor ang gisuportahang mga appliance. |  |
+| `dashboard.components.title` | Components | Mga Komponente | Mga Komponente |  |
+| `dashboard.components.subtitle` | Monitor AdlaWatt system components. | I-monitor ang mga component ng AdlaWatt system. | I-monitor ang mga component sa AdlaWatt system. |  |
+| `dashboard.analytics.title` | Analytics & Trends | Analytics at Trends | Analytics ug Trends |  |
+| `dashboard.analytics.subtitle` | Analyze system performance, energy usage, temperature, and appliance data over time. | Suriin ang performance ng system, paggamit ng enerhiya, temperatura, at datos ng appliance sa paglipas ng panahon. | Susiha ang performance sa system, paggamit sa enerhiya, temperatura, ug datos sa appliance sa paglabay sa panahon. |  |
+| `dashboard.analytics.sectionBattery` | Battery | Baterya | Baterya | section header |
+| `dashboard.analytics.sectionSolar` | Solar | Solar | Solar | section header |
+| `dashboard.analytics.sectionEnergy` | Energy | Enerhiya | Enerhiya | section header |
+| `dashboard.analytics.sectionHealth` | Health | Kalusugan | Panglawas | section header |
+| `dashboard.analytics.sectionUsage` | Usage | Paggamit | Paggamit | section header |
 
 ## Backend-bound (stays English by policy, Phase 1)
 
