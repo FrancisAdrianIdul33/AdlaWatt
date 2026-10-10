@@ -70,7 +70,7 @@
         "@sentry/react-native/expo",
         {
           "organization": "adlawatt",
-          "project": "react-native",
+          "project": "adlawatt-kr",
           "url": "https://sentry.io/"
         }
       ]
