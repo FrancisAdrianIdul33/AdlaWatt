@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, {
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -283,23 +282,27 @@ export default function ChartCard({
   // the three colors over SOLAR_ANIMATION_DURATION_MS.
   // ==========================================================
 
-  const sunIntensity =
-    useRef(
-      new Animated.Value(0),
-    ).current;
+  // Stable Animated.Values via lazy useState (no render-phase
+  // ref access — react-hooks/refs). Identity + behavior unchanged.
+  const [sunIntensity] = useState(
+    () => new Animated.Value(0),
+  );
 
   const [sunColor, setSunColor] =
     useState(SUN_GREY);
 
-  const sunColorNode =
-    sunIntensity.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [
-        SUN_GREY,
-        SUN_MODERATE,
-        sunHigh,
-      ],
-    });
+  const sunColorNode = useMemo(
+    () =>
+      sunIntensity.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [
+          SUN_GREY,
+          SUN_MODERATE,
+          sunHigh,
+        ],
+      }),
+    [sunIntensity, sunHigh],
+  );
 
   const solarTarget =
     getSolarIntensity(
@@ -317,15 +320,13 @@ export default function ChartCard({
   // the sun gauge above.
   // ==========================================================
 
-  const ringProgress =
-    useRef(
-      new Animated.Value(0),
-    ).current;
+  const [ringProgress] = useState(
+    () => new Animated.Value(0),
+  );
 
-  const chargingPulse =
-    useRef(
-      new Animated.Value(0),
-    ).current;
+  const [chargingPulse] = useState(
+    () => new Animated.Value(0),
+  );
 
   const [ringLevel, setRingLevel] =
     useState(0);
@@ -448,6 +449,7 @@ export default function ChartCard({
 
       chargingPulse.setValue(0);
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset glow state when charging stops (animation external sync)
       setChargingScale(1);
 
       setChargingGlowOpacity(0);

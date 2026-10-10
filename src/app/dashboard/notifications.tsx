@@ -136,8 +136,12 @@ export default function NotificationsScreen() {
   const scrollYRef =
     useRef(0);
 
-  const scrollOffset =
-    useRef(new Animated.Value(0)).current;
+  // Stable Animated.Value without render-phase ref access
+  // (react-hooks/refs). useState lazy init keeps one instance
+  // across renders; identical behavior for OTA preview builds.
+  const [scrollOffset] = useState(
+    () => new Animated.Value(0),
+  );
 
   // Drive the ScrollView with the animated value so the
   // scroll transition runs for a fixed duration.
