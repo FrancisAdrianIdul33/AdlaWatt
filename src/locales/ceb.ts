@@ -302,8 +302,6 @@ const ceb = {
     themeLight: "Light",
     themeSystemWith: "System ({{mode}})",
     themeOptionA11y: "Theme {{option}}",
-    colorBlindMode: "Color Blind Mode",
-    colorBlindHint: "I-adjust ang mga kolor para sa accessibility.",
     fontSize: "Font Size",
     fontSmall: "Small",
     fontMedium: "Medium",

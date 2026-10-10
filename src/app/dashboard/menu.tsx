@@ -143,9 +143,6 @@ export default function SettingsScreen() {
   const [themeDraft, setThemeDraft] =
     useState<ThemeOption>("system");
 
-  const [colorBlindMode, setColorBlindMode] =
-    useState(false);
-
   const [fontSize, setFontSize] =
     useState<FontSizeOption>("Medium");
 
@@ -1450,35 +1447,6 @@ export default function SettingsScreen() {
                     </Pressable>
                   ))}
                 </View>
-              </View>
-
-              <View style={styles.preferenceRow}>
-                <View
-                  style={styles.preferenceText}
-                >
-                  <AppText
-                    variant="body"
-                    style={
-                      styles.preferenceTitle
-                    }
-                  >
-                    {tMenu("menu.colorBlindMode")}
-                  </AppText>
-
-                  <AppText
-                    variant="caption"
-                    style={
-                      styles.preferenceDescription
-                    }
-                  >
-                    {tMenu("menu.colorBlindHint")}
-                  </AppText>
-                </View>
-
-                {renderToggle(
-                  colorBlindMode,
-                  setColorBlindMode,
-                )}
               </View>
 
               {/* Font Size */}

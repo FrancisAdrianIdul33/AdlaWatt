@@ -302,8 +302,6 @@ const fil = {
     themeLight: "Light",
     themeSystemWith: "System ({{mode}})",
     themeOptionA11y: "Theme {{option}}",
-    colorBlindMode: "Color Blind Mode",
-    colorBlindHint: "Ayusin ang mga kulay para sa accessibility.",
     fontSize: "Font Size",
     fontSmall: "Small",
     fontMedium: "Medium",
